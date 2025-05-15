@@ -1,0 +1,170 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 239 15% 96%; 
+    --foreground: 239 45% 10%; /* Darker Azul Marino for text */
+
+    --card: 0 0% 100%; 
+    --card-foreground: 239 45% 12%; /* Darker Azul Marino for card text */
+
+    --popover: 0 0% 100%; 
+    --popover-foreground: 239 45% 12%;
+
+    /* Azul Marino: #20214f -> HSL: 239 43% 22% (adjusted to be slightly less dark for primary) */
+    --primary: 239 43% 25%; /* Slightly lighter than pure #20214f for better contrast */
+    --primary-foreground: 0 0% 100%; 
+    
+    --secondary: 239 30% 92%; 
+    --secondary-foreground: 239 43% 24%; /* Darker Azul Marino for text on secondary */
+
+    --muted: 239 20% 95%; 
+    --muted-foreground: 239 15% 45%; 
+
+    /* Accent derived from primary */
+    --accent: 239 43% 48%; 
+    --accent-foreground: 0 0% 100%; 
+
+    --destructive: 0 84.2% 60.2%; 
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 239 25% 85%; 
+    --input: 239 20% 97%; /* Slightly off-white for inputs */
+    --ring: 239 43% 45%; /* Adjusted ring from primary, slightly lighter for visibility */
+
+    --radius: 0.5rem;
+
+    --chart-1: 239 43% 25%; 
+    --chart-2: 239 43% 35%; 
+    --chart-3: 239 43% 45%; 
+    --chart-4: 239 43% 18%; 
+    --chart-5: 239 43% 12%; 
+  }
+
+  .dark {
+    /* Dark theme based on Darker Azul Marino */
+    --background: 239 25% 10%; /* Dark base for background */
+    --foreground: 0 0% 90%; 
+
+    --card: 239 20% 15%; /* Slightly lighter than background for cards */
+    --card-foreground: 0 0% 95%; 
+
+    --popover: 239 15% 12%; 
+    --popover-foreground: 0 0% 95%;
+
+    /* Brighter Azul Marino for Dark Theme primary */
+    --primary: 239 43% 58%; 
+    --primary-foreground: 239 43% 10%; /* Very Dark Azul Marino for text on primary */
+
+    --secondary: 239 15% 20%; 
+    --secondary-foreground: 239 30% 80%; 
+
+    --muted: 239 10% 25%; 
+    --muted-foreground: 239 8% 65%; 
+
+    /* Brighter Accent Azul Marino for dark theme */
+    --accent: 239 43% 68%; 
+    --accent-foreground: 239 43% 8%; 
+
+    --destructive: 0 70% 50%; 
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 239 10% 28%; 
+    --input: 239 15% 18%; 
+    --ring: 239 43% 68%; /* Brighter ring for dark theme */
+
+    --chart-1: 239 43% 58%;
+    --chart-2: 239 43% 68%;
+    --chart-3: 239 43% 78%;
+    --chart-4: 239 43% 48%;
+    --chart-5: 239 43% 38%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    scroll-behavior: smooth;
+  }
+  section {
+    @apply py-12 md:py-20 lg:py-24;
+  }
+}
+
+/* Carousel specific styles for single image display */
+.carousel-single-image-wrapper {
+  position: relative;
+  width: 100%; 
+  aspect-ratio: 16 / 9; /* Common aspect ratio for a larger image display */
+  overflow: hidden; 
+  margin-bottom: 1.5rem; /* Space before bullets */
+}
+
+.carousel-single-image-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.7s ease-in-out; /* Fade transition for image switch */
+}
+
+.carousel-single-image-item.active {
+  opacity: 1;
+  z-index: 10; /* Ensure active image is on top */
+}
+
+/* Individual image hover (already on Image component, but can be reinforced here if needed) */
+/* .carousel-single-image-item img:hover {
+  transform: scale(1.05);
+} */
+
+
+/* Hide scrollbar (if any parent container was forcing it) */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+/* Bullet point navigation styling */
+.carousel-bullets-container {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem; /* Space between bullets */
+  margin-top: 1rem; /* Space after the image container */
+}
+
+.carousel-bullet {
+  display: block;
+  width: 16px; /* Made bullets bigger */
+  height: 16px;
+  border-radius: 50%;
+  background-color: hsl(var(--muted-foreground) / 0.4);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  cursor: pointer;
+  border: 2px solid transparent; /* For focus/hover outline */
+}
+
+.carousel-bullet:hover,
+.carousel-bullet:focus-visible { /* Added focus-visible for accessibility */
+  background-color: hsl(var(--primary) / 0.7);
+  transform: scale(1.1);
+  outline: none; /* Remove default browser outline if using border for focus */
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+.carousel-bullet.active {
+  background-color: hsl(var(--primary));
+  transform: scale(1.2); /* Active bullet even slightly more prominent */
+}
