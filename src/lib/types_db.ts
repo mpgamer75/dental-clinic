@@ -12,94 +12,91 @@ export interface Database {
       appointments: {
         Row: {
           id: string
-          created_at: string
           name: string
           email: string
-          phone: string
-          service: string
-          preferred_date: string
-          preferred_time: string
-          message: string | null
+          phone?: string | null
+          service_type: string
+          reason: string
+          is_urgent: boolean
+          submitted_at: string
           status: string
         }
         Insert: {
           id?: string
-          created_at?: string
           name: string
           email: string
-          phone: string
-          service: string
-          preferred_date: string
-          preferred_time: string
-          message?: string | null
+          phone?: string | null
+          service_type: string
+          reason: string
+          is_urgent?: boolean
+          submitted_at?: string
           status?: string
         }
         Update: {
           id?: string
-          created_at?: string
           name?: string
           email?: string
-          phone?: string
-          service?: string
-          preferred_date?: string
-          preferred_time?: string
-          message?: string | null
+          phone?: string | null
+          service_type?: string
+          reason?: string
+          is_urgent?: boolean
+          submitted_at?: string
           status?: string
         }
       }
       contact_messages: {
         Row: {
           id: string
-          created_at: string
           name: string
           email: string
-          phone: string
+          phone?: string | null
           message: string
-          read: boolean
+          submitted_at: string
+          status: string
         }
         Insert: {
           id?: string
-          created_at?: string
           name: string
           email: string
-          phone: string
+          phone?: string | null
           message: string
-          read?: boolean
+          submitted_at?: string
+          status?: string
         }
         Update: {
           id?: string
-          created_at?: string
           name?: string
           email?: string
-          phone?: string
+          phone?: string | null
           message?: string
-          read?: boolean
+          submitted_at?: string
+          status?: string
         }
       }
       testimonials: {
         Row: {
           id: string
-          created_at: string
           name: string
-          rating: number
-          comment: string
-          approved: boolean
+          quote: string
+          location?: string | null
+          submitted_at: string
+          status: string
         }
         Insert: {
           id?: string
-          created_at?: string
           name: string
-          rating: number
-          comment: string
-          approved?: boolean
+          quote: string
+          location?: string | null
+          submitted_at?: string
+          status?: string
         }
         Update: {
           id?: string
-          created_at?: string
           name?: string
-          rating?: number
-          comment?: string
-          approved?: boolean
+          quote?: string
+          location?: string | null
+          submitted_at?: string
+          status?: string
         }
       }
     }
@@ -113,4 +110,4 @@ export interface Database {
       [_ in never]: never
     }
   }
-} 
+}

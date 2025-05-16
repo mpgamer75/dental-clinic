@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -42,6 +41,15 @@
     --chart-3: 239 43% 45%; 
     --chart-4: 239 43% 18%; 
     --chart-5: 239 43% 12%; 
+
+    --sidebar-background: 239 43% 25%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 239 43% 25%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 239 43% 48%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 239 25% 85%;
+    --sidebar-ring: 239 43% 45%;
   }
 
   .dark {
@@ -81,6 +89,15 @@
     --chart-3: 239 43% 78%;
     --chart-4: 239 43% 48%;
     --chart-5: 239 43% 38%;
+
+    --sidebar-background: 239 45% 12%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 239 43% 58%;
+    --sidebar-primary-foreground: 239 43% 10%;
+    --sidebar-accent: 239 43% 68%;
+    --sidebar-accent-foreground: 239 43% 8%;
+    --sidebar-border: 239 10% 28%;
+    --sidebar-ring: 239 43% 68%;
   }
 }
 
@@ -121,12 +138,6 @@
   opacity: 1;
   z-index: 10; /* Ensure active image is on top */
 }
-
-/* Individual image hover (already on Image component, but can be reinforced here if needed) */
-/* .carousel-single-image-item img:hover {
-  transform: scale(1.05);
-} */
-
 
 /* Hide scrollbar (if any parent container was forcing it) */
 .hide-scrollbar {

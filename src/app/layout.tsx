@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import './global.css';
-import { Toaster } from '@/components/ui/toaster'; // Toaster peut rester global s'il n'est pas dépendant de la langue
+import './globals.css'; // Updated to correct filename
+import { Toaster } from '@/components/ui/toaster';
 
 const inter = Inter({
   subsets: ['latin'],

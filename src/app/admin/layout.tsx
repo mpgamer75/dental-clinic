@@ -1,4 +1,4 @@
-'use client'; // Required for hooks like useState, useEffect, useRouter
+'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -17,13 +17,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 // Admin panel will be primarily in Spanish as requested.
 const lang: Language = 'es';
 const adminStrings = generalUiStrings[lang];
-
-// Metadata needs to be static or generated in a generateMetadata function for server components
-// export const metadata: Metadata = {
-//   title: `${adminStrings.adminPanelTitle} - Orthoprotesis Dental Clinic`,
-//   description: `Panel de administración para ${adminStrings.appointmentsTitle}, ${adminStrings.messagesTitle}, y ${adminStrings.testimonialsTitle}.`,
-//   robots: 'noindex, nofollow',
-// };
 
 export default function AdminLayout({
   children,
@@ -98,27 +91,19 @@ export default function AdminLayout({
           router.replace('/admin/login');
         }
       }
-       // Update loading state only if it hasn't been set by the initial check or if on login page.
-      if (pathname === '/admin/login' && !session) {
-        setIsLoading(false);
-      } else if (pathname !== '/admin/login' && isLoading && (session || _event === 'SIGNED_OUT')) {
-        // if not on login page and still loading, but we have session info or signed out, finish loading
-        // this scenario is less likely if initial checkAuth is robust
-      }
     });
 
     return () => {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [router, pathname, isLoading]); // isLoading included for the missing dependency
+  }, [router, pathname]); // Remove isLoading from dependency array
 
   const handleLogout = async () => {
     setIsLoading(true); // Optional: show loading on logout action
     await supabase.auth.signOut();
     setIsAuthenticatedAdmin(false); // Explicitly set state
     router.push('/admin/login'); // Use push for logout to allow back navigation if desired, or replace
-    // setIsLoading(false); // Loading will be handled by the effect on path change
   };
 
   // If on the login page, render children directly with minimal providers
