@@ -1,4 +1,3 @@
-
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
 import type { Language } from '@/lib/types';
 
 export default function HomePage({ params }: { params: { lang: Language } }) {
-  const lang: Language = params.lang;
+  const lang: Language = params?.lang || 'es';
 
   const currentClinicName = contactDetails.clinicName[lang];
   const currentDoctorName = contactDetails.doctorName[lang];

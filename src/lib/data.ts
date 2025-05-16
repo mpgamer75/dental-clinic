@@ -305,6 +305,10 @@ export const formTranslations: FormTranslations = {
     es: {
       nameLabel: "Su Nombre",
       namePlaceholder: "Ej: Juan Pérez",
+      emailLabel: "Correo Electrónico",
+      emailPlaceholder: "Ej: juan.perez@correo.com",
+      phoneLabel: "Teléfono (Opcional)",
+      phonePlaceholder: "Ej: (809) 555-1234",
       quoteLabel: "Su Testimonio",
       quotePlaceholder: "Comparta su experiencia con nosotros...",
       locationLabel: "Su Ubicación (Opcional)",
@@ -318,6 +322,10 @@ export const formTranslations: FormTranslations = {
     en: {
       nameLabel: "Your Name",
       namePlaceholder: "E.g.: John Doe",
+      emailLabel: "Email Address",
+      emailPlaceholder: "E.g.: john.doe@email.com",
+      phoneLabel: "Phone (Optional)",
+      phonePlaceholder: "E.g.: (555) 123-4567",
       quoteLabel: "Your Testimonial",
       quotePlaceholder: "Share your experience with us...",
       locationLabel: "Your Location (Optional)",

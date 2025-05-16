@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 // Ensure Inter font is imported if needed here, or rely on RootLayout's className
 // import { Inter } from 'next/font/google'; (Already in root)
-import '../global.css'; 
+import '@/app/globals.css'; 
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 // Toaster moved to RootLayout to be truly global, unless specific toast messages need i18n context from here.
@@ -17,8 +17,14 @@ import type { Language } from '@/lib/types';
 //   variable: '--font-sans',
 // });
 
-export async function generateMetadata({ params }: { params: { lang: string } }): Promise<Metadata> {
-  const lang = (params.lang === 'en' || params.lang === 'es') ? params.lang : 'es'; // Validate lang
+export async function generateMetadata({
+  params 
+}: { 
+  params: { lang: string } 
+}): Promise<Metadata> {
+  // En Next.js 15, on ne devrait pas avoir besoin d'attendre params.lang
+  // mais certains environnements peuvent encore le nécessiter
+  const lang = (params?.lang === 'en' || params?.lang === 'es') ? params.lang : 'es';
   
   const currentClinicName = contactDetails.clinicName[lang];
   const currentDoctorName = contactDetails.doctorName[lang];
@@ -26,12 +32,7 @@ export async function generateMetadata({ params }: { params: { lang: string } })
   const currentMetaDescription = baseMetadata[lang].description;
   const currentKeywords = baseMetadata[lang].keywords;
 
-  const createPath = (pathSegment = '') => {
-    // Ensure pathSegment starts with / if it's not empty, or is empty for root
-    const segment = pathSegment.startsWith('/') ? pathSegment : (pathSegment ? `/${pathSegment}` : '');
-    return segment;
-  };
-
+  // Simplification de la logique des chemins alternatifs
   return {
     title: `${currentClinicName} - ${currentDoctorName} | ${currentTitleSuffix}`,
     description: currentMetaDescription
@@ -40,21 +41,24 @@ export async function generateMetadata({ params }: { params: { lang: string } })
     keywords: currentKeywords,
     alternates: {
       languages: {
-        'es': `/es${createPath(params.lang && params.lang !== 'es' ? (typeof params === 'object' && params && 'slug' in params && Array.isArray(params.slug) ? params.slug.join('/') : '') : (typeof params === 'object' && params && 'slug' in params && Array.isArray(params.slug) ? params.slug.join('/') : '') )}`,
-        'en': `/en${createPath(params.lang && params.lang !== 'en' ? (typeof params === 'object' && params && 'slug' in params && Array.isArray(params.slug) ? params.slug.join('/') : '') : (typeof params === 'object' && params && 'slug' in params && Array.isArray(params.slug) ? params.slug.join('/') : '') )}`,
+        'es': '/es',
+        'en': '/en',
       },
     },
   };
 }
 
-export default function LangLayout({
+export default async function LangLayout({
   children,
   params
 }: Readonly<{
   children: React.ReactNode;
   params: { lang: Language };
 }>) {
-  const lang = params.lang;
+  // En Next.js 15, on ne devrait pas avoir besoin d'attendre params.lang
+  // mais certains environnements peuvent encore le nécessiter
+  const lang = params?.lang || 'es';
+  
   return (
     // The <html> and <body> tags are in src/app/layout.tsx
     // Font className is also applied there.
@@ -63,7 +67,7 @@ export default function LangLayout({
       <ThemeProvider
         attribute="class"
         defaultTheme="light" 
-        enableSystem={false} // System theme is being removed
+        enableSystem={false}
         disableTransitionOnChange
       >
         <Navbar />

@@ -22,7 +22,16 @@ const ModerateTestimonialOutputSchema = z.object({
 export type ModerateTestimonialOutput = z.infer<typeof ModerateTestimonialOutputSchema>;
 
 export async function moderateTestimonial(input: ModerateTestimonialInput): Promise<ModerateTestimonialOutput> {
-  return moderateTestimonialFlow(input);
+  try {
+    return await moderateTestimonialFlow(input);
+  } catch (error) {
+    console.error('Error in moderateTestimonial:', error);
+    // En cas d'erreur, nous approuvons par défaut le témoignage pour ne pas bloquer l'utilisateur
+    return {
+      isAppropriate: true,
+      reason: undefined
+    };
+  }
 }
 
 const prompt = ai.definePrompt({

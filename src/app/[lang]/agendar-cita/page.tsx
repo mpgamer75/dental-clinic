@@ -1,4 +1,3 @@
-
 import { AppointmentForm } from '@/components/appointment-form';
 import { contactDetails, services as allServices } from '@/lib/data';
 import type { Metadata } from 'next';
@@ -6,7 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { Language } from '@/lib/types';
 
 export async function generateMetadata({ params }: { params: { lang: string } }): Promise<Metadata> {
-  const lang = (params.lang === 'en' || params.lang === 'es') ? params.lang : 'es';
+  // En Next.js 15, on ne devrait pas avoir besoin d'attendre params.lang
+  // mais certains environnements peuvent encore le nécessiter
+  const lang = (params?.lang === 'en' || params?.lang === 'es') ? params.lang : 'es';
+  
   const pageContent = contactDetails.appointmentPage[lang];
   const clinicName = contactDetails.clinicName[lang];
   const doctorName = contactDetails.doctorName[lang];
@@ -26,7 +28,9 @@ export async function generateMetadata({ params }: { params: { lang: string } })
 }
 
 export default function AgendarCitaPage({ params }: { params: { lang: Language } }) {
-  const lang: Language = params.lang;
+  // En Next.js 15, on ne devrait pas avoir besoin d'attendre params.lang
+  // mais certains environnements peuvent encore le nécessiter
+  const lang: Language = params?.lang || 'es';
   
   const currentClinicName = contactDetails.clinicName[lang];
   const currentDoctorName = contactDetails.doctorName[lang];

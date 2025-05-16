@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { revalidatePath } from 'next/cache';
 
 // Admin panel will be primarily in Spanish as requested
 const lang = 'es';
@@ -45,6 +46,57 @@ function getStatusVariant(status: AppointmentSupabase['status']): "default" | "s
   }
 }
 
+// Actions pour la mise à jour du statut des rendez-vous
+async function confirmAppointment(appointmentId: string) {
+  'use server';
+  try {
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'confirmed' })
+      .eq('id', appointmentId);
+      
+    if (error) throw error;
+    
+    revalidatePath('/admin/appointments');
+  } catch (err) {
+    console.error('Error confirming appointment:', err);
+    throw new Error('No se pudo confirmar la cita');
+  }
+}
+
+async function completeAppointment(appointmentId: string) {
+  'use server';
+  try {
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'completed' })
+      .eq('id', appointmentId);
+      
+    if (error) throw error;
+    
+    revalidatePath('/admin/appointments');
+  } catch (err) {
+    console.error('Error completing appointment:', err);
+    throw new Error('No se pudo marcar la cita como completada');
+  }
+}
+
+async function cancelAppointment(appointmentId: string) {
+  'use server';
+  try {
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'cancelled' })
+      .eq('id', appointmentId);
+      
+    if (error) throw error;
+    
+    revalidatePath('/admin/appointments');
+  } catch (err) {
+    console.error('Error cancelling appointment:', err);
+    throw new Error('No se pudo cancelar la cita');
+  }
+}
 
 export default async function AdminAppointmentsPage() {
   // Here you would typically implement logic to check if the user is authenticated
@@ -114,10 +166,38 @@ export default async function AdminAppointmentsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem>{adminStrings.actionButtons.view}</DropdownMenuItem>
-                        <DropdownMenuItem disabled={appointment.status === 'confirmed'}>{adminStrings.actionButtons.confirm}</DropdownMenuItem>
-                        <DropdownMenuItem disabled={appointment.status === 'completed'}>{adminStrings.actionButtons.complete}</DropdownMenuItem>
+                        <form action={confirmAppointment.bind(null, appointment.id)}>
+                          <DropdownMenuItem 
+                            disabled={appointment.status === 'confirmed' || appointment.status === 'completed' || appointment.status === 'cancelled'}
+                            asChild
+                          >
+                            <button className="w-full text-left px-2 py-1.5">
+                              {adminStrings.actionButtons.confirm}
+                            </button>
+                          </DropdownMenuItem>
+                        </form>
+                        <form action={completeAppointment.bind(null, appointment.id)}>
+                          <DropdownMenuItem 
+                            disabled={appointment.status !== 'confirmed'}
+                            asChild
+                          >
+                            <button className="w-full text-left px-2 py-1.5">
+                              {adminStrings.actionButtons.complete}
+                            </button>
+                          </DropdownMenuItem>
+                        </form>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">{adminStrings.actionButtons.cancel}</DropdownMenuItem>
+                        <form action={cancelAppointment.bind(null, appointment.id)}>
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                            disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+                            asChild
+                          >
+                            <button className="w-full text-left px-2 py-1.5">
+                              {adminStrings.actionButtons.cancel}
+                            </button>
+                          </DropdownMenuItem>
+                        </form>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

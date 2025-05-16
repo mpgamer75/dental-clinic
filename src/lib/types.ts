@@ -98,8 +98,8 @@ export interface AppointmentFormData {
   serviceType: string; 
   service_type?: string; 
   reason: string;
-  is_urgent: boolean; 
-  isUrgent?: boolean; // From form state
+  is_urgent?: boolean; 
+  isUrgent: boolean; // From form state, changed from optional to required
   submitted_at?: string | Date; 
   status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
 }

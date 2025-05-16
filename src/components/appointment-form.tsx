@@ -33,7 +33,16 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
     isUrgent: z.boolean().default(false),
   });
 
-  const form = useForm<AppointmentFormData>({
+  type FormData = {
+    name: string;
+    email: string;
+    phone?: string;
+    serviceType: string;
+    reason: string;
+    isUrgent: boolean;
+  };
+
+  const form = useForm<FormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
       name: '',
@@ -47,14 +56,17 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
 
   const { formState: { isSubmitting } } = form;
 
-  async function onSubmit(data: AppointmentFormData) {
+  async function onSubmit(data: FormData) {
     try {
-      const result = await submitAppointmentForm(data, lang);
+      const appointmentData: AppointmentFormData = {
+        ...data
+      };
+      
+      const result = await submitAppointmentForm(appointmentData, lang);
       if (result.success) {
         toast({
           title: currentFormStrings.successToastTitle,
           description: result.message,
-          // className: 'bg-green-100 border-green-500 text-green-700', // Keep styling consistent with theme
         });
         form.reset();
       } else {
@@ -66,7 +78,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
         if (result.errors) {
           Object.entries(result.errors).forEach(([field, messages]) => {
             if (messages && messages.length > 0) {
-              form.setError(field as keyof AppointmentFormData, { type: 'manual', message: messages.join(', ') });
+              form.setError(field as keyof FormData, { type: 'manual', message: messages.join(', ') });
             }
           });
         }
