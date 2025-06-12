@@ -114,3 +114,55 @@ WITH CHECK (auth.role() = 'admin_role');
 UPDATE auth.users
 SET raw_user_meta_data = raw_user_meta_data || '{"role": "admin_role"}'::jsonb
 WHERE id = '47f980bb-6cf4-4e0a-9f47-e87ea1f5d3aa';
+
+
+
+
+
+-- Nouvelles querys pour corriger le problème de non affichage des rdv et messages sur l'application _crypto_aead_det_decrypt
+
+-- Supprimer les anciennes politiques
+DROP POLICY IF EXISTS "Admin full access for appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Public insert access for appointments" ON public.appointments;
+
+-- Créer les nouvelles politiques
+-- Permettre l'insertion publique
+CREATE POLICY "Public can insert appointments" 
+ON public.appointments FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
+
+-- Permettre la lecture pour les admins (en utilisant les métadonnées JWT)
+CREATE POLICY "Admins can view all appointments" 
+ON public.appointments FOR SELECT 
+TO authenticated 
+USING (
+  auth.jwt() ->> 'user_metadata' ::jsonb ->> 'role' = 'admin_role'
+  OR 
+  auth.jwt() -> 'user_metadata' ->> 'role' = 'admin_role'
+);
+
+-- Permettre la mise à jour pour les admins
+CREATE POLICY "Admins can update appointments" 
+ON public.appointments FOR UPDATE 
+TO authenticated 
+USING (
+  auth.jwt() ->> 'user_metadata' ::jsonb ->> 'role' = 'admin_role'
+  OR 
+  auth.jwt() -> 'user_metadata' ->> 'role' = 'admin_role'
+)
+WITH CHECK (
+  auth.jwt() ->> 'user_metadata' ::jsonb ->> 'role' = 'admin_role'
+  OR 
+  auth.jwt() -> 'user_metadata' ->> 'role' = 'admin_role'
+);
+
+-- Permettre la suppression pour les admins
+CREATE POLICY "Admins can delete appointments" 
+ON public.appointments FOR DELETE 
+TO authenticated 
+USING (
+  auth.jwt() ->> 'user_metadata' ::jsonb ->> 'role' = 'admin_role'
+  OR 
+  auth.jwt() -> 'user_metadata' ->> 'role' = 'admin_role'
+);
