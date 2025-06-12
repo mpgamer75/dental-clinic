@@ -20,13 +20,14 @@ export function Navbar() {
   const uiStrings = generalUiStrings[lang];
   const homeHref = `/${lang}`;
   const appointmentsHref = `/${lang}/agendar-cita`;
-  const servicesHref = `/${lang}/servicios`;
-  const faqHref = `/${lang}/preguntas-frecuentes`;
-  const testimonialsHref = `/${lang}/testimonios`;
-  const contactHref = `/${lang}/contacto`;
+  const servicesHref = `/${lang}#servicios`;
+  const faqHref = `/${lang}#preguntas-frecuentes`;
+  const testimonialsHref = `/${lang}#testimonios`;
+  const contactHref = `/${lang}#contacto`;
 
   const isActive = (href: string) => {
-    return pathname === href || pathname?.startsWith(href);
+    const baseHref = href.split('#')[0];
+    return pathname === baseHref || pathname?.startsWith(baseHref);
   };
 
   return (

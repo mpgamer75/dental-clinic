@@ -1,10 +1,11 @@
-import type { ContactDetails, ServiceData, TestimonialData, FAQData, NavItemData, BaseMetadata, FormTranslations, ActionMessages, GeneralUIData, AdminNavItemData, CarouselImageItem } from './types';
+import type { ContactDetails, ServiceData, TestimonialData, FAQData, NavItemData, BaseMetadata, FormTranslations, ActionMessages, GeneralUIData, AdminNavItemData, CarouselImageItem, DiplomaData } from './types';
 import { Home, ShieldCheck, MessageCircleQuestion, BadgeInfo, Phone, CalendarDays, LayoutDashboard, MessagesSquare, ShieldAlert, Settings } from 'lucide-react'; 
 
 export const navItems: NavItemData = {
   es: [
     { label: 'Inicio', href: '/', icon: Home },
     { label: 'Servicios', href: '/#servicios', icon: ShieldCheck },
+    { label: 'Diplomas', href: '/#diplomas', icon: BadgeInfo },
     { label: 'Testimonios', href: '/#testimonios', icon: MessageCircleQuestion },
     { label: 'Preguntas Frecuentes', href: '/#preguntas-frecuentes', icon: BadgeInfo },
     { label: 'Contacto', href: '/#contacto', icon: Phone },
@@ -12,7 +13,8 @@ export const navItems: NavItemData = {
   ],
   en: [
     { label: 'Home', href: '/', icon: Home },
-    { label: 'Services', href: '/#servicios', icon: ShieldCheck }, 
+    { label: 'Services', href: '/#servicios', icon: ShieldCheck },
+    { label: 'Diplomas', href: '/#diplomas', icon: BadgeInfo },
     { label: 'Testimonials', href: '/#testimonios', icon: MessageCircleQuestion },
     { label: 'FAQ', href: '/#preguntas-frecuentes', icon: BadgeInfo },
     { label: 'Contact', href: '/#contacto', icon: Phone },
@@ -419,8 +421,8 @@ export const contactDetails: ContactDetails = {
     en: 'https://maps.google.com/?q=Plaza+Las+Ramblas+Santiago+de+los+Caballeros'
   },
   embedMapLink: {
-    es: `https://maps.google.com/maps?q=${encodeURIComponent('Plaza Las Ramblas, Módulo 101, Santiago de los Caballeros, República Dominicana')}&output=embed`,
-    en: `https://maps.google.com/maps?q=${encodeURIComponent('Plaza Las Ramblas, Module 101, Santiago de los Caballeros, Dominican Republic')}&output=embed`
+    es: `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4060.840856210959!2d-70.69729749999999!3d19.4541221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eb1cf5f2201f147%3A0xf5965af18d5482e2!2sPlaza%20las%20Ramblas!5e1!3m2!1sfr!2sdo!4v1749698637474!5m2!1sfr!2sdo`,
+    en: `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4060.840856210959!2d-70.69729749999999!3d19.4541221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eb1cf5f2201f147%3A0xf5965af18d5482e2!2sPlaza%20las%20Ramblas!5e1!3m2!1sfr!2sdo!4v1749698637474!5m2!1sfr!2sdo`
   },
   qualifications: {
     es: [
@@ -502,6 +504,16 @@ export const contactDetails: ContactDetails = {
     en: {
       title: "Frequently Asked Questions",
       description: "Find answers to the most common questions about our services and the dental care we offer at {{clinicName}} with {{doctorName}}."
+    }
+  },
+  diplomasSection: {
+    es: {
+      title: "Certificaciones y Diplomas",
+      description: "Conozca las credenciales académicas y profesionales del {{doctorName}}, que respaldan su experiencia y compromiso con la excelencia en el cuidado dental en {{clinicName}}."
+    },
+    en: {
+      title: "Certifications and Diplomas",
+      description: "Learn about the academic and professional credentials of {{doctorName}}, which support his experience and commitment to excellence in dental care at {{clinicName}}."
     }
   },
   contactSection: {
@@ -701,8 +713,158 @@ export const generalUiStrings: GeneralUIData = {
 };
 
 export const visitUsCarouselImages: CarouselImageItem[] = [
-  { src: "https://picsum.photos/seed/plaza-ramblas1/1200/800", altEs: "Plaza Las Ramblas, Santiago de los Caballeros", altEn: "Plaza Las Ramblas, Santiago de los Caballeros", hint: "Plaza Ramblas" },
-  { src: "https://picsum.photos/seed/plaza-ramblas2/1200/800", altEs: "Interior o exterior de Plaza Las Ramblas, Santiago de los Caballeros", altEn: "Interior or exterior of Plaza Las Ramblas, Santiago de los Caballeros", hint: "Plaza facade" },
-  { src: "https://picsum.photos/seed/clinic-exterior/1200/800", altEs: "Exterior de la clínica dental en Santiago de los Caballeros", altEn: "Dental clinic exterior in Santiago de los Caballeros", hint: "clinic exterior" },
-  { src: "https://picsum.photos/seed/santiago-cityscape/1200/800", altEs: "Vista de Santiago de los Caballeros", altEn: "View of Santiago de los Caballeros", hint: "Santiago cityscape" },
+  { src: "/images/vitrine_clinique1.jpg", altEs: "Vitrine de la clínica dental Orthoprotesis en Plaza Las Ramblas, Santiago de los Caballeros", altEn: "Dental clinic Orthoprotesis storefront in Plaza Las Ramblas, Santiago de los Caballeros", hint: "clinic storefront" },
+  { src: "/images/vitrine_clinique2.jpg", altEs: "Interior de la clínica dental Orthoprotesis, Santiago de los Caballeros", altEn: "Interior of Orthoprotesis dental clinic, Santiago de los Caballeros", hint: "clinic interior" },
+  { src: "/images/vitrine_clinique3.jpg", altEs: "Vista exterior de la clínica dental Orthoprotesis en Plaza Las Ramblas", altEn: "Exterior view of Orthoprotesis dental clinic in Plaza Las Ramblas", hint: "clinic exterior view" },
 ];
+
+export const diplomas: DiplomaData = {
+  es: [
+    {
+      id: 'diploma1',
+      title: 'Curso de Implantología Oral',
+      institution: 'PUCMM',
+      year: '1998',
+      image: '/images/diploma1.jpg',
+      description: 'Curso de formación en implantología oral.'
+    },
+    {
+      id: 'diploma2',
+      title: 'Magíster en Prótesis',
+      institution: 'PUCMM',
+      year: '2000',
+      image: '/images/diploma2.jpg',
+      description: 'Maestría en prótesis dentales.'
+    },
+    {
+      id: 'diploma3',
+      title: 'Manejo de Implantes y Protocolos de Restauración para Prótesis Unitaria',
+      institution: 'Universidad de Antioquia',
+      year: '2015',
+      image: '/images/diploma3.jpg',
+      description: 'Formación sobre la gestión de implantes y los protocolos de restauración para prótesis unitarias.'
+    },
+    {
+      id: 'diploma4',
+      title: '2° Encuentro Científico Cultural Dominico-Mexicano: Rehabilitación Oral y Ortodoncia Clínica',
+      institution: 'Facultad de Odontología UNAM',
+      year: '2000',
+      image: '/images/diploma4.jpg',
+      description: 'Participación en el 2do encuentro científico y cultural dominico-mexicano sobre la rehabilitación oral y la ortodoncia clínica.'
+    },
+    {
+      id: 'diploma5',
+      title: 'Implantología Bucal',
+      institution: 'Asociación Odontológica Mexicana para la Enseñanza y la Investigación',
+      year: '2014',
+      image: '/images/diploma5.jpg',
+      description: 'Formación en implantología bucal.'
+    },
+    {
+      id: 'diploma6',
+      title: 'Especialista en Implantología Oral',
+      institution: 'Universidad Central de Este, San Pedro de Macorís (RD)',
+      year: '2021',
+      image: '/images/diploma6.jpg',
+      description: 'Especialización en implantología oral.'
+    },
+    {
+      id: 'diploma7',
+      title: '17° Congresso Brasileiro de Ortodontia',
+      institution: 'Sao Paulo',
+      year: '2010',
+      image: '/images/diploma7.jpg',
+      description: 'Certificat de participation au 17e Congrès brésilien d\'orthodontie.'
+    },
+    {
+      id: 'diploma8',
+      title: '3rd International Dental Implantology Conference',
+      institution: 'Cartagena, Colombia',
+      year: '2017',
+      image: '/images/diploma8.jpg',
+      description: 'Certificat de participation à la 3e Conférence internationale d\'implantologie dentaire.'
+    },
+    {
+      id: 'diploma9',
+      title: 'Certificado: Instituto Mexicano de Carga Inmediata',
+      institution: 'Instituto Mexicano de Carga Inmediata',
+      year: '2017',
+      image: '/images/diploma9.jpg',
+      description: 'Certificat de formation de l\'Institut mexicain de charge immédiate.'
+    }
+  ],
+  en: [
+    {
+      id: 'diploma1',
+      title: 'Oral Implantology Course',
+      institution: 'PUCMM',
+      year: '1998',
+      image: '/images/diploma1.jpg',
+      description: 'Training course in oral implantology.'
+    },
+    {
+      id: 'diploma2',
+      title: 'Master in Prosthetics',
+      institution: 'PUCMM',
+      year: '2000',
+      image: '/images/diploma2.jpg',
+      description: 'Master\'s degree in dental prosthetics.'
+    },
+    {
+      id: 'diploma3',
+      title: 'Implant Management and Restoration Protocols for Unitary Prosthetics',
+      institution: 'University of Antioquia',
+      year: '2015',
+      image: '/images/diploma3.jpg',
+      description: 'Training on implant management and restoration protocols for single prosthetics.'
+    },
+    {
+      id: 'diploma4',
+      title: '2nd Dominican-Mexican Scientific and Cultural Meeting: Oral Rehabilitation and Clinical Orthodontics',
+      institution: 'UNAM Faculty of Dentistry',
+      year: '2000',
+      image: '/images/diploma4.jpg',
+      description: 'Participation in the 2nd Dominican-Mexican scientific and cultural meeting on oral rehabilitation and clinical orthodontics.'
+    },
+    {
+      id: 'diploma5',
+      title: 'Oral Implantology',
+      institution: 'Mexican Dental Association for Teaching and Research',
+      year: '2014',
+      image: '/images/diploma5.jpg',
+      description: 'Training in oral implantology.'
+    },
+    {
+      id: 'diploma6',
+      title: 'Specialist in Oral Implantology',
+      institution: 'Universidad Central de Este, San Pedro de Macorís (DR)',
+      year: '2021',
+      image: '/images/diploma6.jpg',
+      description: 'Specialization in oral implantology.'
+    },
+    {
+      id: 'diploma7',
+      title: '17th Brazilian Orthodontics Congress',
+      institution: 'Sao Paulo',
+      year: '2010',
+      image: '/images/diploma7.jpg',
+      description: 'Certificate of participation in the 17th Brazilian Orthodontics Congress.'
+    },
+    {
+      id: 'diploma8',
+      title: '3rd International Dental Implantology Conference',
+      institution: 'Cartagena, Colombia',
+      year: '2017',
+      image: '/images/diploma8.jpg',
+      description: 'Certificate of participation in the 3rd International Dental Implantology Conference.'
+    },
+    {
+      id: 'diploma9',
+      title: 'Certificate: Mexican Institute of Immediate Loading',
+      institution: 'Mexican Institute of Immediate Loading',
+      year: '2017',
+      image: '/images/diploma9.jpg',
+      description: 'Certificate of training from the Mexican Institute of Immediate Loading.'
+    }
+  ]
+};

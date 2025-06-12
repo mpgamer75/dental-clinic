@@ -81,7 +81,7 @@ export interface AppointmentSupabase {
   id: string;
   name: string;
   email: string;
-  phone?: string | null;
+  phone: string | null;
   service_type: string;
   reason: string;
   is_urgent: boolean;
@@ -89,6 +89,24 @@ export interface AppointmentSupabase {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
 }
 
+export interface ContactMessageSupabase {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string;
+  submitted_at: string;
+  status: 'unread' | 'read' | 'archived';
+}
+
+export interface TestimonialSupabase {
+  id: string;
+  name: string;
+  quote: string;
+  location: string | null;
+  submitted_at: string;
+  status: 'pending_approval' | 'approved' | 'rejected';
+}
 
 export interface AppointmentFormData {
   id?: string; 
@@ -213,6 +231,10 @@ export interface ContactDetails {
     en: TestimonialsSectionContent;
   };
   faqSection: {
+    es: SectionContent;
+    en: SectionContent;
+  };
+  diplomasSection: {
     es: SectionContent;
     en: SectionContent;
   };
@@ -379,11 +401,25 @@ export interface CarouselImageItem {
   hint: string;
 }
 
+export interface Diploma {
+  id: string;
+  title: string;
+  institution: string;
+  year: string;
+  image: string;
+  description: string;
+}
+
+export interface DiplomaData {
+  es: Diploma[];
+  en: Diploma[];
+}
+
 export interface Database {
   public: {
     Tables: {
       appointments: {
-        Row: AppointmentSupabase; // Use the defined interface
+        Row: AppointmentSupabase;
         Insert: {
           id?: string; 
           name: string;
@@ -393,7 +429,7 @@ export interface Database {
           reason: string;
           is_urgent?: boolean; 
           submitted_at?: string; 
-          status?: string; 
+          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'; 
         };
         Update: { 
           id?: string;
@@ -404,19 +440,11 @@ export interface Database {
           reason?: string;
           is_urgent?: boolean;
           submitted_at?: string;
-          status?: string;
+          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
         };
       };
       contact_messages: {
-        Row: {
-          id: string; 
-          name: string;
-          email: string;
-          phone?: string | null;
-          message: string;
-          submitted_at: string; 
-          status: string; 
-        };
+        Row: ContactMessageSupabase;
         Insert: {
           id?: string;
           name: string;
@@ -424,7 +452,7 @@ export interface Database {
           phone?: string | null;
           message: string;
           submitted_at?: string;
-          status?: string;
+          status?: 'unread' | 'read' | 'archived';
         };
         Update: {
           id?: string;
@@ -433,25 +461,18 @@ export interface Database {
           phone?: string | null;
           message?: string;
           submitted_at?: string;
-          status?: string;
+          status?: 'unread' | 'read' | 'archived';
         };
       };
       testimonials: {
-        Row: {
-          id: string; 
-          name: string;
-          quote: string;
-          location?: string | null;
-          submitted_at: string; 
-          status: string; 
-        };
+        Row: TestimonialSupabase;
         Insert: {
           id?: string;
           name: string;
           quote: string;
           location?: string | null;
           submitted_at?: string;
-          status?: string; 
+          status?: 'pending_approval' | 'approved' | 'rejected'; 
         };
         Update: {
           id?: string;
@@ -459,7 +480,7 @@ export interface Database {
           quote?: string;
           location?: string | null;
           submitted_at?: string;
-          status?: string;
+          status?: 'pending_approval' | 'approved' | 'rejected';
         };
       };
     };

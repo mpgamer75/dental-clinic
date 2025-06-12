@@ -17,47 +17,65 @@ import type { Language } from '@/lib/types';
 //   variable: '--font-sans',
 // });
 
-export async function generateMetadata({
-  params 
-}: { 
-  params: { lang: string } 
-}): Promise<Metadata> {
-  // En Next.js 15, on ne devrait pas avoir besoin d'attendre params.lang
-  // mais certains environnements peuvent encore le nécessiter
-  const lang = (params?.lang === 'en' || params?.lang === 'es') ? params.lang : 'es';
-  
-  const currentClinicName = contactDetails.clinicName[lang];
-  const currentDoctorName = contactDetails.doctorName[lang];
-  const currentTitleSuffix = baseMetadata[lang].titleSuffix;
-  const currentMetaDescription = baseMetadata[lang].description;
-  const currentKeywords = baseMetadata[lang].keywords;
+export async function generateMetadata({ params }: { params: Promise<{ lang: Language }> }): Promise<Metadata> {
+  const resolvedParams = await params;
+  const lang = (resolvedParams?.lang === 'en' || resolvedParams?.lang === 'es') ? resolvedParams.lang : 'es';
 
-  // Simplification de la logique des chemins alternatifs
+  const currentClinicName = contactDetails.clinicName[lang];       
+  const currentDoctorName = contactDetails.doctorName[lang];       
+  const currentBaseMetadata = baseMetadata[lang];
+
   return {
-    title: `${currentClinicName} - ${currentDoctorName} | ${currentTitleSuffix}`,
-    description: currentMetaDescription
+    title: `${currentDoctorName} - ${currentBaseMetadata.titleSuffix}`,
+    description: currentBaseMetadata.description
       .replace('{{clinicName}}', currentClinicName)
       .replace('{{doctorName}}', currentDoctorName),
-    keywords: currentKeywords,
+    keywords: currentBaseMetadata.keywords,
+    authors: [{ name: currentDoctorName }],
+    creator: currentDoctorName,
+    publisher: currentClinicName,
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+    metadataBase: new URL('https://orthoprotesisdentalclinic.com'),
     alternates: {
+      canonical: `/${lang}`,
       languages: {
         'es': '/es',
         'en': '/en',
       },
     },
+    openGraph: {
+      title: `${currentDoctorName} - ${currentBaseMetadata.titleSuffix}`,
+      description: currentBaseMetadata.description
+        .replace('{{clinicName}}', currentClinicName)
+        .replace('{{doctorName}}', currentDoctorName),
+      url: `https://orthoprotesisdentalclinic.com/${lang}`,
+      siteName: currentClinicName,
+      locale: lang === 'es' ? 'es_DO' : 'en_US',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${currentDoctorName} - ${currentBaseMetadata.titleSuffix}`,
+      description: currentBaseMetadata.description
+        .replace('{{clinicName}}', currentClinicName)
+        .replace('{{doctorName}}', currentDoctorName),
+    },
   };
 }
 
-export default async function LangLayout({
-  children,
-  params
-}: Readonly<{
-  children: React.ReactNode;
-  params: { lang: Language };
-}>) {
-  // En Next.js 15, on ne devrait pas avoir besoin d'attendre params.lang
-  // mais certains environnements peuvent encore le nécessiter
-  const lang = params?.lang || 'es';
+export default async function LangLayout({ 
+  children, 
+  params 
+}: { 
+  children: React.ReactNode; 
+  params: Promise<{ lang: Language }> 
+}) {
+  const resolvedParams = await params;
+  const lang = resolvedParams?.lang || 'es';
   
   return (
     // The <html> and <body> tags are in src/app/layout.tsx

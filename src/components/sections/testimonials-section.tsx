@@ -61,15 +61,16 @@ export function TestimonialsSection({
                 <Quote className="h-10 w-10 text-accent mb-4" />
                 <p className="text-foreground/80 italic mb-6 flex-grow text-base leading-relaxed">&quot;{testimonial.quote}&quot;</p>
                 <div className="flex items-center mt-auto pt-4 border-t border-border/50 w-full justify-center">
-                  <Image
-                    src={`https://picsum.photos/seed/patient${index}/100/100`}
-                    alt={testimonial.name}
-                    width={48}
-                    height={48}
-                    className="rounded-full mr-4 border-2 border-primary"
-                    data-ai-hint="person happy"
-                  />
-                  <div>
+                  <div className="relative w-12 h-12">
+                    <Image
+                      src={`https://picsum.photos/seed/patient${index}/100/100`}
+                      alt={testimonial.name}
+                      fill
+                      className="rounded-full object-cover border-2 border-primary"
+                      data-ai-hint="person happy"
+                    />
+                  </div>
+                  <div className="ml-4">
                     <p className="font-semibold text-primary text-lg">{testimonial.name}</p>
                     {testimonial.location && (
                       <p className="text-sm text-muted-foreground">{testimonial.location}</p>

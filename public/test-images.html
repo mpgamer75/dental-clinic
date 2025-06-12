@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test des Images - Orthoprotesis Dental Clinic</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .image-test { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .image-test img { max-width: 300px; height: auto; margin: 10px 0; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>Test des Images - Orthoprotesis Dental Clinic</h1>
+    
+    <h2>Images de Vitrine</h2>
+    <div class="image-test success">
+        <h3>Vitrine Clinique 1</h3>
+        <img src="/images/vitrine_clinique1.jpg" alt="Vitrine Clinique 1" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Vitrine Clinique 2</h3>
+        <img src="/images/vitrine_clinique2.jpg" alt="Vitrine Clinique 2" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Vitrine Clinique 3</h3>
+        <img src="/images/vitrine_clinique3.jpg" alt="Vitrine Clinique 3" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <h2>Images des Diplômes</h2>
+    <div class="image-test success">
+        <h3>Diplôme 1</h3>
+        <img src="/images/diploma1.jpg" alt="Diplôme 1" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Diplôme 2</h3>
+        <img src="/images/diploma2.jpg" alt="Diplôme 2" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Diplôme 3</h3>
+        <img src="/images/diploma3.jpg" alt="Diplôme 3" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Diplôme 4</h3>
+        <img src="/images/diploma4.jpg" alt="Diplôme 4" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Diplôme 5</h3>
+        <img src="/images/diploma5.jpg" alt="Diplôme 5" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Diplôme 6</h3>
+        <img src="/images/diploma6.jpg" alt="Diplôme 6" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Diplôme 7</h3>
+        <img src="/images/diploma7.jpg" alt="Diplôme 7" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Diplôme 8</h3>
+        <img src="/images/diploma8.jpg" alt="Diplôme 8" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Diplôme 9</h3>
+        <img src="/images/diploma9.jpg" alt="Diplôme 9" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <div class="image-test success">
+        <h3>Diplôme 10</h3>
+        <img src="/images/diploma10.jpg" alt="Diplôme 10" onerror="this.parentElement.className='image-test error'">
+    </div>
+    
+    <script>
+        // Vérification automatique après chargement
+        window.addEventListener('load', function() {
+            const images = document.querySelectorAll('img');
+            let loadedCount = 0;
+            let errorCount = 0;
+            
+            images.forEach(img => {
+                if (img.complete && img.naturalHeight !== 0) {
+                    loadedCount++;
+                } else {
+                    errorCount++;
+                }
+            });
+            
+            console.log(`Images chargées: ${loadedCount}, Erreurs: ${errorCount}`);
+            
+            if (errorCount === 0) {
+                document.body.insertAdjacentHTML('afterbegin', '<div style="background: green; color: white; padding: 10px; margin: 10px 0;">✅ Toutes les images sont chargées avec succès !</div>');
+            } else {
+                document.body.insertAdjacentHTML('afterbegin', `<div style="background: red; color: white; padding: 10px; margin: 10px 0;">❌ ${errorCount} image(s) n\'ont pas pu être chargées</div>`);
+            }
+        });
+    </script>
+</body>
+</html> 

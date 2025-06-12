@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -85,9 +84,8 @@ export function VisitUsCarousel({ images, visitUsContent, contactHref }: VisitUs
                 <Image
                   src={image.src}
                   alt={image.alt}
-                  layout="fill"
-                  objectFit="cover"
-                  className="transition-transform duration-300 ease-in-out group-hover:scale-105"
+                  fill
+                  className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
                   data-ai-hint={image.hint}
                   priority={index === 0} 
                 />

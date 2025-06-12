@@ -3,16 +3,18 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle } from 'lucide-react'; 
-import { contactDetails, services as allServices, testimonials, faqItems, visitUsCarouselImages } from '@/lib/data'; 
+import { contactDetails, services as allServices, testimonials, faqItems, visitUsCarouselImages, diplomas } from '@/lib/data'; 
 import { ServicesSection } from '@/components/sections/services-section';
 import { TestimonialsSection } from '@/components/sections/testimonials-section';
 import { FaqSection } from '@/components/sections/faq-section';
 import { ContactSection } from '@/components/sections/contact-section';
 import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
+import { DiplomasSection } from '@/components/sections/diplomas-section';
 import type { Language } from '@/lib/types';
 
-export default function HomePage({ params }: { params: { lang: Language } }) {
-  const lang: Language = params?.lang || 'es';
+export default async function HomePage({ params }: { params: Promise<{ lang: Language }> }) {
+  const resolvedParams = await params;
+  const lang: Language = resolvedParams?.lang || 'es';
 
   const currentClinicName = contactDetails.clinicName[lang];
   const currentDoctorName = contactDetails.doctorName[lang];
@@ -34,6 +36,7 @@ export default function HomePage({ params }: { params: { lang: Language } }) {
   const servicesList = allServices[lang]; 
   const testimonialsList = testimonials[lang]; 
   const faqItemsList = faqItems[lang];
+  const diplomasList = diplomas[lang];
 
   const baseLangPath = `/${lang}`;
   const appointmentHref = `${baseLangPath}/agendar-cita`;
@@ -46,6 +49,7 @@ export default function HomePage({ params }: { params: { lang: Language } }) {
     hint: img.hint,
   }));
 
+  const currentDiplomasSectionContent = contactDetails.diplomasSection[lang];
 
   return (
     <>
@@ -79,15 +83,16 @@ export default function HomePage({ params }: { params: { lang: Language } }) {
             <div className="relative group">
               <Card className="overflow-hidden shadow-2xl transform group-hover:scale-105 transition-transform duration-300 ease-in-out">
                 <CardContent className="p-0">
-                  <Image
-                    src="https://picsum.photos/seed/doctor-valerio/600/700"
-                    alt={`Fotografía del ${currentDoctorName}`}
-                    width={600}
-                    height={700}
-                    className="object-cover w-full h-auto"
-                    priority
-                    data-ai-hint="dentist portrait professional"
-                  />
+                  <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px]">
+                    <Image
+                      src="/images/vitrine_clinique1.jpg"
+                      alt={`Fotografía del ${currentDoctorName}`}
+                      fill
+                      className="object-cover"
+                      priority
+                      data-ai-hint="dentist portrait professional"
+                    />
+                  </div>
                 </CardContent>
               </Card>
               <div className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground p-4 rounded-full shadow-xl animate-pulse">
@@ -116,6 +121,13 @@ export default function HomePage({ params }: { params: { lang: Language } }) {
           </div>
         </div>
       </section>
+      
+      <DiplomasSection
+        id="diplomas"
+        title={currentDiplomasSectionContent.title.replace('{{doctorName}}', currentDoctorName).replace('{{clinicName}}', currentClinicName)}
+        description={currentDiplomasSectionContent.description.replace('{{doctorName}}', currentDoctorName).replace('{{clinicName}}', currentClinicName)}
+        diplomasList={diplomasList}
+      />
       
       <VisitUsCarousel 
         images={carouselImagesForLang}

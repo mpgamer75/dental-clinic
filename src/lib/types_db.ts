@@ -14,12 +14,12 @@ export interface Database {
           id: string
           name: string
           email: string
-          phone?: string | null
+          phone: string | null
           service_type: string
           reason: string
           is_urgent: boolean
           submitted_at: string
-          status: string
+          status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
         }
         Insert: {
           id?: string
@@ -30,7 +30,7 @@ export interface Database {
           reason: string
           is_urgent?: boolean
           submitted_at?: string
-          status?: string
+          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
         }
         Update: {
           id?: string
@@ -41,18 +41,19 @@ export interface Database {
           reason?: string
           is_urgent?: boolean
           submitted_at?: string
-          status?: string
+          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
         }
+        Relationships: []
       }
       contact_messages: {
         Row: {
           id: string
           name: string
           email: string
-          phone?: string | null
+          phone: string | null
           message: string
           submitted_at: string
-          status: string
+          status: 'unread' | 'read' | 'archived'
         }
         Insert: {
           id?: string
@@ -61,7 +62,7 @@ export interface Database {
           phone?: string | null
           message: string
           submitted_at?: string
-          status?: string
+          status?: 'unread' | 'read' | 'archived'
         }
         Update: {
           id?: string
@@ -70,17 +71,18 @@ export interface Database {
           phone?: string | null
           message?: string
           submitted_at?: string
-          status?: string
+          status?: 'unread' | 'read' | 'archived'
         }
+        Relationships: []
       }
       testimonials: {
         Row: {
           id: string
           name: string
           quote: string
-          location?: string | null
+          location: string | null
           submitted_at: string
-          status: string
+          status: 'pending_approval' | 'approved' | 'rejected'
         }
         Insert: {
           id?: string
@@ -88,7 +90,7 @@ export interface Database {
           quote: string
           location?: string | null
           submitted_at?: string
-          status?: string
+          status?: 'pending_approval' | 'approved' | 'rejected'
         }
         Update: {
           id?: string
@@ -96,8 +98,9 @@ export interface Database {
           quote?: string
           location?: string | null
           submitted_at?: string
-          status?: string
+          status?: 'pending_approval' | 'approved' | 'rejected'
         }
+        Relationships: []
       }
     }
     Views: {
@@ -107,6 +110,9 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
       [_ in never]: never
     }
   }
