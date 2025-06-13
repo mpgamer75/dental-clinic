@@ -1,222 +1,3 @@
-# Configuration Supabase - Clinique Dentaire Valerio
-
-## 🗄️ Structure de la Base de Données
-
-### Tables Créées
-
-#### 1. **appointments** - Rendez-vous
-```sql
-CREATE TABLE public.appointments (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  phone TEXT,
-  service_type TEXT NOT NULL,
-  reason TEXT NOT NULL,
-  is_urgent BOOLEAN DEFAULT FALSE,
-  submitted_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  status TEXT DEFAULT 'pending' NOT NULL
-);
-```
-
-#### 2. **contact_messages** - Messages de Contact
-```sql
-CREATE TABLE public.contact_messages (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  phone TEXT,
-  message TEXT NOT NULL,
-  submitted_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  status TEXT DEFAULT 'unread' NOT NULL
-);
-```
-
-#### 3. **testimonials** - Témoignages
-```sql
-CREATE TABLE public.testimonials (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  quote TEXT NOT NULL,
-  location TEXT,
-  submitted_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  status TEXT DEFAULT 'pending_approval' NOT NULL
-);
-```
-
-## 🔐 Politiques RLS (Row Level Security)
-
-### Politiques Publiques
-```sql
--- Permettre l'insertion publique pour les formulaires
-CREATE POLICY "Public insert access for appointments" ON public.appointments
-FOR INSERT TO anon, authenticated WITH CHECK (true);
-
-CREATE POLICY "Public insert access for contact_messages" ON public.contact_messages
-FOR INSERT TO anon, authenticated WITH CHECK (true);
-
-CREATE POLICY "Public insert access for testimonials" ON public.testimonials
-FOR INSERT TO anon, authenticated WITH CHECK (true);
-
--- Permettre la lecture des témoignages approuvés
-CREATE POLICY "Public read access for approved testimonials" ON public.testimonials
-FOR SELECT TO anon, authenticated USING (status = 'approved');
-```
-
-### Politiques Admin
-```sql
--- Accès complet pour les administrateurs
-CREATE POLICY "Admin full access for appointments" ON public.appointments
-FOR ALL TO authenticated USING (auth.role() = 'admin_role') WITH CHECK (auth.role() = 'admin_role');
-
-CREATE POLICY "Admin full access for contact_messages" ON public.contact_messages
-FOR ALL TO authenticated USING (auth.role() = 'admin_role') WITH CHECK (auth.role() = 'admin_role');
-
-CREATE POLICY "Admin full access for testimonials" ON public.testimonials
-FOR ALL TO authenticated USING (auth.role() = 'admin_role') WITH CHECK (auth.role() = 'admin_role');
-```
-
-## 👤 Configuration de l'Utilisateur Admin
-
-### 1. Créer un utilisateur admin
-```sql
--- Remplacer l'ID par l'ID de votre utilisateur
-UPDATE auth.users
-SET raw_user_meta_data = raw_user_meta_data || '{"role": "admin_role"}'::jsonb
-WHERE id = 'VOTRE_USER_ID';
-```
-
-### 2. Variables d'Environnement
-```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://wyospvndshfmkqvwkefn.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5b3Nwdm5kc2hmbWtxdndrZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyNjU3OTEsImV4cCI6MjA2Mjg0MTc5MX0.ilCgAzO_kpOC2iUbeyhNmz_5tp5CA3L5ddwsV1GYegI
-```
-
-## 🚀 Déploiement sur Vercel
-
-### 1. Configuration Vercel
-Le fichier `vercel.json` est déjà configuré avec :
-- Headers de cache pour les images
-- Variables d'environnement Supabase
-- Optimisations de performance
-
-### 2. Variables d'Environnement Vercel
-Dans le dashboard Vercel, configurez :
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
-### 3. Déploiement
-```bash
-# Installer Vercel CLI
-npm i -g vercel
-
-# Déployer
-vercel --prod
-```
-
-## 🔧 Fonctionnalités Admin
-
-### Dashboard
-- **URL** : `/admin`
-- **Statistiques** : Rendez-vous, messages, témoignages
-- **Graphiques** : Taux de réussite, activité mensuelle
-- **Actions rapides** : Accès aux différentes sections
-
-### Gestion des Rendez-vous
-- **URL** : `/admin/appointments`
-- **Actions** : Confirmer, compléter, annuler
-- **Filtres** : Par statut, date, urgence
-- **Détails** : Informations complètes du patient
-
-### Messages de Contact
-- **URL** : `/admin/messages`
-- **Statuts** : Non lu, lu, archivé
-- **Réponses** : Interface de réponse intégrée
-
-### Témoignages
-- **URL** : `/admin/testimonials`
-- **Modération** : Approuver, rejeter
-- **Prévisualisation** : Avant publication
-
-## 🔒 Sécurité
-
-### Authentification
-- **Supabase Auth** : Gestion des sessions
-- **RLS** : Protection au niveau de la base de données
-- **Middleware** : Vérification des rôles
-
-### Headers de Sécurité
-- **CSP** : Content Security Policy
-- **HSTS** : HTTP Strict Transport Security
-- **X-Frame-Options** : Protection contre le clickjacking
-- **X-Content-Type-Options** : Protection MIME sniffing
-
-## 📊 Types TypeScript
-
-Les types sont définis dans `src/lib/types_db.ts` et `src/lib/types.ts` :
-- `AppointmentSupabase`
-- `ContactMessageSupabase`
-- `TestimonialSupabase`
-
-## 🎨 Interface Utilisateur
-
-### Thème
-- **Basculement** : Clic direct sur l'icône soleil/lune
-- **Transition** : Animation fluide de 300ms
-- **Responsive** : Adaptation mobile/desktop
-
-### Navigation
-- **Admin** : Sidebar avec navigation rapide
-- **Public** : Menu principal multilingue
-- **Breadcrumbs** : Navigation contextuelle
-
-## 🚨 Dépannage
-
-### Erreurs Courantes
-
-#### 1. Erreur 404 Admin
-- Vérifier que l'utilisateur a le rôle `admin_role`
-- Vérifier les politiques RLS
-- Vérifier la configuration Supabase
-
-#### 2. Images 404
-- Vérifier que les images sont dans `public/images/`
-- Vérifier la configuration Next.js
-- Redémarrer le serveur de développement
-
-#### 3. Erreurs TypeScript
-- Vérifier les types dans `src/lib/types.ts`
-- Vérifier la correspondance avec le schéma Supabase
-- Exécuter `npm run build` pour vérifier
-
-### Logs de Débogage
-```bash
-# Vérifier les logs Supabase
-supabase logs
-
-# Vérifier les logs Next.js
-npm run dev
-```
-
-## 📞 Support
-
-Pour toute question ou problème :
-1. Vérifier les logs de la console
-2. Vérifier la configuration Supabase
-3. Vérifier les variables d'environnement
-4. Redémarrer le serveur de développement
-
----
-
-**Dernière mise à jour** : $(Get-Date -Format "dd/MM/yyyy HH:mm")
-**Version** : 1.0.0
-**Statut** : ✅ Prêt pour production 
-
-
-
-# Vue d'ensemble des tables et politiques 
-
 CREATE TABLE public.appointments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -521,3 +302,106 @@ USING (
 
 -- 9. Vérifier que tout est bien configuré
 SELECT * FROM public.admin_users;
+
+-- 13 Juin 2025 
+
+-- 1. Créer la table app_settings
+CREATE TABLE IF NOT EXISTS public.app_settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  clinic_name_es TEXT NOT NULL DEFAULT 'Orthoprotesis Dental Clinic',
+  clinic_name_en TEXT NOT NULL DEFAULT 'Orthoprotesis Dental Clinic',
+  doctor_name_es TEXT NOT NULL DEFAULT 'Dr. Francis Valerio',
+  doctor_name_en TEXT NOT NULL DEFAULT 'Dr. Francis Valerio',
+  address_es TEXT NOT NULL DEFAULT 'Plaza Las Ramblas, Módulo 101, Santiago de los Caballeros, República Dominicana',
+  address_en TEXT NOT NULL DEFAULT 'Plaza Las Ramblas, Module 101, Santiago de los Caballeros, Dominican Republic',
+  phone_es TEXT NOT NULL DEFAULT '809-581-7059',
+  phone_en TEXT NOT NULL DEFAULT '809-581-7059',
+  email TEXT NOT NULL DEFAULT 'info@orthoprotesisdental.com',
+  schedule_es TEXT NOT NULL DEFAULT 'Lunes a Viernes: 9:00 AM - 6:00 PM',
+  schedule_en TEXT NOT NULL DEFAULT 'Monday to Friday: 9:00 AM - 6:00 PM',
+  map_link_es TEXT NOT NULL DEFAULT 'https://maps.google.com/?q=Plaza+Las+Ramblas+Santiago+de+los+Caballeros',
+  map_link_en TEXT NOT NULL DEFAULT 'https://maps.google.com/?q=Plaza+Las+Ramblas+Santiago+de+los+Caballeros',
+  embed_map_link_es TEXT NOT NULL DEFAULT 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4060.840856210959!2d-70.69729749999999!3d19.4541221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eb1cf5f2201f147%3A0xf5965af18d5482e2!2sPlaza%20las%20Ramblas!5e1!3m2!1sfr!2sdo!4v1749698637474!5m2!1sfr!2sdo',
+  embed_map_link_en TEXT NOT NULL DEFAULT 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4060.840856210959!2d-70.69729749999999!3d19.4541221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eb1cf5f2201f147%3A0xf5965af18d5482e2!2sPlaza%20las%20Ramblas!5e1!3m2!1sfr!2sdo!4v1749698637474!5m2!1sfr!2sdo',
+  maintenance_mode BOOLEAN DEFAULT FALSE,
+  allow_appointments BOOLEAN DEFAULT TRUE,
+  allow_testimonials BOOLEAN DEFAULT TRUE,
+  allow_contact_form BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- 2. Activer RLS
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+
+-- 3. Politique pour les admins
+CREATE POLICY "Admins can manage app_settings" 
+ON public.app_settings FOR ALL 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+);
+
+-- 4. Insérer les paramètres par défaut
+INSERT INTO public.app_settings (id) 
+VALUES (gen_random_uuid()) 
+ON CONFLICT DO NOTHING;
+
+
+-- MAJ de amin_role 
+
+-- 1. Vérifier que la table admin_users existe
+CREATE TABLE IF NOT EXISTS public.admin_users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- 2. Activer RLS si pas déjà fait
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+
+-- 3. Ajouter votre utilisateur comme admin (remplacez l'ID par le vôtre)
+INSERT INTO public.admin_users (id) 
+VALUES ('47f980bb-6cf4-4e0a-9f47-e87ea1f5d3aa') 
+ON CONFLICT (id) DO NOTHING;
+
+-- 4. Mettre à jour les métadonnées utilisateur pour la compatibilité
+UPDATE auth.users
+SET raw_user_meta_data = raw_user_meta_data || '{"role": "admin_role"}'::jsonb
+WHERE id = '47f980bb-6cf4-4e0a-9f47-e87ea1f5d3aa';
+
+-- 5. Vérifier que l'utilisateur est bien admin
+SELECT 
+  u.id,
+  u.email,
+  u.raw_user_meta_data,
+  CASE WHEN au.id IS NOT NULL THEN 'Admin' ELSE 'User' END as role
+FROM auth.users u
+LEFT JOIN public.admin_users au ON u.id = au.id
+WHERE u.id = '47f980bb-6cf4-4e0a-9f47-e87ea1f5d3aa';
+
+
+
+
+
+
+
+
+-- Vérifier si vous êtes dans admin_users
+SELECT * FROM public.admin_users WHERE id = '47f980bb-6cf4-4e0a-9f47-e87ea1f5d3aa';
+
+-- Si pas de résultat, ajouter votre utilisateur
+INSERT INTO public.admin_users (id) 
+VALUES ('47f980bb-6cf4-4e0a-9f47-e87ea1f5d3aa') 
+ON CONFLICT (id) DO NOTHING;
+
+-- Vérifier que ça a marché
+SELECT * FROM public.admin_users WHERE id = '47f980bb-6cf4-4e0a-9f47-e87ea1f5d3aa';
