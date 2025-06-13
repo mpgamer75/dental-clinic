@@ -33,36 +33,77 @@ export default function AdminLayout({
 
     const checkAuth = async () => {
       try {
+        console.log('🔍 Layout: Vérification auth pour:', pathname);
+        
+        // Éviter les vérifications pour les routes publiques
+        if (pathname === '/admin/login') {
+          console.log('📋 Layout: Page de login, pas de vérification auth');
+          setIsLoading(false);
+          return;
+        }
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (!isMounted) return;
 
+        console.log('📋 Layout: Session:', session ? 'Trouvée' : 'Pas de session');
+
         if (sessionError) {
-          console.error('Error fetching session:', sessionError);
+          console.error('❌ Layout: Error fetching session:', sessionError);
           setIsAuthenticatedAdmin(false);
         } else if (!session) {
+          console.log('❌ Layout: Pas de session, redirection vers login');
           setIsAuthenticatedAdmin(false);
           if (pathname !== '/admin/login') {
             router.replace('/admin/login');
           }
         } else {
-          const user = session.user;
-          if (user?.user_metadata?.role === 'admin_role') {
-            setIsAuthenticatedAdmin(true);
-            // If user is admin and on login page, redirect to admin dashboard
-            if (pathname === '/admin/login') {
-                router.replace('/admin');
+          // Vérifier dans la table admin_users
+          try {
+            console.log('🔍 Layout: Vérification admin_users pour:', session.user.id);
+            
+            const { data: adminCheck, error: adminError } = await supabase
+              .from('admin_users')
+              .select('id')
+              .eq('id', session.user.id)
+              .single();
+
+            console.log('📋 Layout: Admin check result:', adminCheck);
+            console.log('📋 Layout: Admin check error:', adminError);
+
+            if (adminError && adminError.code !== 'PGRST116') {
+              console.error('❌ Layout: Admin check error:', adminError);
+              setIsAuthenticatedAdmin(false);
+              if (pathname !== '/admin/login') {
+                router.replace('/admin/login');
+              }
+              return;
             }
-          } else {
+
+            if (adminCheck) {
+              console.log('✅ Layout: Utilisateur admin vérifié');
+              setIsAuthenticatedAdmin(true);
+              if (pathname === '/admin/login') {
+                router.replace('/admin');
+              }
+            } else {
+              console.log('❌ Layout: Utilisateur non admin, déconnexion');
+              setIsAuthenticatedAdmin(false);
+              await supabase.auth.signOut();
+              if (pathname !== '/admin/login') {
+                router.replace('/admin/login');
+              }
+            }
+          } catch (adminCheckError) {
+            console.error('❌ Layout: Error checking admin status:', adminCheckError);
             setIsAuthenticatedAdmin(false);
-            await supabase.auth.signOut(); // Sign out if not admin
             if (pathname !== '/admin/login') {
               router.replace('/admin/login');
             }
           }
         }
       } catch (error) {
-        console.error('Unexpected error during auth check:', error);
+        console.error('❌ Layout: Unexpected error during auth check:', error);
         setIsAuthenticatedAdmin(false);
         if (pathname !== '/admin/login' && isMounted) {
            router.replace('/admin/login');
@@ -76,18 +117,44 @@ export default function AdminLayout({
 
     checkAuth();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
 
-      const user = session?.user;
-      if (user?.user_metadata?.role === 'admin_role') {
-        setIsAuthenticatedAdmin(true);
-        if (pathname === '/admin/login') { // If somehow on login page after an auth state change signifies admin
-            router.replace('/admin');
+      console.log('🔄 Layout: Auth state change:', event, session ? 'Session exists' : 'No session');
+
+      if (session?.user) {
+        // Vérifier dans admin_users
+        try {
+          const { data: adminCheck } = await supabase
+            .from('admin_users')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
+
+          if (adminCheck) {
+            console.log('✅ Layout: Auth change - admin vérifié');
+            setIsAuthenticatedAdmin(true);
+            if (pathname === '/admin/login') {
+              router.replace('/admin');
+            }
+          } else {
+            console.log('❌ Layout: Auth change - non admin');
+            setIsAuthenticatedAdmin(false);
+            if (pathname !== '/admin/login') {
+              router.replace('/admin/login');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Layout: Auth state change admin check error:', error);
+          setIsAuthenticatedAdmin(false);
+          if (pathname !== '/admin/login') {
+            router.replace('/admin/login');
+          }
         }
       } else {
+        console.log('❌ Layout: Auth change - pas de session');
         setIsAuthenticatedAdmin(false);
-        if (pathname !== '/admin/login' && !pathname.startsWith('/admin/login')) { // Avoid redirect loop if already on or going to login
+        if (pathname !== '/admin/login') {
           router.replace('/admin/login');
         }
       }
@@ -97,17 +164,17 @@ export default function AdminLayout({
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [router, pathname]); // Remove isLoading from dependency array
+  }, [router, pathname]);
 
   const handleLogout = async () => {
-    setIsLoading(true); // Optional: show loading on logout action
+    console.log('🚪 Layout: Déconnexion...');
+    setIsLoading(true);
     await supabase.auth.signOut();
-    setIsAuthenticatedAdmin(false); // Explicitly set state
-    router.push('/admin/login'); // Use push for logout to allow back navigation if desired, or replace
+    setIsAuthenticatedAdmin(false);
+    router.push('/admin/login');
   };
 
-  // If on the login page, render children directly with minimal providers
-  // The useEffect will still run to redirect if already logged in as admin
+  // Si on est sur la page de login, render minimal
   if (pathname === '/admin/login') {
     return (
       <LanguageProvider initialLanguage={lang}>
@@ -123,7 +190,7 @@ export default function AdminLayout({
     );
   }
 
-
+  // Loading state
   if (isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
@@ -133,13 +200,8 @@ export default function AdminLayout({
     );
   }
 
-  // If not loading and not authenticated admin (and not on login page - handled above)
-  // This state should ideally be covered by the redirect in useEffect,
-  // but as a fallback or during brief transition.
+  // Si pas authentifié et pas sur login
   if (!isAuthenticatedAdmin) {
-     // The useEffect should have redirected. If we reach here, it's likely a brief moment before redirect.
-     // Or, if redirects are failing, this could be a fallback.
-     // Showing a loader or a minimal "redirecting" message can be better than "access denied" if redirect is imminent.
     return (
         <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -148,6 +210,7 @@ export default function AdminLayout({
     );
   }
   
+  // Interface admin complète
   const sidebarContent = (
     <>
       <nav className="flex flex-col gap-4 p-4 sm:py-5">
@@ -169,7 +232,6 @@ export default function AdminLayout({
       </nav>
     </>
   );
-
 
   return (
     <LanguageProvider initialLanguage={lang}>

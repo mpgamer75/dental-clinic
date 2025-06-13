@@ -17,7 +17,11 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { PieChart, BarChart, StatCard } from '@/components/ui/chart';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/types_db';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface DashboardStats {
   totalAppointments: number;
@@ -35,6 +39,7 @@ interface DashboardStats {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardStats();
@@ -43,23 +48,43 @@ export default function AdminDashboard() {
   const loadDashboardStats = async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      // Créer un client Supabase avec la session actuelle
+      const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+      
+      // Vérifier la session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("No hay sesión activa");
+      }
+
+      // Créer un client avec le token de session
+      const adminClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        },
+      });
 
       // Charger les statistiques des rendez-vous
-      const { data: appointments, error: appointmentsError } = await supabase
+      const { data: appointments, error: appointmentsError } = await adminClient
         .from('appointments')
         .select('*');
 
       if (appointmentsError) throw appointmentsError;
 
       // Charger les statistiques des messages
-      const { data: messages, error: messagesError } = await supabase
+      const { data: messages, error: messagesError } = await adminClient
         .from('contact_messages')
         .select('*');
 
       if (messagesError) throw messagesError;
 
       // Charger les statistiques des témoignages
-      const { data: testimonials, error: testimonialsError } = await supabase
+      const { data: testimonials, error: testimonialsError } = await adminClient
         .from('testimonials')
         .select('*');
 
@@ -92,8 +117,9 @@ export default function AdminDashboard() {
         rejectedTestimonials,
       });
 
-    } catch (error) {
-      console.error('Erreur lors du chargement des statistiques:', error);
+    } catch (error: any) {
+      console.error('Error al cargar las estadísticas:', error);
+      setError(error.message || 'Error desconocido');
     } finally {
       setLoading(false);
     }
@@ -107,19 +133,38 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!stats) {
+  if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold">Erreur</h2>
-          <p className="text-muted-foreground">Impossible de charger les statistiques</p>
+          <h2 className="text-xl font-semibold">Error</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            Verifique que tiene permisos de administrador y que las políticas RLS están configuradas correctamente.
+          </p>
+          <Button onClick={loadDashboardStats} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reintentar
+          </Button>
         </div>
       </div>
     );
   }
 
-  // Données pour les graphiques
+  if (!stats) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold">Error</h2>
+          <p className="text-muted-foreground">No se pudieron cargar las estadísticas</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Datos para los gráficos
   const appointmentData = [
     { label: 'En attente', value: stats.pendingAppointments, color: '#f59e0b' },
     { label: 'Complétés', value: stats.completedAppointments, color: '#10b981' },
@@ -333,4 +378,4 @@ export default function AdminDashboard() {
       </Tabs>
     </div>
   );
-} 
+}

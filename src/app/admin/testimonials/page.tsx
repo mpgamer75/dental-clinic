@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { generalUiStrings } from "@/lib/data";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -47,7 +47,8 @@ function getStatusVariant(status: string): "default" | "secondary" | "destructiv
 async function approveTestimonial(testimonialId: string) {
   'use server';
   try {
-    const { error } = await supabase
+    const adminClient = await createAdminClient();
+    const { error } = await adminClient
       .from('testimonials')
       .update({ status: 'approved' })
       .eq('id', testimonialId);
@@ -64,7 +65,8 @@ async function approveTestimonial(testimonialId: string) {
 async function rejectTestimonial(testimonialId: string) {
   'use server';
   try {
-    const { error } = await supabase
+    const adminClient = await createAdminClient();
+    const { error } = await adminClient
       .from('testimonials')
       .update({ status: 'rejected' })
       .eq('id', testimonialId);
@@ -79,98 +81,128 @@ async function rejectTestimonial(testimonialId: string) {
 }
 
 export default async function AdminTestimonialsPage() {
-  // Fetch testimonials from Supabase
-  const { data: testimonials, error } = await supabase
-    .from('testimonials')
-    .select('*')
-    .order('submitted_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching testimonials:', error);
-    return <p>Error al cargar los testimonios: {error.message}</p>;
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{adminStrings.testimonialsTitle}</CardTitle>
-        <CardDescription>
-          Modera y gestiona los testimonios de los pacientes.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {testimonials && testimonials.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{adminStrings.appointmentTableHeaders.name}</TableHead>
-                <TableHead>Testimonio</TableHead>
-                <TableHead className="hidden md:table-cell">Ubicación</TableHead>
-                <TableHead className="hidden lg:table-cell">{adminStrings.appointmentTableHeaders.submitted}</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead><span className="sr-only">Acciones</span></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {testimonials.map((testimonial) => (
-                <TableRow key={testimonial.id}>
-                  <TableCell className="font-medium">{testimonial.name}</TableCell>
-                  <TableCell className="max-w-xs truncate" title={testimonial.quote}>
-                    {testimonial.quote.length > 50 ? testimonial.quote.substring(0, 50) + '...' : testimonial.quote}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">{testimonial.location || '-'}</TableCell>
-                  <TableCell className="hidden lg:table-cell">{formatDate(testimonial.submitted_at)}</TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(testimonial.status)}>
-                      {adminStrings.statusLabels[testimonial.status as keyof typeof adminStrings.statusLabels] || testimonial.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuItem>{adminStrings.actionButtons.view}</DropdownMenuItem>
-                        <form action={approveTestimonial.bind(null, testimonial.id)}>
-                          <DropdownMenuItem 
-                            disabled={testimonial.status === 'approved'}
-                            asChild
-                          >
-                            <button className="w-full text-left px-2 py-1.5">
-                              {adminStrings.actionButtons.approve}
-                            </button>
-                          </DropdownMenuItem>
-                        </form>
-                        <DropdownMenuSeparator />
-                        <form action={rejectTestimonial.bind(null, testimonial.id)}>
-                          <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                            disabled={testimonial.status === 'rejected'}
-                            asChild
-                          >
-                            <button className="w-full text-left px-2 py-1.5">
-                              {adminStrings.actionButtons.reject}
-                            </button>
-                          </DropdownMenuItem>
-                        </form>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <p>No hay testimonios para mostrar.</p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
+  try {
+    // Utiliser le client admin authentifié
+    const adminClient = await createAdminClient();
     
+    const { data: testimonials, error } = await adminClient
+      .from('testimonials')
+      .select('*')
+      .order('submitted_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching testimonials:', error);
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>{adminStrings.testimonialsTitle}</CardTitle>
+            <CardDescription>Error al cargar los testimonios</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-500">Error: {error.message}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Verifique que tiene permisos de administrador y que las políticas RLS están configuradas correctamente.
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{adminStrings.testimonialsTitle}</CardTitle>
+          <CardDescription>
+            Modera y gestiona los testimonios de los pacientes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {testimonials && testimonials.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{adminStrings.appointmentTableHeaders.name}</TableHead>
+                  <TableHead>Testimonio</TableHead>
+                  <TableHead className="hidden md:table-cell">Ubicación</TableHead>
+                  <TableHead className="hidden lg:table-cell">{adminStrings.appointmentTableHeaders.submitted}</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead><span className="sr-only">Acciones</span></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {testimonials.map((testimonial) => (
+                  <TableRow key={testimonial.id}>
+                    <TableCell className="font-medium">{testimonial.name}</TableCell>
+                    <TableCell className="max-w-xs truncate" title={testimonial.quote}>
+                      {testimonial.quote.length > 50 ? testimonial.quote.substring(0, 50) + '...' : testimonial.quote}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{testimonial.location || '-'}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{formatDate(testimonial.submitted_at)}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusVariant(testimonial.status)}>
+                        {adminStrings.statusLabels[testimonial.status as keyof typeof adminStrings.statusLabels] || testimonial.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuItem>{adminStrings.actionButtons.view}</DropdownMenuItem>
+                          <form action={approveTestimonial.bind(null, testimonial.id)}>
+                            <DropdownMenuItem 
+                              disabled={testimonial.status === 'approved'}
+                              asChild
+                            >
+                              <button className="w-full text-left px-2 py-1.5">
+                                {adminStrings.actionButtons.approve}
+                              </button>
+                            </DropdownMenuItem>
+                          </form>
+                          <DropdownMenuSeparator />
+                          <form action={rejectTestimonial.bind(null, testimonial.id)}>
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                              disabled={testimonial.status === 'rejected'}
+                              asChild
+                            >
+                              <button className="w-full text-left px-2 py-1.5">
+                                {adminStrings.actionButtons.reject}
+                              </button>
+                            </DropdownMenuItem>
+                          </form>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p>No hay testimonios para mostrar.</p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  } catch (error) {
+    console.error('Error in AdminTestimonialsPage:', error);
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{adminStrings.testimonialsTitle}</CardTitle>
+          <CardDescription>Error al cargar la página</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-red-500">
+            Se produjo un error al cargar esta página. Verifique que está autenticado como administrador.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+}

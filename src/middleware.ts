@@ -35,7 +35,7 @@ const SUPPORTED_LANGUAGES = ['es', 'en'];
 const DEFAULT_LANGUAGE = 'es';
 
 // Liste des routes protégées
-const PROTECTED_ROUTES = ['/admin'];
+const ADMIN_ROUTES = ['/admin'];
 const PUBLIC_ROUTES = ['/', '/es', '/en', '/agendar-cita', '/contacto', '/servicios', '/testimonios', '/preguntas-frecuentes'];
 
 // Fonction pour vérifier si une route est publique
@@ -43,12 +43,13 @@ function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some(route => pathname.startsWith(route)) || 
          pathname.startsWith('/images/') ||
          pathname.startsWith('/_next/') ||
-         pathname.startsWith('/favicon.ico');
+         pathname.startsWith('/favicon.ico') ||
+         pathname.startsWith('/api/');
 }
 
-// Fonction pour vérifier si une route est protégée
-function isProtectedRoute(pathname: string): boolean {
-  return PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+// Fonction pour vérifier si une route est admin
+function isAdminRoute(pathname: string): boolean {
+  return pathname.startsWith('/admin');
 }
 
 // Fonction pour vérifier si une route a déjà un préfixe de langue
@@ -77,9 +78,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 3. Gestion des routes admin
-  if (pathname.startsWith('/admin')) {
-    console.log(`Middleware: Requête pour admin: ${pathname}`);
+  // 3. PRIORITÉ: Gestion des routes admin (AVANT les redirections de langue)
+  if (isAdminRoute(pathname)) {
+    console.log(`Middleware: Route admin détectée: ${pathname}`);
+    
+    // Si on a une route admin avec un préfixe de langue, rediriger vers la version sans préfixe
     const adminPathMatch = pathname.match(/^\/(es|en)(\/admin.*)$/);
     if (adminPathMatch) {
       const adminSubPath = adminPathMatch[2];
@@ -88,34 +91,72 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
     
-    const validAdminRoutes = ['/admin', '/admin/login', '/admin/appointments', '/admin/messages', '/admin/testimonials', '/admin/dashboard', '/admin/settings'];
-    const isValidAdminRoute = validAdminRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
+    // Vérifier que c'est une route admin valide
+    const validAdminRoutes = [
+      '/admin', 
+      '/admin/login', 
+      '/admin/appointments', 
+      '/admin/messages', 
+      '/admin/testimonials', 
+      '/admin/dashboard', 
+      '/admin/settings'
+    ];
+    
+    const isValidAdminRoute = validAdminRoutes.some(route => 
+      pathname === route || pathname.startsWith(route + '/')
+    );
     
     if (!isValidAdminRoute) {
       url.pathname = '/admin/login';
-      console.log(`Middleware: Route admin invalide, redirection vers ${url.pathname}`);
+      console.log(`Middleware: Route admin invalide ${pathname}, redirection vers ${url.pathname}`);
       return NextResponse.redirect(url);
     }
     
-    console.log(`Middleware: Continuer avec la route admin valide: ${pathname}`);
-    return NextResponse.next();
+    console.log(`Middleware: Route admin valide, continuer: ${pathname}`);
+    
+    // Ajouter les headers de sécurité et continuer
+    const response = NextResponse.next();
+    Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    return response;
   }
 
-  // 4. Gestion des langues pour les routes publiques
+  // 4. Gestion des routes statiques et API (ne pas rediriger)
+  if (pathname.startsWith('/_next/') || 
+      pathname.startsWith('/api/') || 
+      pathname.startsWith('/images/') || 
+      pathname.includes('.')) {
+    const response = NextResponse.next();
+    
+    // Headers spécifiques pour les images
+    if (pathname.startsWith('/images/')) {
+      response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+    
+    // Headers pour les assets statiques
+    if (pathname.startsWith('/_next/')) {
+      response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+    
+    return response;
+  }
+
+  // 5. Gestion des langues pour les routes publiques SEULEMENT
   if (pathname === '/') {
     console.log(`Middleware: Requête pour la racine, redirection vers /${DEFAULT_LANGUAGE}`);
     url.pathname = `/${DEFAULT_LANGUAGE}`;
     return NextResponse.redirect(url);
   }
 
-  // 5. Gestion des erreurs 404 pour les routes publiques inexistantes
-  if (!isPublicRoute(pathname) && !isProtectedRoute(pathname) && !hasLanguagePrefix(pathname)) {
-    console.log(`Middleware: Route publique inexistante: ${pathname}, redirection vers /${DEFAULT_LANGUAGE}`);
-    url.pathname = `/${DEFAULT_LANGUAGE}`;
+  // 6. Si c'est une route sans préfixe de langue ET que ce n'est pas admin, rediriger vers la version avec langue
+  if (!hasLanguagePrefix(pathname) && !isAdminRoute(pathname)) {
+    console.log(`Middleware: Route sans langue détectée: ${pathname}, redirection vers /${DEFAULT_LANGUAGE}${pathname}`);
+    url.pathname = `/${DEFAULT_LANGUAGE}${pathname}`;
     return NextResponse.redirect(url);
   }
 
-  // 6. Protection contre les attaques par force brute
+  // 7. Protection contre les attaques par force brute
   const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
   const userAgent = request.headers.get('user-agent') || '';
   
@@ -131,30 +172,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 7. Rate limiting basique (peut être amélioré avec Redis)
-  const rateLimitKey = `rate_limit:${clientIP}`;
-  // Ici on pourrait implémenter un vrai rate limiting avec Redis
-
-  // 8. Headers de sécurité
-  const response = NextResponse.next();
-  
-  // Ajouter tous les headers de sécurité
-  Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
-    response.headers.set(key, value);
-  });
-
-  // 9. Headers spécifiques pour les images
-  if (pathname.startsWith('/images/')) {
-    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-  }
-
-  // 10. Headers pour les assets statiques
-  if (pathname.startsWith('/_next/')) {
-    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-  }
-
-  // 11. Protection contre les attaques par injection
+  // 8. Protection contre les attaques par injection
   const contentType = request.headers.get('content-type');
   if (contentType && contentType.includes('application/json')) {
     // Vérifier la taille du body pour éviter les attaques par déni de service
@@ -163,6 +181,14 @@ export function middleware(request: NextRequest) {
       return new NextResponse('Payload Too Large', { status: 413 });
     }
   }
+
+  // 9. Headers de sécurité pour toutes les autres requêtes
+  const response = NextResponse.next();
+  
+  // Ajouter tous les headers de sécurité
+  Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
 
   return response;
 }

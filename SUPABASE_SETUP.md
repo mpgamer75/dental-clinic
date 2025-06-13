@@ -338,50 +338,186 @@ WHERE id = '47f980bb-6cf4-4e0a-9f47-e87ea1f5d3aa';
 
 
 
--- Nouvelles querys pour corriger le problème de non affichage des rdv et messages sur l'application _crypto_aead_det_decrypt
+-- Nouvelles querys pour corriger le problème de non affichage des rdv et messages sur l'application 
 
--- Supprimer les anciennes politiques
+-- 1. D'abord, créer la table admin_users
+CREATE TABLE IF NOT EXISTS public.admin_users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- 2. Insérer votre utilisateur admin
+INSERT INTO public.admin_users (id) 
+VALUES ('47f980bb-6cf4-4e0a-9f47-e87ea1f5d3aa') 
+ON CONFLICT (id) DO NOTHING;
+
+-- 3. Activer RLS sur la table admin_users
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+
+-- 4. Politique pour que les admins puissent voir qui sont les autres admins
+CREATE POLICY "Admins can view admin_users" 
+ON public.admin_users FOR SELECT 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+);
+
+-- 5. Maintenant, supprimer toutes les anciennes politiques pour appointments
 DROP POLICY IF EXISTS "Admin full access for appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Public insert access for appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Admins can view all appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Admins can update appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Admins can delete appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Public can insert appointments" ON public.appointments;
 
--- Créer les nouvelles politiques
--- Permettre l'insertion publique
+-- 6. Créer les nouvelles politiques pour appointments
 CREATE POLICY "Public can insert appointments" 
 ON public.appointments FOR INSERT 
 TO anon, authenticated 
 WITH CHECK (true);
 
--- Permettre la lecture pour les admins (en utilisant les métadonnées JWT)
 CREATE POLICY "Admins can view all appointments" 
 ON public.appointments FOR SELECT 
 TO authenticated 
 USING (
-  auth.jwt() ->> 'user_metadata' ::jsonb ->> 'role' = 'admin_role'
-  OR 
-  auth.jwt() -> 'user_metadata' ->> 'role' = 'admin_role'
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
 );
 
--- Permettre la mise à jour pour les admins
 CREATE POLICY "Admins can update appointments" 
 ON public.appointments FOR UPDATE 
 TO authenticated 
 USING (
-  auth.jwt() ->> 'user_metadata' ::jsonb ->> 'role' = 'admin_role'
-  OR 
-  auth.jwt() -> 'user_metadata' ->> 'role' = 'admin_role'
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
 )
 WITH CHECK (
-  auth.jwt() ->> 'user_metadata' ::jsonb ->> 'role' = 'admin_role'
-  OR 
-  auth.jwt() -> 'user_metadata' ->> 'role' = 'admin_role'
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
 );
 
--- Permettre la suppression pour les admins
 CREATE POLICY "Admins can delete appointments" 
 ON public.appointments FOR DELETE 
 TO authenticated 
 USING (
-  auth.jwt() ->> 'user_metadata' ::jsonb ->> 'role' = 'admin_role'
-  OR 
-  auth.jwt() -> 'user_metadata' ->> 'role' = 'admin_role'
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
 );
+
+-- 7. Politiques pour contact_messages
+DROP POLICY IF EXISTS "Admin full access for contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Public insert access for contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Admins can view all contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Admins can update contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Admins can delete contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Public can insert contact_messages" ON public.contact_messages;
+
+CREATE POLICY "Public can insert contact_messages" 
+ON public.contact_messages FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
+
+CREATE POLICY "Admins can view all contact_messages" 
+ON public.contact_messages FOR SELECT 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+);
+
+CREATE POLICY "Admins can update contact_messages" 
+ON public.contact_messages FOR UPDATE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+);
+
+CREATE POLICY "Admins can delete contact_messages" 
+ON public.contact_messages FOR DELETE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+);
+
+-- 8. Politiques pour testimonials
+DROP POLICY IF EXISTS "Admin full access for testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Public insert access for testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Public read access for approved testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Admins can view all testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Admins can update testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Admins can delete testimonials" ON public.testimonials;
+DROP POLICY IF EXISTS "Public can insert testimonials" ON public.testimonials;
+
+CREATE POLICY "Public can insert testimonials" 
+ON public.testimonials FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
+
+CREATE POLICY "Public read access for approved testimonials" 
+ON public.testimonials FOR SELECT 
+TO anon, authenticated 
+USING (status = 'approved');
+
+CREATE POLICY "Admins can view all testimonials" 
+ON public.testimonials FOR SELECT 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+);
+
+CREATE POLICY "Admins can update testimonials" 
+ON public.testimonials FOR UPDATE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+);
+
+CREATE POLICY "Admins can delete testimonials" 
+ON public.testimonials FOR DELETE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.admin_users 
+    WHERE admin_users.id = auth.uid()
+  )
+);
+
+-- 9. Vérifier que tout est bien configuré
+SELECT * FROM public.admin_users;

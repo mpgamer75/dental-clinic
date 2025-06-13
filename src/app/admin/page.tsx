@@ -1,17 +1,39 @@
+// app/admin/page.tsx
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CalendarCheck, MessageCircle, ShieldCheck } from "lucide-react";
 import { generalUiStrings } from "@/lib/data";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
+import type { Database } from "@/types/supabase";
 
-export default function AdminDashboardPage() {
-  // Admin panel will be primarily in Spanish as requested
-  const lang = 'es';
+export default async function AdminDashboardPage() {
+  // ✅ Récupération sécurisée du cookie store
+  const cookieStore = cookies();
+
+  // ✅ Initialisation Supabase server client
+  const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore });
+
+  // ✅ Récupération de la session
+  const {
+    data: { session },
+    error: sessionError
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session?.user || session.user.user_metadata?.role !== "admin_role") {
+    redirect("/");
+  }
+
+  const lang = "es";
   const adminStrings = generalUiStrings[lang];
 
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold text-primary mb-8">{adminStrings.adminPanelTitle}</h1>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Citas */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -29,6 +51,8 @@ export default function AdminDashboardPage() {
             </Link>
           </CardContent>
         </Card>
+
+        {/* Messages */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -41,11 +65,13 @@ export default function AdminDashboardPage() {
             <p className="text-xs text-muted-foreground pt-1">
               Leer y responder a los mensajes de contacto.
             </p>
-             <Link href="/admin/messages" className="text-sm text-primary hover:underline pt-2 block">
+            <Link href="/admin/messages" className="text-sm text-primary hover:underline pt-2 block">
               Ir a Mensajes &rarr;
             </Link>
           </CardContent>
         </Card>
+
+        {/* Témoignages */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -64,9 +90,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
-      {/* Further dashboard elements can be added here */}
     </div>
   );
 }
-
-    

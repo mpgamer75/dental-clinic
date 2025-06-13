@@ -102,6 +102,96 @@ export interface Database {
         }
         Relationships: []
       }
+      admin_users: {
+        Row: {
+          id: string
+          created_at: string
+        }
+        Insert: {
+          id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          id: string
+          clinic_name_es: string
+          clinic_name_en: string
+          doctor_name_es: string
+          doctor_name_en: string
+          address_es: string
+          address_en: string
+          phone_es: string
+          phone_en: string
+          email: string
+          schedule_es: string
+          schedule_en: string
+          map_link_es: string
+          map_link_en: string
+          embed_map_link_es: string
+          embed_map_link_en: string
+          maintenance_mode: boolean
+          allow_appointments: boolean
+          allow_testimonials: boolean
+          allow_contact_form: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_name_es?: string
+          clinic_name_en?: string
+          doctor_name_es?: string
+          doctor_name_en?: string
+          address_es?: string
+          address_en?: string
+          phone_es?: string
+          phone_en?: string
+          email?: string
+          schedule_es?: string
+          schedule_en?: string
+          map_link_es?: string
+          map_link_en?: string
+          embed_map_link_es?: string
+          embed_map_link_en?: string
+          maintenance_mode?: boolean
+          allow_appointments?: boolean
+          allow_testimonials?: boolean
+          allow_contact_form?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_name_es?: string
+          clinic_name_en?: string
+          doctor_name_es?: string
+          doctor_name_en?: string
+          address_es?: string
+          address_en?: string
+          phone_es?: string
+          phone_en?: string
+          email?: string
+          schedule_es?: string
+          schedule_en?: string
+          map_link_es?: string
+          map_link_en?: string
+          embed_map_link_es?: string
+          embed_map_link_en?: string
+          maintenance_mode?: boolean
+          allow_appointments?: boolean
+          allow_testimonials?: boolean
+          allow_contact_form?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
