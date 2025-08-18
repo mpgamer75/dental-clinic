@@ -1,45 +1,39 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types_db';
 
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-// Client Supabase pour l'admin
+// Client admin avec service role key pour bypasser RLS
 export const createAdminClient = async () => {
-  const supabase = createClient<any>(supabaseUrl, supabaseAnonKey);
+  const adminClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
   
-  // Vérifier que l'utilisateur est connecté
-  const { data: { session }, error } = await supabase.auth.getSession();
+  // Vérifier que l'utilisateur actuel est admin
+  const { data: { session }, error } = await adminClient.auth.getSession();
   
-  if (error) {
-    console.error('Session error:', error);
-    throw new Error(`Session error: ${error.message}`);
-  }
-  
-  if (!session) {
+  if (error || !session) {
     throw new Error("No authenticated session");
   }
 
-  // Vérifier que l'utilisateur est admin
-  const { data: adminCheck, error: adminError } = await supabase
+  // Vérifier dans admin_users
+  const { data: adminCheck, error: adminError } = await adminClient
     .from('admin_users')
     .select('id')
     .eq('id', session.user.id)
     .single();
 
-  if (adminError && adminError.code !== 'PGRST116') {
-    console.error('Admin check error:', adminError);
-    throw new Error(`Admin verification failed: ${adminError.message}`);
-  }
-
-  if (!adminCheck) {
+  if (adminError || !adminCheck) {
     throw new Error("User is not an admin");
   }
   
-  return supabase;
+  return adminClient;
 };

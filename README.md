@@ -1,65 +1,65 @@
-# Clinique Dentaire Valerio - Site Web Officiel
+# Clínica Dental Valerio - Sitio Web Oficial
 
-Bienvenue sur le dépôt du site web officiel de la Clinique Dentaire Valerio, dirigée par le **Dr. Francis Valerio** à **Santiago de los Caballeros, République Dominicaine**. Ce projet est une application web réelle et fonctionnelle, conçue pour servir les patients de la clinique avec une expérience numérique moderne et efficace.
+Bienvenido al repositorio del sitio web oficial de la Clínica Dental Valerio, dirigida por el **Dr. Francis Valerio** en **Santiago de los Caballeros, República Dominicana**. Este proyecto es una aplicación web real y funcional, diseñada para ofrecer a los pacientes una experiencia digital moderna y eficiente.
 
-## 🚀 Vue d'ensemble du Projet
+## 🚀 Descripción General del Proyecto
 
-Ce site web multilingue (espagnol/anglais) a été développé pour fournir des informations complètes sur les services de la clinique, permettre la prise de rendez-vous en ligne, présenter les témoignages de patients, et afficher les certifications professionnelles du Dr. Valerio. Il inclut également un panneau d'administration sécurisé pour la gestion des contenus et des rendez-vous.
+Este sitio web multilingüe (español/inglés) ha sido desarrollado para proporcionar información completa sobre los servicios de la clínica, permitir la reserva de citas en línea, mostrar testimonios de pacientes y exhibir las certificaciones profesionales del Dr. Valerio. También incluye un panel de administración seguro para la gestión de contenidos y citas.
 
-## 🛠️ Technologies Utilisées (Tech Stack)
+## 🛠️ Tecnologías Utilizadas (Tech Stack)
 
-Le projet est construit avec une pile technologique moderne et robuste, garantissant performance, sécurité et maintenabilité :
+El proyecto está construido con una pila tecnológica moderna y robusta, garantizando rendimiento, seguridad y mantenibilidad:
 
-*   **Next.js 15** : Un framework React pour le développement web, optimisé pour les applications à rendu côté serveur (SSR) et la génération de sites statiques (SSG). Il offre une excellente performance et une expérience développeur améliorée.
-*   **TypeScript** : Un superset de JavaScript qui ajoute le typage statique, améliorant la qualité du code, la détection des erreurs et la maintenabilité des projets de grande envergure.
-*   **Supabase** : Une alternative open-source à Firebase, fournissant une base de données PostgreSQL, l'authentification, le stockage de fichiers, et des fonctions Edge. Il sert de backend robuste pour toutes les opérations de données du site.
-*   **Tailwind CSS** : Un framework CSS utilitaire qui permet de construire rapidement des interfaces utilisateur personnalisées et responsives directement dans le balisage HTML.
-*   **Shadcn/ui** : Une collection de composants UI réutilisables, stylisés avec Tailwind CSS, pour accélérer le développement de l'interface utilisateur.
+*   **Next.js 15**: Un framework de React para desarrollo web, optimizado para aplicaciones con renderizado del lado del servidor (SSR) y generación de sitios estáticos (SSG). Ofrece excelente rendimiento y una mejor experiencia para desarrolladores.
+*   **TypeScript**: Un superset de JavaScript que añade tipado estático, mejorando la calidad del código, la detección de errores y la mantenibilidad en proyectos grandes.
+*   **Supabase**: Una alternativa open-source a Firebase, que proporciona una base de datos PostgreSQL, autenticación, almacenamiento de archivos y funciones Edge. Sirve como backend robusto para todas las operaciones de datos del sitio.
+*   **Tailwind CSS**: Un framework CSS utilitario que permite construir rápidamente interfaces de usuario personalizadas y responsivas directamente en el marcado HTML.
+*   **Shadcn/ui**: Una colección de componentes UI reutilizables, estilizados con Tailwind CSS, para acelerar el desarrollo de la interfaz de usuario.
 
-## ✨ Fonctionnalités Clés
+## ✨ Funcionalidades Clave
 
-*   **Interface Multilingue** : Support complet pour l'espagnol et l'anglais.
-*   **Prise de Rendez-vous** : Formulaire interactif pour planifier des consultations.
-*   **Galerie de Diplômes et Certifications** : Présentation des qualifications professionnelles du Dr. Valerio.
-*   **Témoignages de Patients** : Section dédiée aux avis et retours des patients.
-*   **Carte Google Maps Intégrée** : Affichage précis de l'emplacement de la clinique.
-*   **Panneau d'Administration Sécurisé** : Gestion des rendez-vous, messages, témoignages et paramètres du site.
-*   **Optimisations de Performance** : Chargement rapide des pages et optimisation des images.
-*   **Sécurité Renforcée** : Headers de sécurité HTTP et protection contre les menaces courantes.
+*   **Interfaz Multilingüe**: Soporte completo para español e inglés.
+*   **Reserva de Citas**: Formulario interactivo para agendar consultas.
+*   **Galería de Diplomas y Certificaciones**: Presentación de las cualificaciones profesionales del Dr. Valerio.
+*   **Testimonios de Pacientes**: Sección dedicada a opiniones y comentarios de los pacientes.
+*   **Mapa de Google Integrado**: Visualización precisa de la ubicación de la clínica.
+*   **Panel de Administración Seguro**: Gestión de citas, mensajes, testimonios y parámetros del sitio.
+*   **Optimización de Rendimiento**: Carga rápida de páginas y optimización de imágenes.
+*   **Seguridad Mejorada**: Encabezados de seguridad HTTP y protección contra amenazas comunes.
 
-## 🚀 Démarrage Rapide (Pour les Développeurs)
+## 🚀 Inicio Rápido (Para Desarrolladores)
 
-1.  **Cloner le dépôt** :
+1.  **Clonar el repositorio**:
     ```bash
-    git clone [URL_DU_DEPOT]
+    git clone [URL_DEL_REPOSITORIO]
     cd Valerio_Dental
     ```
-2.  **Installer les dépendances** :
+2.  **Instalar dependencias**:
     ```bash
     npm install
-    # ou
+    # o
     yarn install
     ```
-3.  **Configurer les variables d'environnement** :
-    Créez un fichier `.env.local` à la racine du projet et ajoutez vos clés API Supabase (voir `DEPLOYMENT_GUIDE.md` pour plus de détails) :
+3.  **Configurar variables de entorno**:
+    Cree un archivo `.env.local` en la raíz del proyecto y agregue sus claves API de Supabase (ver `DEPLOYMENT_GUIDE.md` para más detalles):
     ```
-    NEXT_PUBLIC_SUPABASE_URL=votre_url_supabase
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_publique_supabase
-    SUPABASE_SERVICE_ROLE_KEY=votre_cle_privee_supabase
-    # GOOGLE_AI_API_KEY=votre_cle_google_ai (si applicable)
+    NEXT_PUBLIC_SUPABASE_URL=tu_url_supabase
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_clave_publica_supabase
+    SUPABASE_SERVICE_ROLE_KEY=tu_clave_privada_supabase
+    # GOOGLE_AI_API_KEY=tu_clave_google_ai (si aplica)
     ```
-4.  **Lancer le serveur de développement** :
+4.  **Iniciar el servidor de desarrollo**:
     ```bash
     npm run dev
-    # ou
+    # o
     yarn dev
     ```
-    Le site sera accessible sur `http://localhost:3000`.
+    El sitio estará disponible en `http://localhost:3000`.
 
-## 🌐 Déploiement
+## 🌐 Despliegue
 
-Ce projet est conçu pour être déployé sur [Vercel](https://vercel.com) et utilise [Supabase](https://supabase.com) comme backend. Un guide de déploiement détaillé (`DEPLOYMENT_GUIDE.md`) est fourni à la racine du projet pour vous accompagner dans le processus de mise en production.
+Este proyecto está diseñado para ser desplegado en [Vercel](https://vercel.com) y utiliza [Supabase](https://supabase.com) como backend. Se proporciona una guía de despliegue detallada (`DEPLOYMENT_GUIDE.md`) en la raíz del proyecto para ayudarte en el proceso de puesta en producción.
 
 ---
 
-© {{year}} Clinique Dentaire Valerio. Tous droits réservés.
+© {{year}} Clínica Dental Valerio. Todos los derechos reservados.

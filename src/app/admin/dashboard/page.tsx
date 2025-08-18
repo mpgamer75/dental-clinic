@@ -1,10 +1,6 @@
-'use client';
-
-import { useState, useEffect } from 'react';
+import { createServerClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Calendar, 
   MessageSquare, 
@@ -16,366 +12,175 @@ import {
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
-import { PieChart, BarChart, StatCard } from '@/components/ui/chart';
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/lib/types_db';
+import { redirect } from 'next/navigation';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+export default async function AdminDashboard() {
+  try {
+    // Utiliser le client admin pour avoir accès aux données
+    const adminClient = await createAdminClient();
+    
+    // Charger les statistiques
+    const [
+      appointmentsResult,
+      messagesResult,
+      testimonialsResult
+    ] = await Promise.allSettled([
+      adminClient.from('appointments').select('*'),
+      adminClient.from('contact_messages').select('*'),
+      adminClient.from('testimonials').select('*')
+    ]);
 
-interface DashboardStats {
-  totalAppointments: number;
-  pendingAppointments: number;
-  completedAppointments: number;
-  cancelledAppointments: number;
-  totalMessages: number;
-  unreadMessages: number;
-  totalTestimonials: number;
-  pendingTestimonials: number;
-  approvedTestimonials: number;
-  rejectedTestimonials: number;
-}
+    const appointments = appointmentsResult.status === 'fulfilled' ? appointmentsResult.value.data || [] : [];
+    const messages = messagesResult.status === 'fulfilled' ? messagesResult.value.data || [] : [];
+    const testimonials = testimonialsResult.status === 'fulfilled' ? testimonialsResult.value.data || [] : [];
 
-export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    // Calculer les statistiques
+    const stats = {
+      totalAppointments: appointments.length,
+      pendingAppointments: appointments.filter(a => a.status === 'pending').length,
+      completedAppointments: appointments.filter(a => a.status === 'completed').length,
+      cancelledAppointments: appointments.filter(a => a.status === 'cancelled').length,
+      totalMessages: messages.length,
+      unreadMessages: messages.filter(m => m.status === 'unread').length,
+      totalTestimonials: testimonials.length,
+      pendingTestimonials: testimonials.filter(t => t.status === 'pending_approval').length,
+      approvedTestimonials: testimonials.filter(t => t.status === 'approved').length,
+    };
 
-  useEffect(() => {
-    loadDashboardStats();
-  }, []);
-
-  const loadDashboardStats = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Créer un client Supabase avec la session actuelle
-      const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
-      
-      // Vérifier la session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error("No hay sesión activa");
-      }
-
-      // Créer un client avec le token de session
-      const adminClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-        global: {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        },
-      });
-
-      // Charger les statistiques des rendez-vous
-      const { data: appointments, error: appointmentsError } = await adminClient
-        .from('appointments')
-        .select('*');
-
-      if (appointmentsError) throw appointmentsError;
-
-      // Charger les statistiques des messages
-      const { data: messages, error: messagesError } = await adminClient
-        .from('contact_messages')
-        .select('*');
-
-      if (messagesError) throw messagesError;
-
-      // Charger les statistiques des témoignages
-      const { data: testimonials, error: testimonialsError } = await adminClient
-        .from('testimonials')
-        .select('*');
-
-      if (testimonialsError) throw testimonialsError;
-
-      // Calculer les statistiques
-      const totalAppointments = appointments?.length || 0;
-      const pendingAppointments = appointments?.filter(a => a.status === 'pending').length || 0;
-      const completedAppointments = appointments?.filter(a => a.status === 'completed').length || 0;
-      const cancelledAppointments = appointments?.filter(a => a.status === 'cancelled').length || 0;
-
-      const totalMessages = messages?.length || 0;
-      const unreadMessages = messages?.filter(m => m.status === 'unread').length || 0;
-
-      const totalTestimonials = testimonials?.length || 0;
-      const pendingTestimonials = testimonials?.filter(t => t.status === 'pending_approval').length || 0;
-      const approvedTestimonials = testimonials?.filter(t => t.status === 'approved').length || 0;
-      const rejectedTestimonials = testimonials?.filter(t => t.status === 'rejected').length || 0;
-
-      setStats({
-        totalAppointments,
-        pendingAppointments,
-        completedAppointments,
-        cancelledAppointments,
-        totalMessages,
-        unreadMessages,
-        totalTestimonials,
-        pendingTestimonials,
-        approvedTestimonials,
-        rejectedTestimonials,
-      });
-
-    } catch (error: any) {
-      console.error('Error al cargar las estadísticas:', error);
-      setError(error.message || 'Error desconocido');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <RefreshCw className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold">Error</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <p className="text-sm text-muted-foreground mb-4">
-            Verifique que tiene permisos de administrador y que las políticas RLS están configuradas correctamente.
-          </p>
-          <Button onClick={loadDashboardStats} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Reintentar
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!stats) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold">Error</h2>
-          <p className="text-muted-foreground">No se pudieron cargar las estadísticas</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Datos para los gráficos
-  const appointmentData = [
-    { label: 'En attente', value: stats.pendingAppointments, color: '#f59e0b' },
-    { label: 'Complétés', value: stats.completedAppointments, color: '#10b981' },
-    { label: 'Annulés', value: stats.cancelledAppointments, color: '#ef4444' },
-  ];
-
-  const testimonialData = [
-    { label: 'En attente', value: stats.pendingTestimonials, color: '#f59e0b' },
-    { label: 'Approuvés', value: stats.approvedTestimonials, color: '#10b981' },
-    { label: 'Rejetés', value: stats.rejectedTestimonials, color: '#ef4444' },
-  ];
-
-  const monthlyData = [
-    { label: 'Jan', value: 12 },
-    { label: 'Fév', value: 19 },
-    { label: 'Mar', value: 15 },
-    { label: 'Avr', value: 22 },
-    { label: 'Mai', value: 18 },
-    { label: 'Jun', value: 25 },
-  ];
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Tableau de bord</h1>
-          <p className="text-muted-foreground">Vue d'ensemble de votre clinique</p>
-        </div>
-        <Button onClick={loadDashboardStats} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Actualiser
-        </Button>
-      </div>
-
-      {/* Cartes de statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard
-          title="Rendez-vous"
-          value={stats.totalAppointments}
-          description={`${stats.pendingAppointments} en attente`}
-          icon={<Calendar className="h-4 w-4" />}
-          trend={{ value: 12, isPositive: true }}
-        />
-        <StatCard
-          title="Messages"
-          value={stats.totalMessages}
-          description={`${stats.unreadMessages} non lus`}
-          icon={<MessageSquare className="h-4 w-4" />}
-          trend={{ value: 8, isPositive: true }}
-        />
-        <StatCard
-          title="Témoignages"
-          value={stats.totalTestimonials}
-          description={`${stats.pendingTestimonials} en attente`}
-          icon={<Users className="h-4 w-4" />}
-          trend={{ value: 15, isPositive: true }}
-        />
-        <StatCard
-          title="Taux de conversion"
-          value="68%"
-          description="Rendez-vous confirmés"
-          icon={<TrendingUp className="h-4 w-4" />}
-          trend={{ value: 5, isPositive: true }}
-        />
-      </div>
-
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-          <TabsTrigger value="appointments">Rendez-vous</TabsTrigger>
-          <TabsTrigger value="testimonials">Témoignages</TabsTrigger>
-          <TabsTrigger value="analytics">Analytiques</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <PieChart
-              data={appointmentData}
-              title="Statut des rendez-vous"
-              total={stats.totalAppointments}
-            />
-            <PieChart
-              data={testimonialData}
-              title="Statut des témoignages"
-              total={stats.totalTestimonials}
-            />
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Tableau de bord</h1>
+            <p className="text-muted-foreground">Vue d'ensemble de votre clinique</p>
           </div>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="appointments" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Rendez-vous récents
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {appointmentData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="font-medium">{item.label}</span>
-                      </div>
-                      <Badge variant="secondary">{item.value}</Badge>
+        {/* Cartes de statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Rendez-vous Total</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalAppointments}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.pendingAppointments} en attente
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Messages</CardTitle>
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalMessages}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.unreadMessages} non lus
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Témoignages</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalTestimonials}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.pendingTestimonials} en attente
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Taux de complétion</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {stats.totalAppointments > 0 
+                  ? Math.round((stats.completedAppointments / stats.totalAppointments) * 100)
+                  : 0}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Rendez-vous complétés
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Rendez-vous récents */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Rendez-vous récents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {appointments.slice(0, 5).map((appointment) => (
+                <div key={appointment.id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div>
+                      <p className="text-sm font-medium">{appointment.name}</p>
+                      <p className="text-xs text-muted-foreground">{appointment.service_type}</p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <BarChart
-              data={monthlyData}
-              title="Rendez-vous par mois"
-              maxValue={30}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="testimonials" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Gestion des témoignages
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-600" />
-                      <span className="font-medium">En attente de modération</span>
-                    </div>
-                    <Badge variant="secondary">{stats.pendingTestimonials}</Badge>
                   </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="font-medium">Approuvés</span>
-                    </div>
-                    <Badge variant="secondary">{stats.approvedTestimonials}</Badge>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-red-600" />
-                      <span className="font-medium">Rejetés</span>
-                    </div>
-                    <Badge variant="secondary">{stats.rejectedTestimonials}</Badge>
+                  <div className="flex items-center space-x-2">
+                    {appointment.is_urgent && (
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                    )}
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      appointment.status === 'completed' 
+                        ? 'bg-green-100 text-green-800'
+                        : appointment.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {appointment.status}
+                    </span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-            <PieChart
-              data={testimonialData}
-              title="Répartition des témoignages"
-              total={stats.totalTestimonials}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <BarChart
-              data={monthlyData}
-              title="Évolution mensuelle"
-              maxValue={30}
-            />
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Métriques clés</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Taux de réponse</span>
-                  <span className="text-sm text-muted-foreground">94%</span>
+        {/* Messages récents */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Messages récents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {messages.slice(0, 5).map((message) => (
+                <div key={message.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{message.name}</p>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      message.status === 'unread' 
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {message.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {message.message}
+                  </p>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div className="bg-primary h-2 rounded-full" style={{ width: '94%' }} />
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Satisfaction client</span>
-                  <span className="text-sm text-muted-foreground">4.8/5</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '96%' }} />
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Temps de réponse moyen</span>
-                  <span className="text-sm text-muted-foreground">2.3h</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: '85%' }} />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  } catch (error) {
+    console.error('Error in dashboard:', error);
+    redirect('/admin/login');
+  }
 }

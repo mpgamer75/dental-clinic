@@ -7,7 +7,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
-import type { Database } from "@/types/supabase";
+import type { Database } from "@/lib/types_db";
 
 export default async function AdminDashboardPage() {
   // ✅ Récupération sécurisée du cookie store
@@ -22,7 +22,19 @@ export default async function AdminDashboardPage() {
     error: sessionError
   } = await supabase.auth.getSession();
 
-  if (sessionError || !session?.user || session.user.user_metadata?.role !== "admin_role") {
+  if (sessionError || !session?.user) {
+    redirect("/admin/login");
+  }
+
+  // ✅ Vérifier si l'utilisateur est admin
+  const { data: adminCheck, error: adminError } = await supabase
+    .from('admin_users')
+    .select('id')
+    .eq('id', session.user.id)
+    .single();
+
+  if (adminError || !adminCheck) {
+    console.error('User is not admin:', session.user.id);
     redirect("/");
   }
 
