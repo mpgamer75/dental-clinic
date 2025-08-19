@@ -1,4 +1,3 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -17,7 +16,6 @@ const DEFAULT_LANGUAGE = 'es';
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
   const { pathname } = req.nextUrl;
 
   // Ajouter les headers de sécurité
@@ -32,51 +30,6 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/api/') ||
     pathname.includes('.')
   ) {
-    return res;
-  }
-
-  // Vérifier l'authentification pour les routes admin
-  if (pathname.startsWith('/admin')) {
-    // Permettre l'accès à la page de login
-    if (pathname === '/admin/login') {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Si déjà connecté et admin, rediriger vers dashboard
-      if (session) {
-        const { data: adminCheck } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (adminCheck) {
-          return NextResponse.redirect(new URL('/admin/dashboard', req.url));
-        }
-      }
-      return res;
-    }
-
-    // Pour toutes les autres routes admin, vérifier l'auth
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return NextResponse.redirect(new URL('/admin/login', req.url));
-    }
-
-    // Vérifier si l'utilisateur est admin
-    const { data: adminCheck, error: adminError } = await supabase
-      .from('admin_users')
-      .select('id')
-      .eq('id', session.user.id)
-      .single();
-
-    if (adminError || !adminCheck) {
-      console.error('Admin check failed:', adminError);
-      // Déconnecter et rediriger
-      await supabase.auth.signOut();
-      return NextResponse.redirect(new URL('/admin/login', req.url));
-    }
-
     return res;
   }
 

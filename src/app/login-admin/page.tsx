@@ -6,14 +6,10 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { generalUiStrings, contactDetails } from '@/lib/data';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Eye, EyeOff, Loader2, Shield } from 'lucide-react';
+import Link from 'next/link';
 import type { Database } from '@/lib/types_db';
-
-const lang = 'es';
-const uiStrings = generalUiStrings[lang];
-const clinicName = contactDetails.clinicName[lang];
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -33,7 +29,7 @@ export default function AdminLoginPage() {
     try {
       console.log('🔐 Tentative de connexion pour:', email);
       
-      // Étape 1: Authentification
+      // Authentification
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -58,7 +54,7 @@ export default function AdminLoginPage() {
 
       console.log('✅ Connexion réussie, vérification admin pour:', data.user.id);
 
-      // Étape 2: Vérifier si l'utilisateur est admin
+      // Vérifier si l'utilisateur est admin
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('id')
@@ -77,8 +73,8 @@ export default function AdminLoginPage() {
 
       console.log('✅ Utilisateur admin confirmé, redirection...');
       
-      // Forcer le rafraîchissement de la page pour mettre à jour les cookies
-      router.push('/admin/dashboard');
+      // Redirection vers le dashboard
+      router.push('/admin-dashboard');
       router.refresh();
       
     } catch (error: any) {
@@ -90,29 +86,25 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary/30 via-background to-secondary/30 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/30 via-background to-secondary/30 p-4">
+      {/* Lien retour */}
+      <div className="w-full max-w-md mb-4">
+        <Link href="/es" className="text-sm text-muted-foreground hover:text-primary">
+          ← Volver al sitio web
+        </Link>
+      </div>
+
       <Card className="w-full max-w-md shadow-2xl rounded-xl overflow-hidden">
         <CardHeader className="text-center bg-primary text-primary-foreground p-8">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-12 w-12 mx-auto mb-4 text-primary-foreground"
-          >
-            <path d="M6.2998 5.21973C5.16341 6.6043 4.50024 8.27246 4.50024 10.0098C4.50024 11.7471 5.16341 13.4153 6.2998 14.7998" />
-            <path d="M17.7002 5.21973C18.8366 6.6043 19.5 8.27246 19.5 10.0098C19.5 11.7471 18.8366 13.4153 17.7002 14.7998" />
-            <path d="M12 21.5098V17.6398" />
-            <path d="M12 17.63C12 17.63 12 17.63 11.78 17.63H12.22C12 17.63 12 17.63 12 17.63Z" fill="currentColor" />
-            <path d="M9.4698 2.50977V6.00977" />
-            <path d="M14.5302 2.50977V6.00977" />
-          </svg>
-          <CardTitle className="text-3xl font-bold">{uiStrings.adminPanelTitle}</CardTitle>
-          <CardDescription className="text-primary-foreground/90">{clinicName} - Acceso Administrativo</CardDescription>
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-foreground text-primary">
+            <Shield className="h-6 w-6" />
+          </div>
+          <CardTitle className="text-3xl font-bold">Panel Administrativo</CardTitle>
+          <CardDescription className="text-primary-foreground/90">
+            Orthoprotesis - Acceso Administrativo
+          </CardDescription>
         </CardHeader>
+        
         <CardContent className="p-6 space-y-6">
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
@@ -128,6 +120,7 @@ export default function AdminLoginPage() {
                 disabled={isLoading}
               />
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
               <div className="relative">
@@ -147,18 +140,19 @@ export default function AdminLoginPage() {
                   size="icon"
                   className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
+            
             {error && (
               <p className="text-sm text-destructive text-center bg-destructive/10 p-3 rounded-md">
                 {error}
               </p>
             )}
+            
             <Button 
               type="submit" 
               className="w-full text-lg py-3" 
@@ -175,9 +169,6 @@ export default function AdminLoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="text-center text-xs text-muted-foreground p-6 pt-0">
-          <p>&copy; {new Date().getFullYear()} {clinicName}. Todos los derechos reservados.</p>
-        </CardFooter>
       </Card>
     </div>
   );

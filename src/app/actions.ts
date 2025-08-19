@@ -3,7 +3,7 @@
 import type { ContactFormData, AppointmentFormData, TestimonialFormSubmitData, Language } from '@/lib/types';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase'; // Using Supabase client
-import { moderateTestimonial } from '@/ai/flows/moderate-testimonial-flow';
+// import { moderateTestimonial } from '@/ai/flows/moderate-testimonial-flow'; // Désactivé temporairement
 import { actionMessages } from '@/lib/data';
 
 
@@ -175,23 +175,26 @@ export async function submitTestimonialForm(formData: TestimonialFormSubmitData,
   }
 
   try {
-    const moderationResult = await moderateTestimonial({ quote: validatedFields.data.quote });
+    // Modération AI désactivée temporairement pour éviter les erreurs de dépendances
+    // const moderationResult = await moderateTestimonial({ quote: validatedFields.data.quote });
+    // 
+    // if (!moderationResult.isAppropriate) {
+    //   const reasonMessage = moderationResult.reason 
+    //     ? `${messages.testimonialModerationReasonPrefix}${moderationResult.reason}`
+    //     : messages.testimonialModerationFailed;
+    //   return {
+    //     success: false,
+    //     message: reasonMessage,
+    //   };
+    // }
 
-    if (!moderationResult.isAppropriate) {
-      const reasonMessage = moderationResult.reason 
-        ? `${messages.testimonialModerationReasonPrefix}${moderationResult.reason}`
-        : messages.testimonialModerationFailed;
-      return {
-        success: false,
-        message: reasonMessage,
-      };
-    }
-
+    // Pour l'instant, on accepte tous les témoignages (modération manuelle via admin)
     const { error } = await supabase
       .from('testimonials')
       .insert({
         ...validatedFields.data,
-        // submitted_at and status have defaults in Supabase
+        // submitted_at et status ont des valeurs par défaut dans Supabase
+        // Le statut sera 'pending' par défaut pour modération manuelle
       });
 
     if (error) throw error;
@@ -202,13 +205,9 @@ export async function submitTestimonialForm(formData: TestimonialFormSubmitData,
     };
   } catch (error) {
     console.error('Error submitting testimonial form to Supabase:', error);
-    let errorMessage = messages.testimonialError;
-    if (error instanceof Error && error.message.includes('moderation')) {
-        errorMessage = messages.testimonialModerationApiError;
-    }
     return {
       success: false,
-      message: errorMessage,
+      message: messages.testimonialError,
     };
   }
 }

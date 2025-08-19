@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { generalUiStrings } from '@/lib/data';
 import { useLanguage } from '@/contexts/language-context';
@@ -82,6 +82,14 @@ export function Navbar() {
           <Button variant="outline" size="icon" onClick={toggleLanguage} className="h-8 w-8">
             {lang === 'es' ? 'EN' : 'ES'}
           </Button>
+          
+          {/* Bouton Connexion Admin */}
+          <Link href="/login-admin">
+            <Button variant="ghost" size="sm" className="hidden md:flex">
+              <LogIn className="mr-2 h-4 w-4" />
+              Connexion
+            </Button>
+          </Link>
 
           {/* Mobile Menu Button */}
           <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleMenu}>
@@ -111,6 +119,14 @@ export function Navbar() {
             </Link>
             <Link href={appointmentsHref} className="text-sm" onClick={closeMenu}>
               <Button size="sm" className="w-full">{uiStrings.appointments}</Button>
+            </Link>
+            
+            {/* Bouton Connexion Admin Mobile */}
+            <Link href="/login-admin" onClick={closeMenu}>
+              <Button variant="outline" size="sm" className="w-full justify-start">
+                <LogIn className="mr-2 h-4 w-4" />
+                Connexion Admin
+              </Button>
             </Link>
           </nav>
         </div>

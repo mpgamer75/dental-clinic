@@ -1,12 +1,7 @@
 import type { Metadata } from 'next';
-// Ensure Inter font is imported if needed here, or rely on RootLayout's className
-// import { Inter } from 'next/font/google'; (Already in root)
 import '@/app/globals.css'; 
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-// Toaster moved to RootLayout to be truly global, unless specific toast messages need i18n context from here.
-// For now, assuming Toaster is fine in RootLayout. If specific i18n for toasts is needed, it can be added here.
-// import { Toaster } from '@/components/ui/toaster'; 
 import { contactDetails, baseMetadata } from '@/lib/data';
 import { LanguageProvider } from '@/contexts/language-context';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -78,9 +73,6 @@ export default async function LangLayout({
   const lang = resolvedParams?.lang || 'es';
   
   return (
-    // The <html> and <body> tags are in src/app/layout.tsx
-    // Font className is also applied there.
-    // This layout provides language and theme context.
     <LanguageProvider initialLanguage={lang}>
       <ThemeProvider
         attribute="class"
@@ -88,10 +80,11 @@ export default async function LangLayout({
         enableSystem={false}
         disableTransitionOnChange
       >
-        <Navbar />
-        <main className="flex-grow">{children}</main>
-        <Footer />
-        {/* <Toaster /> Moved to RootLayout */}
+        <div suppressHydrationWarning>
+          <Navbar />
+          <main className="flex-grow">{children}</main>
+          <Footer />
+        </div>
       </ThemeProvider>
     </LanguageProvider>
   );
