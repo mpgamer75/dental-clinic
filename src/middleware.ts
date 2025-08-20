@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Configuration de sécurité
+// Configuration de sécurité améliorée
 const SECURITY_HEADERS = {
   'X-XSS-Protection': '1; mode=block',
   'X-Frame-Options': 'DENY',
@@ -9,6 +9,7 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://wyospvndshfmkqvwkefn.supabase.co; frame-src 'self' https://www.google.com https://www.youtube.com;",
 };
 
 const SUPPORTED_LANGUAGES = ['es', 'en'];
@@ -23,12 +24,13 @@ export async function middleware(req: NextRequest) {
     res.headers.set(key, value);
   });
 
-  // Ne pas traiter les routes statiques
+  // Ne pas traiter les routes statiques et admin
   if (
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/images/') ||
     pathname.startsWith('/api/') ||
-    pathname.includes('.')
+    pathname.includes('.') ||
+    pathname.startsWith('/admin')
   ) {
     return res;
   }
@@ -43,7 +45,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith(`/${lang}/`) || pathname === `/${lang}`
   );
 
-  if (!hasLangPrefix && !pathname.startsWith('/admin')) {
+  if (!hasLangPrefix) {
     return NextResponse.redirect(new URL(`/${DEFAULT_LANGUAGE}${pathname}`, req.url));
   }
 

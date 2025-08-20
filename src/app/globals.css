@@ -4,43 +4,41 @@
 
 @layer base {
   :root {
-    --background: 239 15% 96%; 
-    --foreground: 239 45% 10%; /* Darker Azul Marino for text */
+    --background: 0 0% 100%;
+    --foreground: 239 45% 10%;
 
-    --card: 0 0% 100%; 
-    --card-foreground: 239 45% 12%; /* Darker Azul Marino for card text */
+    --card: 0 0% 100%;
+    --card-foreground: 239 45% 12%;
 
-    --popover: 0 0% 100%; 
+    --popover: 0 0% 100%;
     --popover-foreground: 239 45% 12%;
 
-    /* Azul Marino: #20214f -> HSL: 239 43% 22% (adjusted to be slightly less dark for primary) */
-    --primary: 239 43% 25%; /* Slightly lighter than pure #20214f for better contrast */
-    --primary-foreground: 0 0% 100%; 
+    --primary: 239 43% 25%;
+    --primary-foreground: 0 0% 100%;
     
-    --secondary: 239 30% 92%; 
-    --secondary-foreground: 239 43% 24%; /* Darker Azul Marino for text on secondary */
+    --secondary: 239 30% 92%;
+    --secondary-foreground: 239 43% 24%;
 
-    --muted: 239 20% 95%; 
-    --muted-foreground: 239 15% 45%; 
+    --muted: 239 20% 95%;
+    --muted-foreground: 239 15% 45%;
 
-    /* Accent derived from primary */
-    --accent: 239 43% 48%; 
-    --accent-foreground: 0 0% 100%; 
+    --accent: 239 43% 48%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%; 
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 239 25% 85%; 
-    --input: 239 20% 97%; /* Slightly off-white for inputs */
-    --ring: 239 43% 45%; /* Adjusted ring from primary, slightly lighter for visibility */
+    --border: 239 25% 85%;
+    --input: 239 20% 97%;
+    --ring: 239 43% 45%;
 
     --radius: 0.5rem;
 
-    --chart-1: 239 43% 25%; 
-    --chart-2: 239 43% 35%; 
-    --chart-3: 239 43% 45%; 
-    --chart-4: 239 43% 18%; 
-    --chart-5: 239 43% 12%; 
+    --chart-1: 239 43% 25%;
+    --chart-2: 239 43% 35%;
+    --chart-3: 239 43% 45%;
+    --chart-4: 239 43% 18%;
+    --chart-5: 239 43% 12%;
 
     --sidebar-background: 239 43% 25%;
     --sidebar-foreground: 0 0% 100%;
@@ -53,36 +51,33 @@
   }
 
   .dark {
-    /* Dark theme based on Darker Azul Marino */
-    --background: 239 25% 10%; /* Dark base for background */
-    --foreground: 0 0% 90%; 
+    --background: 239 25% 10%;
+    --foreground: 0 0% 90%;
 
-    --card: 239 20% 15%; /* Slightly lighter than background for cards */
-    --card-foreground: 0 0% 95%; 
+    --card: 239 20% 15%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 239 15% 12%; 
+    --popover: 239 15% 12%;
     --popover-foreground: 0 0% 95%;
 
-    /* Brighter Azul Marino for Dark Theme primary */
-    --primary: 239 43% 58%; 
-    --primary-foreground: 239 43% 10%; /* Very Dark Azul Marino for text on primary */
+    --primary: 239 43% 58%;
+    --primary-foreground: 239 43% 10%;
 
-    --secondary: 239 15% 20%; 
-    --secondary-foreground: 239 30% 80%; 
+    --secondary: 239 15% 20%;
+    --secondary-foreground: 239 30% 80%;
 
-    --muted: 239 10% 25%; 
-    --muted-foreground: 239 8% 65%; 
+    --muted: 239 10% 25%;
+    --muted-foreground: 239 8% 65%;
 
-    /* Brighter Accent Azul Marino for dark theme */
-    --accent: 239 43% 68%; 
-    --accent-foreground: 239 43% 8%; 
+    --accent: 239 43% 68%;
+    --accent-foreground: 239 43% 8%;
 
-    --destructive: 0 70% 50%; 
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 239 10% 28%; 
-    --input: 239 15% 18%; 
-    --ring: 239 43% 68%; /* Brighter ring for dark theme */
+    --border: 239 10% 28%;
+    --input: 239 15% 18%;
+    --ring: 239 43% 68%;
 
     --chart-1: 239 43% 58%;
     --chart-2: 239 43% 68%;
@@ -105,23 +100,114 @@
   * {
     @apply border-border;
   }
+  
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
     scroll-behavior: smooth;
   }
+  
   section {
     @apply py-12 md:py-20 lg:py-24;
   }
 }
 
-/* Carousel specific styles for single image display */
+/* Animations personnalisées */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Classes d'animation */
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Effets de survol améliorés */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Carousel amélioré */
 .carousel-single-image-wrapper {
   position: relative;
-  width: 100%; 
-  aspect-ratio: 16 / 9; /* Common aspect ratio for a larger image display */
-  overflow: hidden; 
-  margin-bottom: 1.5rem; /* Space before bullets */
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
 .carousel-single-image-item {
@@ -131,51 +217,137 @@
   width: 100%;
   height: 100%;
   opacity: 0;
-  transition: opacity 0.7s ease-in-out; /* Fade transition for image switch */
+  transition: opacity 0.7s ease-in-out, transform 0.7s ease-in-out;
+  transform: scale(1.05);
 }
 
 .carousel-single-image-item.active {
   opacity: 1;
-  z-index: 10; /* Ensure active image is on top */
+  z-index: 10;
+  transform: scale(1);
 }
 
-/* Hide scrollbar (if any parent container was forcing it) */
-.hide-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;  /* Safari and Chrome */
-}
-
-/* Bullet point navigation styling */
+/* Bullet points améliorés */
 .carousel-bullets-container {
   display: flex;
   justify-content: center;
-  gap: 0.75rem; /* Space between bullets */
-  margin-top: 1rem; /* Space after the image container */
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .carousel-bullet {
   display: block;
-  width: 16px; /* Made bullets bigger */
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background-color: hsl(var(--muted-foreground) / 0.4);
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  transition: all 0.3s ease;
   cursor: pointer;
-  border: 2px solid transparent; /* For focus/hover outline */
+  border: 2px solid transparent;
 }
 
-.carousel-bullet:hover,
-.carousel-bullet:focus-visible { /* Added focus-visible for accessibility */
-  background-color: hsl(var(--primary) / 0.7);
-  transform: scale(1.1);
-  outline: none; /* Remove default browser outline if using border for focus */
-  border-color: hsl(var(--primary) / 0.5);
+.carousel-bullet:hover {
+  background-color: hsl(var(--primary) / 0.6);
+  transform: scale(1.2);
+  border-color: hsl(var(--primary) / 0.3);
 }
 
 .carousel-bullet.active {
   background-color: hsl(var(--primary));
-  transform: scale(1.2); /* Active bullet even slightly more prominent */
+  transform: scale(1.3);
+  width: 24px;
+  border-radius: 6px;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.5);
+  border-radius: 5px;
+  transition: background 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.7);
+}
+
+/* Effets de texte */
+.text-gradient {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Cards améliorées */
+.card-hover {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.card-hover:hover::before {
+  left: 100%;
+}
+
+/* Boutons améliorés */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 70%
+  );
+  transform: rotate(45deg);
+  transition: transform 0.6s;
+  transform: translateX(-100%) translateY(-100%);
+}
+
+.btn-shine:hover::after {
+  transform: translateX(0) translateY(0);
+}
+
+/* Focus visible amélioré */
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* Transitions globales */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

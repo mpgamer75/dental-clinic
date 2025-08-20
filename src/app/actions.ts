@@ -2,10 +2,8 @@
 
 import type { ContactFormData, AppointmentFormData, TestimonialFormSubmitData, Language } from '@/lib/types';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase'; // Using Supabase client
-// import { moderateTestimonial } from '@/ai/flows/moderate-testimonial-flow'; // Désactivé temporairement
+import { supabase } from '@/lib/supabase';
 import { actionMessages } from '@/lib/data';
-
 
 const createContactFormSchema = (lang: Language) => {
   const zodMsgs = actionMessages[lang].zod;
@@ -37,8 +35,6 @@ export async function submitContactForm(formData: Omit<ContactFormData, 'id' | '
       .from('contact_messages')
       .insert({
         ...validatedFields.data,
-        // submitted_at is set by default in Supabase table
-        // status is set by default in Supabase table
       });
 
     if (error) throw error;
@@ -64,49 +60,40 @@ const createAppointmentFormSchema = (lang: Language) => {
     phone: z.string().optional().refine(value => !value || /^[0-9+\s()-]*$/.test(value), {
       message: zodMsgs.phoneInvalid
     }),
-    service_type: z.string().min(1, { message: zodMsgs.serviceTypeRequired }), // Column name matches Supabase
+    service_type: z.string().min(1, { message: zodMsgs.serviceTypeRequired }),
     reason: z.string().min(10, { message: zodMsgs.reasonMin }).max(500, { message: zodMsgs.reasonMax }),
     is_urgent: z.boolean().default(false),
   });
 };
 
-// Type for Supabase insert, matching schema from Zod but with corrected field names if needed
 interface AppointmentSupabaseInsertData {
   name: string;
   email: string;
   phone?: string;
-  service_type: string; // Supabase column name
+  service_type: string;
   reason: string;
   is_urgent: boolean;
 }
 
-
 export async function submitAppointmentForm(formData: Omit<AppointmentFormData, 'id' | 'submitted_at' | 'status' | 'serviceType'> & { serviceType: string }, lang: Language) {
   const appointmentFormSchema = createAppointmentFormSchema(lang);
   
-  // Map serviceType to service_type for validation and insertion
   const dataToValidate = {
     ...formData,
-    service_type: formData.serviceType, // Map to the name expected by Zod schema / Supabase
+    service_type: formData.serviceType,
   };
-  // delete (dataToValidate as any).serviceType; // remove original if it causes issues, but Zod should ignore extra fields
 
   const validatedFields = appointmentFormSchema.safeParse(dataToValidate);
   const messages = actionMessages[lang];
 
   if (!validatedFields.success) {
-    // Convert Zod errors to a format suitable for form errors
     const errorFields = validatedFields.error.flatten().fieldErrors;
-    
-    // Create a properly typed object for our field errors
     const fieldErrors: Record<string, string[]> = {};
     
-    // Map service_type errors to serviceType for frontend compatibility
     if (errorFields.service_type) {
       fieldErrors.serviceType = errorFields.service_type;
     }
     
-    // Copy other errors
     Object.entries(errorFields).forEach(([key, value]) => {
       if (key !== 'service_type') {
         fieldErrors[key] = value;
@@ -120,7 +107,6 @@ export async function submitAppointmentForm(formData: Omit<AppointmentFormData, 
     };
   }
   
-  // Prepare data for Supabase, ensuring field names match table columns
   const supabaseData: AppointmentSupabaseInsertData = {
       name: validatedFields.data.name,
       email: validatedFields.data.email,
@@ -130,12 +116,10 @@ export async function submitAppointmentForm(formData: Omit<AppointmentFormData, 
       is_urgent: validatedFields.data.is_urgent,
   };
 
-
   try {
     const { error } = await supabase
       .from('appointments')
       .insert(supabaseData);
-      // submitted_at and status have defaults in Supabase
 
     if (error) throw error;
 
@@ -175,26 +159,13 @@ export async function submitTestimonialForm(formData: TestimonialFormSubmitData,
   }
 
   try {
-    // Modération AI désactivée temporairement pour éviter les erreurs de dépendances
-    // const moderationResult = await moderateTestimonial({ quote: validatedFields.data.quote });
-    // 
-    // if (!moderationResult.isAppropriate) {
-    //   const reasonMessage = moderationResult.reason 
-    //     ? `${messages.testimonialModerationReasonPrefix}${moderationResult.reason}`
-    //     : messages.testimonialModerationFailed;
-    //   return {
-    //     success: false,
-    //     message: reasonMessage,
-    //   };
-    // }
-
-    // Pour l'instant, on accepte tous les témoignages (modération manuelle via admin)
+    // Insertion directe sans modération AI
+    // Le statut sera 'pending_approval' par défaut pour modération manuelle
     const { error } = await supabase
       .from('testimonials')
       .insert({
         ...validatedFields.data,
-        // submitted_at et status ont des valeurs par défaut dans Supabase
-        // Le statut sera 'pending' par défaut pour modération manuelle
+        status: 'pending_approval'
       });
 
     if (error) throw error;
