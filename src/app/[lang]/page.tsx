@@ -70,10 +70,8 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
                 <span className="text-sm font-medium text-primary">+30 años de experiencia</span>
               </div>
               
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-                <span className="bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-                  {currentDoctorName}
-                </span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-primary">
+                {currentDoctorName}
               </h1>
               
               <p className="text-2xl md:text-3xl font-semibold text-foreground/90">
@@ -134,6 +132,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
                       src="/images/vitrine_clinique1.jpg"
                       alt={`Fotografía del ${currentDoctorName}`}
                       fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
                       className="object-cover transition-transform duration-700 group-hover:scale-110"
                       priority
                       quality={90}

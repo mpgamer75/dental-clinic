@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import '@/app/globals.css'; 
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
+import { BackToTop } from '@/components/back-to-top';
+import { ScrollProgress } from '@/components/scroll-progress';
 import { contactDetails, baseMetadata } from '@/lib/data';
 import { LanguageProvider } from '@/contexts/language-context';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -81,9 +83,11 @@ export default async function LangLayout({
         disableTransitionOnChange
       >
         <div suppressHydrationWarning>
+          <ScrollProgress />
           <Navbar />
           <main className="flex-grow">{children}</main>
           <Footer />
+          <BackToTop />
         </div>
       </ThemeProvider>
     </LanguageProvider>

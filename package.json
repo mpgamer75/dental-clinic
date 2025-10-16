@@ -13,7 +13,8 @@
         "typecheck": "tsc --noEmit",
         "cleanup:test-data": "tsx scripts/cleanup-test-data.ts",
         "setup-admin": "tsx src/scripts/setup-admin.ts",
-        "diagnose-admin": "tsx src/scripts/diagnose-admin.ts"
+        "diagnose-admin": "tsx src/scripts/diagnose-admin.ts",
+        "quick-admin": "tsx src/scripts/quick-admin-setup.ts"
     },
     "dependencies": {
         "@genkit-ai/googleai": "^1.8.0",

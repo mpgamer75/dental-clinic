@@ -1,96 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Menu, X, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { generalUiStrings } from '@/lib/data';
 import { useLanguage } from '@/contexts/language-context';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { useState } from 'react';
 
 export function Navbar() {
   const { lang, toggleLanguage } = useLanguage();
   const pathname = usePathname();
-  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  const closeMenu = () => setIsMenuOpen(false);
-
-  useEffect(() => {
-    checkUser();
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        await checkAdminStatus(session.user.id);
-      } else {
-        setUser(null);
-        setIsAdmin(false);
-      }
-      setIsLoading(false);
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        await checkAdminStatus(session.user.id);
-      }
-    } catch (error) {
-      console.error('Error checking user:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const checkAdminStatus = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('id')
-        .eq('id', userId)
-        .single();
-      
-      setIsAdmin(!error && !!data);
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      setIsAdmin(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setIsAdmin(false);
-      router.push(`/${lang}`);
-      router.refresh();
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
 
   const uiStrings = generalUiStrings[lang];
   const homeHref = `/${lang}`;
@@ -106,243 +28,237 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 shadow-sm">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link href={homeHref} className="flex items-center gap-2 group">
-            <div className="relative">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/98 shadow-md">
+      <div className="container flex h-16 items-center justify-between px-4 md:px-6">
+        {/* Logo */}
+        <Link href={homeHref} className="flex items-center gap-3 group">
+          <div className="relative">
+            {/* Background effect */}
+            <div className="absolute -inset-1 bg-primary/20 rounded-xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            {/* Logo container */}
+            <div className="relative bg-primary p-2.5 rounded-xl shadow-md group-hover:shadow-lg transition-all duration-300">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+                stroke="white"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-6 w-6 text-primary transition-transform group-hover:scale-110"
+                className="h-5 w-5"
               >
-                <path d="M6.3 5.2A9 9 0 0 1 12 3a9 9 0 0 1 5.7 2.2" />
-                <path d="M10.2 17.1a9 9 0 0 1-3.9-12" />
-                <path d="M13.8 7a9 9 0 0 1 3.9 12" />
-                <path d="M17.7 18.8A9 9 0 0 1 12 21a9 9 0 0 1-5.7-2.2" />
-                <path d="M12 12h.01" />
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                <path d="M12 6v6l4 2" />
               </svg>
-              <div className="absolute -inset-1 bg-primary/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent hidden sm:inline">
+          </div>
+          
+          {/* Text logo - COLOR UNIFORME */}
+          <div className="flex flex-col">
+            <span className="text-xl font-bold text-primary hidden sm:inline transition-colors duration-300">
               Orthoprotesis
             </span>
-          </Link>
-        </div>
+            <span className="text-[10px] text-muted-foreground/80 hidden lg:inline font-medium tracking-wide">
+              CLÍNICA DENTAL PROFESIONAL
+            </span>
+          </div>
+        </Link>
 
-        {/* Desktop Menu */}
-        <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-1">
           <Link 
             href={homeHref} 
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground ${
-              isActive(homeHref) ? 'bg-accent text-accent-foreground' : ''
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              isActive(homeHref) 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
             }`}
           >
             {uiStrings.home}
           </Link>
           <Link 
             href={servicesHref} 
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground ${
-              isActive(servicesHref) ? 'bg-accent text-accent-foreground' : ''
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              isActive(servicesHref) 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
             }`}
           >
             {uiStrings.services}
           </Link>
           <Link 
             href={faqHref} 
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground ${
-              isActive(faqHref) ? 'bg-accent text-accent-foreground' : ''
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              isActive(faqHref) 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
             }`}
           >
             {uiStrings.faq}
           </Link>
           <Link 
             href={testimonialsHref} 
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground ${
-              isActive(testimonialsHref) ? 'bg-accent text-accent-foreground' : ''
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              isActive(testimonialsHref) 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
             }`}
           >
             {uiStrings.testimonials}
           </Link>
           <Link 
             href={contactHref} 
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground ${
-              isActive(contactHref) ? 'bg-accent text-accent-foreground' : ''
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              isActive(contactHref) 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
             }`}
           >
             {uiStrings.contact}
           </Link>
-          <Link href={appointmentsHref} className="ml-2">
-            <Button size="sm" className="shadow-sm hover:shadow-md transition-all">
-              {uiStrings.appointments}
+          
+          {/* CTA Button */}
+          <Link href={appointmentsHref} className="ml-4">
+            <Button 
+              size="sm" 
+              className="relative overflow-hidden bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-xl transition-all duration-300 font-semibold px-6 py-5 hover:scale-[1.02] group"
+            >
+              <span className="relative z-10">{uiStrings.appointments}</span>
+              <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
             </Button>
           </Link>
         </nav>
 
+        {/* Right Controls */}
         <div className="flex items-center gap-2">
-          <ThemeToggleButton />
+          {/* Theme Toggle */}
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/30 border border-border/40">
+            <ThemeToggleButton />
+            
+            {/* Language Toggle */}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={toggleLanguage}
+              className="h-8 w-8 text-xs font-bold hover:bg-accent transition-colors"
+              aria-label="Toggle language"
+            >
+              {lang === 'es' ? 'EN' : 'ES'}
+            </Button>
+          </div>
           
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={toggleLanguage} 
-            className="h-9 w-9 font-semibold hover:bg-accent"
-          >
-            {lang === 'es' ? 'EN' : 'ES'}
-          </Button>
+          {/* Admin Icon */}
+          <Link href="/admin">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 hover:bg-primary/10 transition-all duration-200 group"
+              aria-label="Admin"
+            >
+              <ShieldCheck className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+            </Button>
+          </Link>
           
-          {/* Admin Section */}
-          {!isLoading && (
-            <>
-              {user && isAdmin ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                          {user.email?.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.email}</p>
-                        <Badge variant="secondary" className="mt-1 w-fit">Admin</Badge>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="cursor-pointer">
-                        <Settings className="mr-2 h-4 w-4" />
-                        {lang === 'es' ? 'Panel Admin' : 'Admin Panel'}
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      {lang === 'es' ? 'Cerrar sesión' : 'Logout'}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Link href="/admin/login">
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-9 w-9 hover:bg-accent"
-                    title={lang === 'es' ? 'Administración' : 'Administration'}
-                  >
-                    <User className="h-5 w-5" />
-                  </Button>
-                </Link>
-              )}
-            </>
-          )}
-
           {/* Mobile Menu Button */}
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleMenu}>
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="md:hidden h-9 w-9 hover:bg-accent transition-colors"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {isMenuOpen ? (
+              <X className="h-5 w-5 transition-transform duration-200 rotate-90" />
+            ) : (
+              <Menu className="h-5 w-5 transition-transform duration-200" />
+            )}
           </Button>
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden border-t bg-background/95 backdrop-blur-lg py-4">
-          <nav className="container flex flex-col space-y-2 px-4">
+        <div className="md:hidden border-t border-border/40 bg-background animate-in slide-in-from-top-2 duration-200">
+          <nav className="container flex flex-col gap-1 py-4 px-4">
             <Link 
               href={homeHref} 
-              className="px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors" 
-              onClick={closeMenu}
+              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                isActive(homeHref) 
+                  ? 'bg-primary/10 text-primary' 
+                  : 'hover:bg-accent/50'
+              }`}
+              onClick={() => setIsMenuOpen(false)}
             >
               {uiStrings.home}
             </Link>
             <Link 
               href={servicesHref} 
-              className="px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors" 
-              onClick={closeMenu}
+              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                isActive(servicesHref) 
+                  ? 'bg-primary/10 text-primary' 
+                  : 'hover:bg-accent/50'
+              }`}
+              onClick={() => setIsMenuOpen(false)}
             >
               {uiStrings.services}
             </Link>
             <Link 
               href={faqHref} 
-              className="px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors" 
-              onClick={closeMenu}
+              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                isActive(faqHref) 
+                  ? 'bg-primary/10 text-primary' 
+                  : 'hover:bg-accent/50'
+              }`}
+              onClick={() => setIsMenuOpen(false)}
             >
               {uiStrings.faq}
             </Link>
             <Link 
               href={testimonialsHref} 
-              className="px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors" 
-              onClick={closeMenu}
+              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                isActive(testimonialsHref) 
+                  ? 'bg-primary/10 text-primary' 
+                  : 'hover:bg-accent/50'
+              }`}
+              onClick={() => setIsMenuOpen(false)}
             >
               {uiStrings.testimonials}
             </Link>
             <Link 
               href={contactHref} 
-              className="px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors" 
-              onClick={closeMenu}
+              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                isActive(contactHref) 
+                  ? 'bg-primary/10 text-primary' 
+                  : 'hover:bg-accent/50'
+              }`}
+              onClick={() => setIsMenuOpen(false)}
             >
               {uiStrings.contact}
             </Link>
-            <Link href={appointmentsHref} onClick={closeMenu}>
-              <Button size="sm" className="w-full">{uiStrings.appointments}</Button>
-            </Link>
             
-            {/* Admin Section for Mobile */}
-            {!isLoading && (
-              <div className="pt-2 border-t space-y-2">
-                {user && isAdmin ? (
-                  <>
-                    <div className="px-3 py-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            {user.email?.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{user.email}</p>
-                          <Badge variant="secondary" className="text-xs">Admin</Badge>
-                        </div>
-                      </div>
-                    </div>
-                    <Link href="/admin" onClick={closeMenu}>
-                      <Button variant="outline" size="sm" className="w-full justify-start">
-                        <Settings className="mr-2 h-4 w-4" />
-                        {lang === 'es' ? 'Panel Admin' : 'Admin Panel'}
-                      </Button>
-                    </Link>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full justify-start text-destructive" 
-                      onClick={() => {
-                        handleLogout();
-                        closeMenu();
-                      }}
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      {lang === 'es' ? 'Cerrar sesión' : 'Logout'}
-                    </Button>
-                  </>
-                ) : (
-                  <Link href="/admin/login" onClick={closeMenu}>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
-                      <User className="mr-2 h-4 w-4" />
-                      {lang === 'es' ? 'Administración' : 'Administration'}
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            )}
+            {/* Mobile Language Toggle */}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                toggleLanguage();
+                setIsMenuOpen(false);
+              }}
+              className="mt-2 w-full justify-center"
+            >
+              {lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
+            </Button>
+            
+            {/* Mobile CTA */}
+            <Link href={appointmentsHref} onClick={() => setIsMenuOpen(false)}>
+              <Button 
+                size="sm" 
+                className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md font-medium py-6"
+              >
+                {uiStrings.appointments}
+              </Button>
+            </Link>
           </nav>
         </div>
       )}
