@@ -30,7 +30,7 @@ async function diagnoseAdmin() {
   try {
     // 1. Vérifier la connexion Supabase
     console.log('1️⃣ Test de connexion Supabase...');
-    const { data: healthCheck, error: healthError } = await supabase
+    const { error: healthError } = await supabase
       .from('admin_users')
       .select('count')
       .limit(1);
@@ -92,14 +92,19 @@ async function diagnoseAdmin() {
 
     // 4. Test d'accès avec un client normal
     console.log('\n4️⃣ Test d\'accès client normal...');
-    const normalClient = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!anonKey || !supabaseUrl) {
+      console.log('❌ Variables d\'environnement manquantes');
+      return;
+    }
+    const normalClient = createClient(supabaseUrl, anonKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
       }
     });
 
-    const { data: testAccess, error: accessError } = await normalClient
+    const { error: accessError } = await normalClient
       .from('admin_users')
       .select('id')
       .limit(1);

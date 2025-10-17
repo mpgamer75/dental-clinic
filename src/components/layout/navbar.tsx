@@ -9,13 +9,11 @@ import { generalUiStrings } from '@/lib/data';
 import { useLanguage } from '@/contexts/language-context';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { useState } from 'react';
-import { useTheme } from 'next-themes';
 
 export function Navbar() {
   const { lang, toggleLanguage } = useLanguage();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { theme } = useTheme();
 
   const uiStrings = generalUiStrings[lang];
   const homeHref = `/${lang}`;

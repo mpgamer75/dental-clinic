@@ -7,11 +7,11 @@ export default function NotFound() {
       <h1 className="text-4xl font-bold">404</h1>
       <h2 className="mt-2 text-2xl font-semibold">Page non trouvée</h2>
       <p className="mt-4 mb-8 max-w-md text-muted-foreground">
-        Désolé, la page que vous recherchez n'existe pas ou a été déplacée.
+        Désolé, la page que vous recherchez n&apos;existe pas ou a été déplacée.
       </p>
       <Button asChild>
         <Link href="/">
-          Retour à l'accueil
+          Retour à l&apos;accueil
         </Link>
       </Button>
     </div>

@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
@@ -87,7 +86,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<{ user: { id: string; email?: string } } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -95,8 +94,6 @@ export default function AdminPage() {
   const [recentMessages, setRecentMessages] = useState<ContactMessage[]>([]);
   const [recentTestimonials, setRecentTestimonials] = useState<Testimonial[]>([]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
 
   const supabase = createClient();
 
@@ -146,7 +143,8 @@ export default function AdminPage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [router, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   const fetchDashboardData = async () => {
     try {
@@ -262,7 +260,7 @@ export default function AdminPage() {
         window.location.href = '/admin';
       }, 100);
 
-    } catch (error: any) {
+    } catch {
       setError('Error inesperado. Por favor, intente de nuevo.');
       setIsLoading(false);
     }
@@ -303,11 +301,12 @@ export default function AdminPage() {
       });
 
       await fetchDashboardData();
-    } catch (error: any) {
-      console.error('Error updating appointment:', error);
+    } catch (err) {
+      console.error('Error updating appointment:', err);
+      const errorMessage = err instanceof Error ? err.message : "No se pudo actualizar la cita. Verifica los permisos de la base de datos.";
       toast({
         title: "❌ Error al actualizar",
-        description: error?.message || "No se pudo actualizar la cita. Verifica los permisos de la base de datos.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -331,8 +330,8 @@ export default function AdminPage() {
       });
 
       await fetchDashboardData();
-    } catch (error) {
-      console.error('Error updating message:', error);
+    } catch (err) {
+      console.error('Error updating message:', err);
       toast({
         title: "❌ Error",
         description: "No se pudo actualizar el mensaje",
@@ -359,8 +358,8 @@ export default function AdminPage() {
       });
 
       await fetchDashboardData();
-    } catch (error) {
-      console.error('Error updating testimonial:', error);
+    } catch (err) {
+      console.error('Error updating testimonial:', err);
       toast({
         title: "❌ Error",
         description: "No se pudo actualizar el testimonio",
@@ -377,7 +376,7 @@ export default function AdminPage() {
     setUpdatingId(id);
     try {
       const { error } = await supabase
-        .from(table as any)
+        .from(table)
         .delete()
         .eq('id', id);
 
@@ -389,8 +388,8 @@ export default function AdminPage() {
       });
 
       await fetchDashboardData();
-    } catch (error) {
-      console.error('Error deleting item:', error);
+    } catch (err) {
+      console.error('Error deleting item:', err);
       toast({
         title: "❌ Error",
         description: `No se pudo eliminar el ${itemName}`,
@@ -429,6 +428,7 @@ export default function AdminPage() {
   };
 
   const getStatusBadge = (status: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const variants: Record<string, { color: string; label: string; icon?: any }> = {
       pending: { color: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20', label: 'Pendiente', icon: Clock },
       confirmed: { color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20', label: 'Confirmado', icon: CheckCircle2 },
@@ -745,7 +745,6 @@ export default function AdminPage() {
                                   variant="ghost" 
                                   size="icon" 
                                   className="h-8 w-8 hover:bg-accent transition-colors"
-                                  onClick={() => setSelectedAppointment(apt)}
                                 >
                                   <Info className="h-4 w-4" />
                                 </Button>
@@ -948,7 +947,6 @@ export default function AdminPage() {
                                   variant="ghost" 
                                   size="icon" 
                                   className="h-8 w-8 hover:bg-accent transition-colors"
-                                  onClick={() => setSelectedMessage(msg)}
                                 >
                                   <Info className="h-4 w-4" />
                                 </Button>
@@ -1150,7 +1148,7 @@ export default function AdminPage() {
                       )}
                     </div>
 
-                    <p className="text-sm mb-3 line-clamp-3 italic leading-relaxed">"{test.quote}"</p>
+                    <p className="text-sm mb-3 line-clamp-3 italic leading-relaxed">&ldquo;{test.quote}&rdquo;</p>
 
                     <div className="flex items-center justify-between pt-2 border-t">
                       {getStatusBadge(test.status)}

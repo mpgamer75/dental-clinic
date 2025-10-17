@@ -11,7 +11,6 @@ import { ContactSection } from '@/components/sections/contact-section';
 import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
 import { DiplomasSection } from '@/components/sections/diplomas-section';
 import type { Language } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
 
 export default async function HomePage({ params }: { params: Promise<{ lang: Language }> }) {
   const resolvedParams = await params;
