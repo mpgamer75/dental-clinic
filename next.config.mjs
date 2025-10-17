@@ -1,56 +1,40 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
+  reactStrictMode: true,
+  
+  // Configuration cache optimisée
+  onDemandEntries: {
+    maxInactiveAge: 60 * 1000,
+    pagesBufferLength: 5,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+
+  // Optimisation des images
   images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Ajout domaines externes
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'picsum.photos',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'wyospvndshfmkqvwkefn.supabase.co',
-        port: '',
-        pathname: '/**',
       },
     ],
-    // Configuration pour les images locales
-    unoptimized: false,
-    formats: ['image/webp', 'image/avif'],
   },
-  // Configuration pour servir les fichiers statiques
+
+  // Headers pour cache navigateur
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/:path*',
         headers: [
           {
-            key: 'Content-Security-Policy',
-            value: `
-              default-src 'self';
-              script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://accounts.google.com;
-              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-              img-src 'self' data: https://picsum.photos https://wyospvndshfmkqvwkefn.supabase.co;
-              font-src 'self' https://fonts.gstatic.com;
-              frame-src 'self' https://www.google.com https://www.youtube.com https://www.google.com/maps/;
-              connect-src 'self' https://www.google-analytics.com https://wyospvndshfmkqvwkefn.supabase.co;
-            `.replace(/\s\s+/g, ' ').trim(),
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: 'public, max-age=3600, stale-while-revalidate=86400',
           },
         ],
       },
@@ -61,39 +45,51 @@ const nextConfig = {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
           },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
     ];
   },
-  // Configuration pour les fichiers statiques
-  // async rewrites() {
-  //   return [
-  //     {
-  //       source: '/images/:path*',
-  //       destination: '/images/:path*',
-  //     },
-  //   ];
-  // },
-  // Optimisations de performance
+
+  // Experimental features pour performance
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ['lucide-react'],
+    scrollRestoration: true,
   },
-  // Configuration de sécurité
+
+  // Compiler options
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+
+  // Webpack optimizations - SIMPLIFIÉ pour éviter erreur exports
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+
+    return config;
+  },
+
+  // Production optimizations
   poweredByHeader: false,
   compress: true,
-  // Configuration pour les fichiers statiques
-  // webpack: (config) => {
-  //   config.module.rules.push({
-  //     test: /\.(png|jpe?g|gif|svg)$/i,
-  //     type: 'asset/resource',
-  //   });
-  //   return config;
-  // },
+  generateEtags: true,
 };
 
 export default nextConfig;

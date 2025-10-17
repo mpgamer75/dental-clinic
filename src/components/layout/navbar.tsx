@@ -41,14 +41,12 @@ export function Navbar() {
             
             {/* Logo image container */}
             <div className="relative rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-all duration-300 ring-2 ring-primary/10 group-hover:ring-primary/30">
-              <div className={`relative w-12 h-12 transition-all duration-300 ${
-                theme === 'dark' ? 'brightness-110' : 'brightness-100'
-              }`}>
+              <div className="relative w-12 h-12">
                 <Image
                   src="/images/logo_valerio.png"
                   alt="Orthoprotesis Dental Clinic Logo"
                   fill
-                  className="object-contain p-1"
+                  className="object-contain p-1 dark:brightness-110"
                   priority
                   sizes="48px"
                 />
