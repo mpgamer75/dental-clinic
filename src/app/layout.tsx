@@ -28,6 +28,7 @@ export default function RootLayout({
           defaultTheme="light"
           enableSystem={false}
           disableTransitionOnChange={false}
+          storageKey="orthoprotesis-theme"
         >
           {children}
           <Toaster />

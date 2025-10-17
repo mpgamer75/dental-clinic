@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,11 +9,13 @@ import { generalUiStrings } from '@/lib/data';
 import { useLanguage } from '@/contexts/language-context';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { useState } from 'react';
+import { useTheme } from 'next-themes';
 
 export function Navbar() {
   const { lang, toggleLanguage } = useLanguage();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme } = useTheme();
 
   const uiStrings = generalUiStrings[lang];
   const homeHref = `/${lang}`;
@@ -34,23 +37,22 @@ export function Navbar() {
         <Link href={homeHref} className="flex items-center gap-3 group">
           <div className="relative">
             {/* Background effect */}
-            <div className="absolute -inset-1 bg-primary/20 rounded-xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            {/* Logo container */}
-            <div className="relative bg-primary p-2.5 rounded-xl shadow-md group-hover:shadow-lg transition-all duration-300">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-              >
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-                <path d="M12 6v6l4 2" />
-              </svg>
+            {/* Logo image container */}
+            <div className="relative rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-all duration-300 ring-2 ring-primary/10 group-hover:ring-primary/30">
+              <div className={`relative w-12 h-12 transition-all duration-300 ${
+                theme === 'dark' ? 'brightness-110' : 'brightness-100'
+              }`}>
+                <Image
+                  src="/images/logo_valerio.png"
+                  alt="Orthoprotesis Dental Clinic Logo"
+                  fill
+                  className="object-contain p-1"
+                  priority
+                  sizes="48px"
+                />
+              </div>
             </div>
           </div>
           

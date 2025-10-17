@@ -7,7 +7,10 @@ import { useState } from 'react';
 import { useLanguage } from '@/contexts/language-context';
 import { generalUiStrings } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import { Users, Anchor, Smile, Sparkles, ShieldCheck, HeartPulse, Bone, type LucideProps } from 'lucide-react';
+import { 
+  Users, Smile, Sparkles, ShieldCheck, HeartPulse, 
+  Activity, Stethoscope, type LucideProps, Scan, Syringe
+} from 'lucide-react';
 import type React from 'react';
 import { Badge } from '@/components/ui/badge';
 
@@ -18,14 +21,18 @@ interface ServicesSectionProps {
   servicesList: Service[];
 }
 
+// Icons dentaires professionnels TOUS DISPONIBLES dans Lucide
 const IconComponents: Record<string, React.FC<LucideProps>> = {
-  Users,
-  Anchor,
-  Smile,
-  Sparkles,
-  ShieldCheck,
-  HeartPulse,
-  Bone,
+  Users,          // Prótesis Dentales (personnes/multiple dents)
+  Scan,           // Implantes (scan/technologie précise) ✅ CHANGÉ
+  Smile,          // Ortodoncia (sourire)
+  Sparkles,       // Limpieza Dental (brillance)
+  ShieldCheck,    // Empastes/Restauraciones (protection)
+  HeartPulse,     // Endodoncia (traitement canal/santé)
+  Activity,       // Blanqueamiento (activité/résultat)
+  Stethoscope,    // Consulta General (examen)
+  Syringe,        // Backup option (injection/traitement)
+  Telescope: Scan, // Fallback: Telescope n'existe pas, on utilise Scan
 };
 
 export function ServicesSection({ id, title, description, servicesList }: ServicesSectionProps) {
@@ -63,7 +70,10 @@ export function ServicesSection({ id, title, description, servicesList }: Servic
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {servicesList.map((service, index) => {
-            const IconComponent = service.iconName ? IconComponents[service.iconName] : null;
+            // Gestion du fallback pour Telescope
+            const iconName = service.iconName === 'Telescope' ? 'Scan' : service.iconName;
+            const IconComponent = iconName ? IconComponents[iconName] : null;
+            
             const isExpanded = expandedDescriptions[service.title] || false;
             const showReadMoreButton = service.description.length > MAX_CHARS_BEFORE_TRUNCATE;
             const isPopular = popularServices.includes(service.title);
@@ -98,12 +108,23 @@ export function ServicesSection({ id, title, description, servicesList }: Servic
                 )} />
                 
                 <CardHeader className="relative items-center text-center pt-8 pb-4">
-                  {IconComponent && (
+                  {IconComponent ? (
                     <div className={cn(
                       "mb-4 p-4 rounded-full inline-flex transition-all duration-500",
                       isHovered ? "bg-primary/20 scale-110 rotate-3" : "bg-primary/10"
                     )}>
                       <IconComponent className={cn(
+                        "h-12 w-12 md:h-14 md:w-14 transition-colors duration-500 stroke-[2]",
+                        isHovered ? "text-primary" : "text-primary/80"
+                      )} />
+                    </div>
+                  ) : (
+                    // Fallback si aucun icon trouvé : afficher un icon par défaut
+                    <div className={cn(
+                      "mb-4 p-4 rounded-full inline-flex transition-all duration-500",
+                      isHovered ? "bg-primary/20 scale-110 rotate-3" : "bg-primary/10"
+                    )}>
+                      <ShieldCheck className={cn(
                         "h-12 w-12 md:h-14 md:w-14 transition-colors duration-500",
                         isHovered ? "text-primary" : "text-primary/80"
                       )} />

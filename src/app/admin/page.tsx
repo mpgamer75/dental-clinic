@@ -279,12 +279,23 @@ export default function AdminPage() {
   const updateAppointmentStatus = async (id: string, status: Appointment['status']) => {
     setUpdatingId(id);
     try {
-      const { error } = await supabase
+      console.log('Updating appointment:', { id, status });
+      
+      const { data, error } = await supabase
         .from('appointments')
-        .update({ status })
-        .eq('id', id);
+        .update({ 
+          status,
+          // Note: updated_at n'existe pas dans le schéma, on update juste le status
+        })
+        .eq('id', id)
+        .select();
 
-      if (error) throw error;
+      console.log('Update result:', { data, error });
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(error.message || 'Error desconocido');
+      }
 
       toast({
         title: "✅ Cita actualizada",
@@ -292,11 +303,11 @@ export default function AdminPage() {
       });
 
       await fetchDashboardData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating appointment:', error);
       toast({
-        title: "❌ Error",
-        description: "No se pudo actualizar la cita",
+        title: "❌ Error al actualizar",
+        description: error?.message || "No se pudo actualizar la cita. Verifica los permisos de la base de datos.",
         variant: "destructive",
       });
     } finally {
@@ -733,7 +744,7 @@ export default function AdminPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-8 w-8 hover:bg-accent transition-colors"
                                   onClick={() => setSelectedAppointment(apt)}
                                 >
                                   <Info className="h-4 w-4" />
@@ -828,7 +839,7 @@ export default function AdminPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-8 w-8 hover:bg-accent transition-colors"
                                   disabled={updatingId === apt.id}
                                 >
                                   {updatingId === apt.id ? (
@@ -936,7 +947,7 @@ export default function AdminPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-8 w-8 hover:bg-accent transition-colors"
                                   onClick={() => setSelectedMessage(msg)}
                                 >
                                   <Info className="h-4 w-4" />
@@ -1013,7 +1024,7 @@ export default function AdminPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-8 w-8 hover:bg-accent transition-colors"
                                   disabled={updatingId === msg.id}
                                 >
                                   {updatingId === msg.id ? (
@@ -1101,7 +1112,7 @@ export default function AdminPage() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-7 w-7 hover:bg-accent transition-colors"
                             disabled={updatingId === test.id}
                           >
                             {updatingId === test.id ? (

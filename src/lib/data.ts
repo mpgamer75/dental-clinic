@@ -42,12 +42,12 @@ export const adminNavItems: AdminNavItemData = {
 export const services: ServiceData = {
   es: [
     {
-      iconName: 'Users', // Represents multiple teeth or dentures
+      iconName: 'Users', // Prótesis - personnes/multiple dents
       title: 'Prótesis Dentales',
       description: 'Restauramos la función y estética de tu sonrisa con prótesis fijas y removibles de alta calidad. Esto incluye coronas individuales para proteger dientes dañados, puentes para reemplazar uno o más dientes ausentes utilizando dientes adyacentes como soporte, y dentaduras completas o parciales para una restauración extensa. Cada solución es personalizada para asegurar comodidad, durabilidad y una apariencia natural.',
     },
     {
-      iconName: 'Anchor', // Represents stability of implants
+      iconName: 'Scan', // Implantes - scan/technologie précise
       title: 'Implantes Dentales',
       description: 'Los implantes dentales son la solución más avanzada y duradera para reemplazar dientes perdidos. Consisten en un tornillo de titanio biocompatible que se integra con el hueso maxilar, actuando como una raíz artificial. Sobre este implante se coloca una corona de porcelana o zirconio, indistinguible de un diente natural. Los implantes ofrecen una base estable, previenen la pérdida ósea, mejoran la capacidad de masticación y restauran la estética de manera excepcional.',
     },
@@ -57,19 +57,17 @@ export const services: ServiceData = {
       description: 'Corregimos dientes desalineados y problemas de mordida (maloclusiones) para mejorar tanto la estética de tu sonrisa como tu salud oral general. Ofrecemos opciones como brackets metálicos tradicionales, brackets cerámicos más discretos, y los modernos alineadores transparentes (ortodoncia invisible). Los tratamientos son adaptados para niños, adolescentes y adultos, buscando una sonrisa alineada, funcional y saludable.',
     },
     {
-      // iconName: 'ShieldCheck', Using ToothIcon directly in component for now for dental-specific imagery
-      iconName: 'ShieldCheck', 
+      iconName: 'Sparkles', // Limpieza - brillance/propreté
       title: 'Limpieza Dental Profesional',
       description: 'La profilaxis dental es fundamental para mantener una boca sana. Este procedimiento elimina la placa bacteriana y el sarro (cálculo dental) que el cepillado diario no puede remover, especialmente en zonas de difícil acceso. Ayuda a prevenir caries, gingivitis, periodontitis y mal aliento. Recomendamos una limpieza cada seis meses para una sonrisa radiante y encías saludables.',
     },
     {
-      iconName: 'Sparkles', // Represents whitening/brightness
+      iconName: 'Activity', // Blanqueamiento - résultats actifs
       title: 'Blanqueamiento Dental',
       description: 'Devuelve el brillo y un tono más blanco a tu sonrisa con nuestros tratamientos de blanqueamiento dental seguros y efectivos. Utilizamos geles blanqueadores de última generación, aplicados profesionalmente en la clínica para resultados rápidos y notables, o mediante kits personalizados para usar en casa bajo supervisión odontológica. Elimina manchas y rejuvenece tu apariencia.',
     },
     {
-      // iconName: 'ShieldCheck', // Re-using for general protection/repair
-      iconName: 'ShieldCheck', 
+      iconName: 'ShieldCheck', // Empastes - protection réparation
       title: 'Empastes (Restauraciones)',
       description: 'Reparamos dientes dañados por caries, devolviéndoles su forma, función e integridad. Tras eliminar el tejido carioso, rellenamos la cavidad con resinas compuestas del color del diente (estéticas) que se mimetizan perfectamente con tu sonrisa. Este tratamiento detiene el avance de la caries y alivia la sensibilidad dental.',
     },
@@ -79,19 +77,19 @@ export const services: ServiceData = {
       description: 'Este procedimiento salva un diente cuya pulpa (nervio) está infectada o inflamada debido a caries profundas o traumatismos. Se elimina la pulpa dañada, se limpian y desinfectan los conductos radiculares, y luego se sellan herméticamente. La endodoncia alivia el dolor intenso y permite conservar el diente natural, evitando su extracción.',
     },
     {
-      iconName: 'Bone', // Represents examination of teeth/bone structure
+      iconName: 'Stethoscope', // Consulta - examen médical
       title: 'Consulta General/Revisión',
       description: 'Las consultas generales y revisiones periódicas son la base de una buena salud bucodental. El Dr. Francis Valerio realizará un examen completo de tus dientes, encías y tejidos orales, utilizando radiografías digitales si es necesario, para detectar problemas en etapas tempranas. Se discutirá cualquier hallazgo y se elaborará un plan de tratamiento personalizado si es preciso.',
     }
   ],
   en: [
     {
-      iconName: 'Users',
+      iconName: 'Users', // Prosthetics - multiple teeth/people
       title: 'Dental Prosthetics',
       description: 'We restore the function and aesthetics of your smile with high-quality fixed and removable prosthetics. This includes individual crowns to protect damaged teeth, bridges to replace one or more missing teeth using adjacent teeth as support, and full or partial dentures for extensive restoration. Each solution is customized to ensure comfort, durability, and a natural appearance.',
     },
     {
-      iconName: 'Anchor',
+      iconName: 'Scan', // Implants - scan/precision technology
       title: 'Dental Implants',
       description: 'Dental implants are the most advanced and durable solution for replacing missing teeth. They consist of a biocompatible titanium screw that integrates with the jawbone, acting as an artificial root. A porcelain or zirconia crown, indistinguishable from a natural tooth, is placed on this implant. Implants offer a stable base, prevent bone loss, improve chewing ability, and exceptionally restore aesthetics.',
     },
@@ -101,12 +99,12 @@ export const services: ServiceData = {
       description: 'We correct misaligned teeth and bite problems (malocclusions) to improve both the aesthetics of your smile and your overall oral health. We offer options such as traditional metal braces, more discreet ceramic braces, and modern clear aligners (invisible orthodontics). Treatments are tailored for children, adolescents, and adults, aiming for a straight, functional, and healthy smile.',
     },
     {
-      iconName: 'ShieldCheck',
+      iconName: 'Sparkles', // Cleaning - shine/brightness
       title: 'Professional Dental Cleaning',
       description: 'Dental prophylaxis is essential for maintaining a healthy mouth. This procedure removes bacterial plaque and tartar (dental calculus) that daily brushing cannot, especially in hard-to-reach areas. It helps prevent cavities, gingivitis, periodontitis, and bad breath. We recommend a cleaning every six months for a radiant smile and healthy gums.',
     },
     {
-      iconName: 'Sparkles',
+      iconName: 'Activity', // Whitening - active results
       title: 'Teeth Whitening',
       description: 'Restore brightness and a whiter shade to your smile with our safe and effective teeth whitening treatments. We use latest-generation whitening gels, professionally applied in the clinic for quick and noticeable results, or through custom take-home kits under dental supervision. It removes stains and rejuvenates your appearance.',
     },
@@ -121,7 +119,7 @@ export const services: ServiceData = {
       description: 'This procedure saves a tooth whose pulp (nerve) is infected or inflamed due to deep cavities or trauma. The damaged pulp is removed, root canals are cleaned and disinfected, and then hermetically sealed. Endodontics relieves severe pain and allows the natural tooth to be preserved, avoiding extraction.',
     },
     {
-      iconName: 'Bone', 
+      iconName: 'Stethoscope', // Consultation - medical exam
       title: 'General Consultation/Check-up',
       description: 'General consultations and periodic check-ups are the foundation of good oral health. Dr. Francis Valerio will perform a comprehensive examination of your teeth, gums, and oral tissues, using digital X-rays if necessary, to detect problems in early stages. Any findings will be discussed, and a personalized treatment plan will be developed if needed.',
     }
@@ -271,7 +269,7 @@ export const formTranslations: FormTranslations = {
       namePlaceholder: "Ej: María González",
       emailLabel: "Correo Electrónico",
       emailPlaceholder: "Ej: maria.gonzalez@correo.com",
-      phoneLabel: "Teléfono (Opcional)",
+      phoneLabel: "Teléfono",
       phonePlaceholder: "Ej: (829) 123-4567",
       serviceTypeLabel: "Tipo de Servicio Requerido",
       serviceTypePlaceholder: "Seleccione el servicio que necesita",
@@ -289,7 +287,7 @@ export const formTranslations: FormTranslations = {
       namePlaceholder: "E.g.: Mary Smith",
       emailLabel: "Email Address",
       emailPlaceholder: "E.g.: mary.smith@email.com",
-      phoneLabel: "Phone (Optional)",
+      phoneLabel: "Phone",
       phonePlaceholder: "E.g.: (555) 987-6543",
       serviceTypeLabel: "Type of Service Required",
       serviceTypePlaceholder: "Select the service you need",
