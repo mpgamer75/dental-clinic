@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
+import { DashboardCharts } from '@/components/admin/dashboard-charts';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -688,6 +689,13 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Dashboard Charts */}
+        <DashboardCharts
+          appointments={recentAppointments}
+          messages={recentMessages}
+          testimonials={recentTestimonials}
+        />
 
         {/* Data Sections */}
         <div className="grid gap-6 lg:grid-cols-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
