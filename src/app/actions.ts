@@ -8,12 +8,31 @@ import { actionMessages } from '@/lib/data';
 const createContactFormSchema = (lang: Language) => {
   const zodMsgs = actionMessages[lang].zod;
   return z.object({
-    name: z.string().min(2, { message: zodMsgs.nameMin }),
-    email: z.string().email({ message: zodMsgs.emailInvalid }),
-    phone: z.string().optional().refine(value => !value || /^[0-9+\s()-]*$/.test(value), {
+    name: z.string()
+      .min(2, { message: zodMsgs.nameMin })
+      .max(100, { message: 'El nombre es demasiado largo' })
+      .refine(value => !/[\x00-\x1F\x7F]/.test(value), {
+        message: 'El nombre contiene caracteres no válidos'
+      }),
+    email: z.string()
+      .email({ message: zodMsgs.emailInvalid })
+      .max(255, { message: 'El email es demasiado largo' })
+      .toLowerCase()
+      .trim(),
+    phone: z.string().optional().refine(value => {
+      if (!value || value.trim() === '') return true;
+      // Doit contenir au moins 7 chiffres et pas plus de 15
+      const digitsOnly = value.replace(/[^0-9]/g, '');
+      return digitsOnly.length >= 7 && digitsOnly.length <= 15 && /^[0-9+\s()-]*$/.test(value);
+    }, {
       message: zodMsgs.phoneInvalid
     }),
-    message: z.string().min(10, { message: zodMsgs.messageMin }),
+    message: z.string()
+      .min(10, { message: zodMsgs.messageMin })
+      .max(2000, { message: 'El mensaje es demasiado largo' })
+      .refine(value => !/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value), {
+        message: 'El mensaje contiene caracteres no válidos'
+      }),
   });
 };
 
@@ -55,13 +74,33 @@ export async function submitContactForm(formData: Omit<ContactFormData, 'id' | '
 const createAppointmentFormSchema = (lang: Language) => {
   const zodMsgs = actionMessages[lang].zod;
   return z.object({
-    name: z.string().min(2, { message: zodMsgs.nameMin }),
-    email: z.string().email({ message: zodMsgs.emailInvalid }),
-    phone: z.string().optional().refine(value => !value || /^[0-9+\s()-]*$/.test(value), {
+    name: z.string()
+      .min(2, { message: zodMsgs.nameMin })
+      .max(100, { message: 'El nombre es demasiado largo' })
+      .refine(value => !/[\x00-\x1F\x7F]/.test(value), {
+        message: 'El nombre contiene caracteres no válidos'
+      }),
+    email: z.string()
+      .email({ message: zodMsgs.emailInvalid })
+      .max(255, { message: 'El email es demasiado largo' })
+      .toLowerCase()
+      .trim(),
+    phone: z.string().optional().refine(value => {
+      if (!value || value.trim() === '') return true;
+      const digitsOnly = value.replace(/[^0-9]/g, '');
+      return digitsOnly.length >= 7 && digitsOnly.length <= 15 && /^[0-9+\s()-]*$/.test(value);
+    }, {
       message: zodMsgs.phoneInvalid
     }),
-    service_type: z.string().min(1, { message: zodMsgs.serviceTypeRequired }),
-    reason: z.string().min(10, { message: zodMsgs.reasonMin }).max(500, { message: zodMsgs.reasonMax }),
+    service_type: z.string()
+      .min(1, { message: zodMsgs.serviceTypeRequired })
+      .max(100, { message: 'El tipo de servicio es demasiado largo' }),
+    reason: z.string()
+      .min(10, { message: zodMsgs.reasonMin })
+      .max(500, { message: zodMsgs.reasonMax })
+      .refine(value => !/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value), {
+        message: 'La razón contiene caracteres no válidos'
+      }),
     is_urgent: z.boolean().default(false),
   });
 };
@@ -139,9 +178,21 @@ export async function submitAppointmentForm(formData: Omit<AppointmentFormData, 
 const createTestimonialFormSchema = (lang: Language) => {
   const zodMsgs = actionMessages[lang].zod;
   return z.object({
-    name: z.string().min(2, { message: zodMsgs.nameMin }),
-    quote: z.string().min(15, { message: zodMsgs.quoteMin }).max(500, { message: zodMsgs.quoteMax }),
-    location: z.string().optional(),
+    name: z.string()
+      .min(2, { message: zodMsgs.nameMin })
+      .max(100, { message: 'El nombre es demasiado largo' })
+      .refine(value => !/[\x00-\x1F\x7F]/.test(value), {
+        message: 'El nombre contiene caracteres no válidos'
+      }),
+    quote: z.string()
+      .min(15, { message: zodMsgs.quoteMin })
+      .max(500, { message: zodMsgs.quoteMax })
+      .refine(value => !/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value), {
+        message: 'El testimonio contiene caracteres no válidos'
+      }),
+    location: z.string()
+      .max(100, { message: 'La ubicación es demasiado larga' })
+      .optional(),
   });
 };
 

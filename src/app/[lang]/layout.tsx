@@ -14,9 +14,9 @@ import type { Language } from '@/lib/types';
 //   variable: '--font-sans',
 // });
 
-export async function generateMetadata({ params }: { params: Promise<{ lang: Language }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const resolvedParams = await params;
-  const lang = (resolvedParams?.lang === 'en' || resolvedParams?.lang === 'es') ? resolvedParams.lang : 'es';
+  const lang: Language = (resolvedParams?.lang === 'en' || resolvedParams?.lang === 'es') ? resolvedParams.lang as Language : 'es';
 
   const currentClinicName = contactDetails.clinicName[lang];       
   const currentDoctorName = contactDetails.doctorName[lang];       
@@ -64,15 +64,15 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: Lan
   };
 }
 
-export default async function LangLayout({ 
-  children, 
-  params 
-}: { 
-  children: React.ReactNode; 
-  params: Promise<{ lang: Language }> 
+export default async function LangLayout({
+  children,
+  params
+}: {
+  children: React.ReactNode;
+  params: Promise<{ lang: string }>
 }) {
   const resolvedParams = await params;
-  const lang = resolvedParams?.lang || 'es';
+  const lang: Language = (resolvedParams?.lang === 'en' || resolvedParams?.lang === 'es') ? resolvedParams.lang as Language : 'es';
   
   return (
     <LanguageProvider initialLanguage={lang}>
