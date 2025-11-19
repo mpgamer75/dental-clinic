@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import Script from 'next/script';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Star, Award, Clock, Phone } from 'lucide-react';
@@ -12,6 +13,7 @@ import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
 import { DiplomasSection } from '@/components/sections/diplomas-section';
 import type { Language } from '@/lib/types';
 import { createServerClient } from '@/lib/supabase-server';
+import { getDentalClinicStructuredData, getBreadcrumbStructuredData, getFAQStructuredData } from '@/lib/seo-config';
 
 export default async function HomePage({ params }: { params: Promise<{ lang: Language }> }) {
   const resolvedParams = await params;
@@ -68,8 +70,33 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
 
   const currentDiplomasSectionContent = contactDetails.diplomasSection[lang];
 
+  // Generate structured data for SEO
+  const clinicStructuredData = getDentalClinicStructuredData(lang);
+  const breadcrumbStructuredData = getBreadcrumbStructuredData(lang, '');
+  const faqStructuredData = getFAQStructuredData(faqItemsList);
+
   return (
     <>
+      {/* Structured Data for SEO */}
+      <Script
+        id="clinic-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(clinicStructuredData) }}
+        strategy="beforeInteractive"
+      />
+      <Script
+        id="breadcrumb-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
+        strategy="beforeInteractive"
+      />
+      <Script
+        id="faq-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
+        strategy="beforeInteractive"
+      />
+
       {/* Hero Section Améliorée */}
       <section className="relative bg-gradient-to-br from-primary/10 via-background to-accent/10 pt-20 md:pt-28 lg:pt-32 pb-12 md:pb-20 lg:pb-24 overflow-hidden">
         {/* Animated Background Elements */}
