@@ -278,12 +278,11 @@ export default function AdminPage() {
     setUpdatingId(id);
     try {
       console.log('Updating appointment:', { id, status });
-      
+
       const { data, error } = await supabase
         .from('appointments')
-        .update({ 
-          status,
-          // Note: updated_at n'existe pas dans le schéma, on update juste le status
+        .update({
+          status: status as 'pending' | 'confirmed' | 'cancelled' | 'completed',
         })
         .eq('id', id)
         .select();
@@ -319,7 +318,7 @@ export default function AdminPage() {
     try {
       const { error } = await supabase
         .from('contact_messages')
-        .update({ status })
+        .update({ status: status as 'unread' | 'read' | 'archived' })
         .eq('id', id);
 
       if (error) throw error;
@@ -347,7 +346,7 @@ export default function AdminPage() {
     try {
       const { error } = await supabase
         .from('testimonials')
-        .update({ status })
+        .update({ status: status as 'pending_approval' | 'approved' | 'rejected' })
         .eq('id', id);
 
       if (error) throw error;
