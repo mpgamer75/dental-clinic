@@ -23,16 +23,35 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
   const currentFormStrings = formTranslations.appointmentForm[lang];
   const currentActionMessages = actionMessages[lang];
 
-  // Schema avec téléphone OBLIGATOIRE
+  // Schema avec validation améliorée
   const clientSchema = z.object({
-    name: z.string().min(2, { message: currentActionMessages.zod.nameMin }),
-    email: z.string().email({ message: currentActionMessages.zod.emailInvalid }),
-    phone: z.string().min(8, { message: currentActionMessages.zod.phoneInvalid }).refine(
-      value => /^[0-9+\s()-]*$/.test(value),
-      { message: currentActionMessages.zod.phoneInvalid }
-    ),
-    serviceType: z.string().min(1, { message: currentActionMessages.zod.serviceTypeRequired }),
-    reason: z.string().min(10, { message: currentActionMessages.zod.reasonMin }).max(500, { message: currentActionMessages.zod.reasonMax }),
+    name: z.string()
+      .min(2, { message: currentActionMessages.zod.nameMin })
+      .max(100, { message: lang === 'es' ? 'El nombre es demasiado largo' : 'Name is too long' })
+      .refine(value => !/[\x00-\x1F\x7F]/.test(value), {
+        message: lang === 'es' ? 'El nombre contiene caracteres no válidos' : 'Name contains invalid characters'
+      }),
+    email: z.string()
+      .email({ message: currentActionMessages.zod.emailInvalid })
+      .max(255, { message: lang === 'es' ? 'El email es demasiado largo' : 'Email is too long' })
+      .toLowerCase()
+      .trim(),
+    phone: z.string().refine(value => {
+      if (!value || value.trim() === '') return false; // Requis
+      const digitsOnly = value.replace(/[^0-9]/g, '');
+      return digitsOnly.length >= 7 && digitsOnly.length <= 15 && /^[0-9+\s()-]*$/.test(value);
+    }, {
+      message: currentActionMessages.zod.phoneInvalid
+    }),
+    serviceType: z.string()
+      .min(1, { message: currentActionMessages.zod.serviceTypeRequired })
+      .max(100, { message: lang === 'es' ? 'El tipo de servicio es demasiado largo' : 'Service type is too long' }),
+    reason: z.string()
+      .min(10, { message: currentActionMessages.zod.reasonMin })
+      .max(500, { message: currentActionMessages.zod.reasonMax })
+      .refine(value => !/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value), {
+        message: lang === 'es' ? 'La razón contiene caracteres no válidos' : 'Reason contains invalid characters'
+      }),
     isUrgent: z.boolean().default(false),
   });
 
@@ -112,9 +131,12 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
               </FormLabel>
               <FormControl>
                 <div className="relative">
-                  <Input 
-                    placeholder={currentFormStrings.namePlaceholder} 
-                    {...field} 
+                  <Input
+                    placeholder={currentFormStrings.namePlaceholder}
+                    {...field}
+                    aria-label={currentFormStrings.nameLabel}
+                    aria-required="true"
+                    maxLength={100}
                     className="pl-4 h-12 bg-background border-2 border-muted-foreground/20 focus:border-primary transition-all text-base"
                   />
                 </div>
@@ -137,10 +159,14 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
                   <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input 
-                    type="email" 
-                    placeholder={currentFormStrings.emailPlaceholder} 
-                    {...field} 
+                  <Input
+                    type="email"
+                    placeholder={currentFormStrings.emailPlaceholder}
+                    {...field}
+                    aria-label={currentFormStrings.emailLabel}
+                    aria-required="true"
+                    maxLength={255}
+                    autoComplete="email"
                     className="h-12 bg-background border-2 border-muted-foreground/20 focus:border-primary transition-all text-base"
                   />
                 </FormControl>
@@ -159,10 +185,13 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
                   <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input 
-                    type="tel" 
-                    placeholder={currentFormStrings.phonePlaceholder} 
-                    {...field} 
+                  <Input
+                    type="tel"
+                    placeholder={currentFormStrings.phonePlaceholder}
+                    {...field}
+                    aria-label={currentFormStrings.phoneLabel}
+                    aria-required="true"
+                    autoComplete="tel"
                     className="h-12 bg-background border-2 border-muted-foreground/20 focus:border-primary transition-all text-base"
                   />
                 </FormControl>
@@ -214,9 +243,12 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
                 <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
-                <Textarea 
-                  placeholder={currentFormStrings.reasonPlaceholder} 
-                  {...field} 
+                <Textarea
+                  placeholder={currentFormStrings.reasonPlaceholder}
+                  {...field}
+                  aria-label={currentFormStrings.reasonLabel}
+                  aria-required="true"
+                  maxLength={500}
                   className="min-h-[120px] bg-background border-2 border-muted-foreground/20 focus:border-primary transition-all text-base resize-none"
                 />
               </FormControl>

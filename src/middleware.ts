@@ -9,7 +9,20 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://wyospvndshfmkqvwkefn.supabase.co; frame-src 'self' https://www.google.com https://www.youtube.com;",
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self' 'nonce-{NONCE}' 'strict-dynamic' https://vercel.live https://va.vercel-scripts.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: https: blob:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' https://wyospvndshfmkqvwkefn.supabase.co https://vercel.live https://va.vercel-scripts.com wss://wyospvndshfmkqvwkefn.supabase.co",
+    "frame-src 'self' https://www.google.com https://www.youtube.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests"
+  ].join('; '),
 };
 
 const SUPPORTED_LANGUAGES = ['es', 'en'];
