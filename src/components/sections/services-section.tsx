@@ -7,12 +7,13 @@ import { useState } from 'react';
 import { useLanguage } from '@/contexts/language-context';
 import { generalUiStrings } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import { 
-  Users, Smile, Sparkles, ShieldCheck, HeartPulse, 
+import {
+  Users, Smile, Sparkles, ShieldCheck, HeartPulse,
   Activity, Stethoscope, type LucideProps, Scan, Syringe
 } from 'lucide-react';
 import type React from 'react';
 import { Badge } from '@/components/ui/badge';
+import { motion, LayoutGroup } from 'framer-motion';
 
 interface ServicesSectionProps {
   id: string; 
@@ -56,7 +57,12 @@ export function ServicesSection({ id, title, description, servicesList }: Servic
   return (
     <section id={id} className="bg-gradient-to-b from-background via-secondary/5 to-background py-16 md:py-24 lg:py-32">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="text-center mb-12 md:mb-16 animate-fade-in">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12 md:mb-16"
+        >
           <Badge variant="secondary" className="mb-4">
             {lang === 'es' ? 'Servicios Especializados' : 'Specialized Services'}
           </Badge>
@@ -66,9 +72,10 @@ export function ServicesSection({ id, title, description, servicesList }: Servic
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             {description}
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <LayoutGroup>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {servicesList.map((service, index) => {
             // Gestion du fallback pour Telescope
             const iconName = service.iconName === 'Telescope' ? 'Scan' : service.iconName;
@@ -80,19 +87,26 @@ export function ServicesSection({ id, title, description, servicesList }: Servic
             const isHovered = hoveredCard === service.title;
 
             return (
-              <Card 
+              <motion.div
                 key={service.title}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.5,
+                  delay: index * 0.1,
+                  layout: { duration: 0.3 }
+                }}
                 onMouseEnter={() => setHoveredCard(service.title)}
                 onMouseLeave={() => setHoveredCard(null)}
-                className={cn(
-                  "relative shadow-lg transition-all duration-500 ease-out hover:shadow-2xl flex flex-col bg-card rounded-xl overflow-hidden group border-2",
-                  isHovered ? "scale-105 border-primary/50" : "border-transparent hover:border-primary/30",
-                  "hover-lift"
-                )}
-                style={{
-                  animationDelay: `${index * 100}ms`,
-                }}
               >
+                <Card
+                  className={cn(
+                    "relative shadow-lg transition-all duration-500 ease-out hover:shadow-2xl flex flex-col bg-card rounded-xl overflow-hidden group border-2 h-full",
+                    isHovered ? "scale-105 border-primary/50" : "border-transparent hover:border-primary/30",
+                    "hover-lift tap-feedback"
+                  )}
+                >
                 {isPopular && (
                   <div className="absolute top-3 right-3 z-10">
                     <Badge variant="default" className="bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0">
@@ -134,32 +148,51 @@ export function ServicesSection({ id, title, description, servicesList }: Servic
                     {service.title}
                   </CardTitle>
                 </CardHeader>
-                
+
                 <CardContent className="relative text-left flex-grow flex flex-col px-6 pb-8">
-                  <CardDescription 
-                    className={cn(
-                      "text-foreground/80 text-base leading-relaxed flex-grow transition-all duration-300 ease-in-out",
-                      !isExpanded && showReadMoreButton && "line-clamp-5"
-                    )}
-                  >
-                    {service.description}
-                  </CardDescription>
-                  
-                  {showReadMoreButton && (
-                    <Button 
-                      variant="link" 
-                      onClick={() => toggleDescription(service.title)} 
-                      className="mt-3 self-start px-0 text-primary hover:text-primary/80 font-medium"
+                  <motion.div layout="position">
+                    <CardDescription
+                      className={cn(
+                        "text-foreground/80 text-base leading-relaxed flex-grow transition-all duration-300 ease-in-out",
+                        !isExpanded && showReadMoreButton && "line-clamp-5"
+                      )}
                     >
-                      {isExpanded ? currentStrings.readLess : currentStrings.readMore}
-                      <span className="ml-1">{isExpanded ? '↑' : '→'}</span>
-                    </Button>
+                      {service.description}
+                    </CardDescription>
+                  </motion.div>
+
+                  {showReadMoreButton && (
+                    <motion.div layout="position">
+                      <Button
+                        variant="link"
+                        onClick={() => toggleDescription(service.title)}
+                        className="mt-3 self-start px-0 text-primary hover:text-primary/80 font-medium group/btn"
+                      >
+                        <motion.span
+                          initial={false}
+                          animate={{ rotate: isExpanded ? 180 : 0 }}
+                          transition={{ duration: 0.3, type: 'spring', stiffness: 200 }}
+                          className="inline-flex items-center gap-1"
+                        >
+                          {isExpanded ? currentStrings.readLess : currentStrings.readMore}
+                          <motion.span
+                            className="inline-block ml-1"
+                            animate={{ y: isExpanded ? -2 : 0 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            {isExpanded ? '↑' : '→'}
+                          </motion.span>
+                        </motion.span>
+                      </Button>
+                    </motion.div>
                   )}
                 </CardContent>
               </Card>
+              </motion.div>
             );
           })}
-        </div>
+          </div>
+        </LayoutGroup>
 
         <div className="text-center mt-12">
           <Button 

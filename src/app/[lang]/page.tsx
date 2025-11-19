@@ -2,8 +2,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, Star, Award, Clock, Phone } from 'lucide-react'; 
-import { contactDetails, services as allServices, testimonials, faqItems, visitUsCarouselImages, diplomas } from '@/lib/data'; 
+import { CheckCircle, Star, Award, Clock, Phone } from 'lucide-react';
+import { contactDetails, services as allServices, faqItems, visitUsCarouselImages, diplomas } from '@/lib/data';
 import { ServicesSection } from '@/components/sections/services-section';
 import { TestimonialsSection } from '@/components/sections/testimonials-section';
 import { FaqSection } from '@/components/sections/faq-section';
@@ -11,6 +11,7 @@ import { ContactSection } from '@/components/sections/contact-section';
 import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
 import { DiplomasSection } from '@/components/sections/diplomas-section';
 import type { Language } from '@/lib/types';
+import { createServerClient } from '@/lib/supabase-server';
 
 export default async function HomePage({ params }: { params: Promise<{ lang: Language }> }) {
   const resolvedParams = await params;
@@ -33,10 +34,26 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
   const currentFaqSectionContent = contactDetails.faqSection[lang];
   const currentContactSectionContent = contactDetails.contactSection[lang];
 
-  const servicesList = allServices[lang]; 
-  const testimonialsList = testimonials[lang]; 
+  const servicesList = allServices[lang];
   const faqItemsList = faqItems[lang];
   const diplomasList = diplomas[lang];
+
+  // Fetch approved testimonials from database
+  const supabase = await createServerClient();
+  const { data: dbTestimonials } = await supabase
+    .from('testimonials')
+    .select('*')
+    .eq('status', 'approved')
+    .order('submitted_at', { ascending: false });
+
+  // Transform database testimonials to match the expected format
+  const testimonialsList = dbTestimonials && dbTestimonials.length > 0
+    ? dbTestimonials.map(t => ({
+        name: t.name,
+        quote: t.quote,
+        location: t.location || undefined,
+      }))
+    : [];
 
   const baseLangPath = `/${lang}`;
   const appointmentHref = `${baseLangPath}/agendar-cita`;
