@@ -7,18 +7,49 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   LogOut, Calendar, MessageCircle, Quote, LayoutDashboard,
-  TrendingUp, Users, Clock, ArrowRight, Sparkles
+  Clock, ArrowRight, Sparkles
 } from 'lucide-react';
 import { AppointmentsTable } from './appointments-table';
 import { MessagesTable } from './messages-table';
 import { TestimonialsTable } from './testimonials-table';
 import { Card, CardContent } from '@/components/ui/card';
 
+interface Appointment {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  service_type: string;
+  reason: string;
+  is_urgent: boolean;
+  submitted_at: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+}
+
+interface Message {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string;
+  submitted_at: string;
+  status: 'unread' | 'read' | 'archived';
+}
+
+interface Testimonial {
+  id: string;
+  name: string;
+  quote: string;
+  location: string | null;
+  submitted_at: string;
+  status: 'pending_approval' | 'approved' | 'rejected';
+}
+
 interface Props {
   userEmail: string;
-  appointments: any[];
-  messages: any[];
-  testimonials: any[];
+  appointments: Appointment[];
+  messages: Message[];
+  testimonials: Testimonial[];
   signOutAction: () => Promise<void>;
 }
 
