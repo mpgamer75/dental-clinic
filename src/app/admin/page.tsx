@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
@@ -280,11 +282,10 @@ export default function AdminPage() {
     try {
       console.log('Updating appointment:', { id, status });
 
+      const updateData: Partial<Appointment> = { status };
       const { data, error } = await supabase
         .from('appointments')
-        .update({
-          status: status as 'pending' | 'confirmed' | 'cancelled' | 'completed',
-        })
+        .update(updateData as never)
         .eq('id', id)
         .select();
 
@@ -317,9 +318,10 @@ export default function AdminPage() {
   const updateMessageStatus = async (id: string, status: ContactMessage['status']) => {
     setUpdatingId(id);
     try {
+      const updateData: Partial<ContactMessage> = { status };
       const { error } = await supabase
         .from('contact_messages')
-        .update({ status: status as 'unread' | 'read' | 'archived' })
+        .update(updateData as never)
         .eq('id', id);
 
       if (error) throw error;
@@ -345,9 +347,10 @@ export default function AdminPage() {
   const updateTestimonialStatus = async (id: string, status: Testimonial['status']) => {
     setUpdatingId(id);
     try {
+      const updateData: Partial<Testimonial> = { status };
       const { error } = await supabase
         .from('testimonials')
-        .update({ status: status as 'pending_approval' | 'approved' | 'rejected' })
+        .update(updateData as never)
         .eq('id', id);
 
       if (error) throw error;

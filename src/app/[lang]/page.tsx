@@ -11,7 +11,7 @@ import { FaqSection } from '@/components/sections/faq-section';
 import { ContactSection } from '@/components/sections/contact-section';
 import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
 import { DiplomasSection } from '@/components/sections/diplomas-section';
-import type { Language } from '@/lib/types';
+import type { Language, TestimonialSupabase } from '@/lib/types';
 import { createServerClient } from '@/lib/supabase-server';
 import { getDentalClinicStructuredData, getBreadcrumbStructuredData, getFAQStructuredData } from '@/lib/seo-config';
 
@@ -42,11 +42,13 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
 
   // Fetch approved testimonials from database
   const supabase = await createServerClient();
-  const { data: dbTestimonials } = await supabase
+  const { data } = await supabase
     .from('testimonials')
     .select('*')
     .eq('status', 'approved')
     .order('submitted_at', { ascending: false });
+
+  const dbTestimonials = data as TestimonialSupabase[] | null;
 
   // Transform database testimonials to match the expected format
   const testimonialsList = dbTestimonials && dbTestimonials.length > 0
