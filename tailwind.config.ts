@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import defaultTheme from "tailwindcss/defaultTheme";
 
 export default {
     darkMode: ["class"],
@@ -36,6 +37,10 @@ export default {
   				DEFAULT: 'hsl(var(--accent))',
   				foreground: 'hsl(var(--accent-foreground))'
   			},
+  			highlight: {
+  				DEFAULT: 'hsl(var(--highlight))',
+  				foreground: 'hsl(var(--highlight-foreground))'
+  			},
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
@@ -71,6 +76,11 @@ export default {
   				cream: '#FFFBEB',
   				'cream-dark': '#FEF3C7',
   			}
+  		},
+  		fontFamily: {
+  			sans: ['var(--font-body)', ...defaultTheme.fontFamily.sans],
+  			body: ['var(--font-body)', ...defaultTheme.fontFamily.sans],
+  			heading: ['var(--font-heading)', ...defaultTheme.fontFamily.sans],
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

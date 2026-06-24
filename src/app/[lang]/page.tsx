@@ -77,6 +77,23 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
   const breadcrumbStructuredData = getBreadcrumbStructuredData(lang, '');
   const faqStructuredData = getFAQStructuredData(faqItemsList);
 
+  const heroExtras =
+    lang === 'es'
+      ? {
+          experience: '+30 años de experiencia',
+          guarantee: '100% Garantizado',
+          immediate: 'Atención Inmediata',
+          certified: 'Certificado Internacional',
+          yearsBadge: 'Años de Experiencia',
+        }
+      : {
+          experience: '+30 years of experience',
+          guarantee: '100% Guaranteed',
+          immediate: 'Immediate Care',
+          certified: 'Internationally Certified',
+          yearsBadge: 'Years of Experience',
+        };
+
   return (
     <>
       {/* Structured Data for SEO */}
@@ -110,9 +127,9 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
         <div className="container mx-auto px-4 md:px-6 relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6 text-center md:text-left animate-slide-up">
-              <div className="inline-flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-full mb-4">
-                <Star className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-primary">+30 años de experiencia</span>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-highlight/20 bg-highlight/10 px-4 py-2">
+                <Star className="h-4 w-4 text-highlight" />
+                <span className="text-sm font-medium text-highlight">{heroExtras.experience}</span>
               </div>
               
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-primary">
@@ -153,18 +170,18 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
               </div>
 
               {/* Trust Indicators */}
-              <div className="flex flex-wrap gap-4 justify-center md:justify-start pt-4">
+              <div className="flex flex-wrap gap-x-6 gap-y-3 justify-center md:justify-start pt-4">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="text-sm text-muted-foreground">100% Garantizado</span>
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                  <span className="text-sm text-muted-foreground">{heroExtras.guarantee}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-blue-500" />
-                  <span className="text-sm text-muted-foreground">Atención Inmediata</span>
+                  <Clock className="h-5 w-5 text-primary" />
+                  <span className="text-sm text-muted-foreground">{heroExtras.immediate}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-orange-500" />
-                  <span className="text-sm text-muted-foreground">Certificado Internacional</span>
+                  <Award className="h-5 w-5 text-primary" />
+                  <span className="text-sm text-muted-foreground">{heroExtras.certified}</span>
                 </div>
               </div>
             </div>
@@ -195,8 +212,8 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
               {/* Experience Badge */}
               <div className="absolute -top-4 -left-4 bg-card p-4 rounded-xl shadow-xl border-2 border-primary/20">
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-primary">30+</p>
-                  <p className="text-xs text-muted-foreground">Años de Experiencia</p>
+                  <p className="font-heading text-3xl font-bold text-primary">30+</p>
+                  <p className="text-xs text-muted-foreground">{heroExtras.yearsBadge}</p>
                 </div>
               </div>
             </div>

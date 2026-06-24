@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Implémenter sécuriter dans header contre XSS, CRSF et SQL injection
   
   // Configuration cache optimisée
   onDemandEntries: {

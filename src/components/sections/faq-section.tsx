@@ -1,4 +1,3 @@
-
 import type { FAQItem } from '@/lib/types';
 import {
   Accordion,
@@ -6,9 +5,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { SectionHeading } from '@/components/section-heading';
+import { Reveal } from '@/components/reveal';
 
 interface FaqSectionProps {
-  id: string; // Added id for anchor linking
+  id: string;
   title: string;
   description: string;
   faqItemsList: FAQItem[];
@@ -16,33 +17,28 @@ interface FaqSectionProps {
 
 export function FaqSection({ id, title, description, faqItemsList }: FaqSectionProps) {
   return (
-    <section id={id} className="bg-background py-12 md:py-20 lg:py-24">
+    <section id={id} className="bg-background">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-primary">{title}</h2>
-          <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">
-            {description}
-          </p>
-        </div>
+        <SectionHeading title={title} description={description} />
 
-        <div className="max-w-3xl mx-auto">
-          <Accordion type="single" collapsible className="w-full space-y-4">
+        <Reveal className="mx-auto max-w-3xl">
+          <Accordion type="single" collapsible className="w-full space-y-3">
             {faqItemsList.map((item) => (
-              <AccordionItem 
-                key={item.id} 
-                value={item.id} 
-                className="bg-card shadow-md rounded-lg px-2 transition-shadow duration-300 hover:shadow-xl hover:border-primary/50 border border-transparent"
+              <AccordionItem
+                key={item.id}
+                value={item.id}
+                className="overflow-hidden rounded-xl border border-border/60 bg-card px-2 shadow-sm transition-all duration-300 hover:border-primary/40 data-[state=open]:border-primary/50 data-[state=open]:shadow-md"
               >
-                <AccordionTrigger className="text-left font-semibold text-lg hover:no-underline p-6 text-primary hover:text-primary/80">
+                <AccordionTrigger className="px-4 py-5 text-left font-heading text-base font-semibold text-foreground transition-colors hover:text-primary hover:no-underline data-[state=open]:text-primary md:text-lg">
                   {item.question}
                 </AccordionTrigger>
-                <AccordionContent className="p-6 pt-0 text-foreground/80 text-base leading-relaxed">
+                <AccordionContent className="px-4 pb-5 text-base leading-relaxed text-muted-foreground">
                   {item.answer}
                 </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

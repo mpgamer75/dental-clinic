@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { generalUiStrings } from '@/lib/data';
 import { useLanguage } from '@/contexts/language-context';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
+import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 export function Navbar() {
@@ -18,31 +19,33 @@ export function Navbar() {
   const uiStrings = generalUiStrings[lang];
   const homeHref = `/${lang}`;
   const appointmentsHref = `/${lang}/agendar-cita`;
-  const servicesHref = `/${lang}#servicios`;
-  const faqHref = `/${lang}#preguntas-frecuentes`;
-  const testimonialsHref = `/${lang}#testimonios`;
-  const contactHref = `/${lang}#contacto`;
 
-  const isActive = (href: string) => {
-    const baseHref = href.split('#')[0];
-    return pathname === baseHref || pathname?.startsWith(baseHref);
-  };
+  const navLinks = [
+    { href: homeHref, label: uiStrings.home },
+    { href: `/${lang}#servicios`, label: uiStrings.services },
+    { href: `/${lang}#preguntas-frecuentes`, label: uiStrings.faq },
+    { href: `/${lang}#testimonios`, label: uiStrings.testimonials },
+    { href: `/${lang}#contacto`, label: uiStrings.contact },
+  ];
+
+  // Only the bare /{lang} home route gets a persistent highlight; the hash
+  // links all share that base, so they should not all light up at once.
+  const isActive = (href: string) => !href.includes('#') && pathname === href;
+
+  const switchLangLabel = lang === 'es' ? 'Switch to English' : 'Cambiar a Español';
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/98 shadow-md">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 shadow-sm backdrop-blur-lg supports-[backdrop-filter]:bg-background/65">
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
         {/* Logo */}
-        <Link href={homeHref} className="flex items-center gap-3 group">
+        <Link href={homeHref} className="group flex items-center gap-3">
           <div className="relative">
-            {/* Background effect */}
-            <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            
-            {/* Logo image container */}
-            <div className="relative rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-all duration-300 ring-2 ring-primary/10 group-hover:ring-primary/30">
-              <div className="relative w-12 h-12">
+            <div className="absolute -inset-2 rounded-2xl bg-primary/20 opacity-0 blur-lg transition-opacity duration-300 group-hover:opacity-100" />
+            <div className="relative overflow-hidden rounded-xl shadow-sm ring-1 ring-primary/10 transition-all duration-300 group-hover:shadow-md group-hover:ring-primary/25">
+              <div className="relative h-12 w-12">
                 <Image
                   src="/images/logo_valerio.png"
-                  alt="Orthoprotesis Dental Clinic Logo"
+                  alt="Orthoprotesis Dental Clinic"
                   fill
                   className="object-contain p-1 dark:brightness-110"
                   priority
@@ -51,208 +54,125 @@ export function Navbar() {
               </div>
             </div>
           </div>
-          
-          {/* Text logo - COLOR UNIFORME */}
-          <div className="flex flex-col">
-            <span className="text-xl font-bold text-primary hidden sm:inline transition-colors duration-300">
+          <div className="flex flex-col leading-tight">
+            <span className="hidden font-heading text-xl font-bold text-primary sm:inline">
               Orthoprotesis
             </span>
-            <span className="text-[10px] text-muted-foreground/80 hidden lg:inline font-medium tracking-wide">
-              CLÍNICA DENTAL PROFESIONAL
+            <span className="hidden text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground lg:inline">
+              Clínica Dental
             </span>
           </div>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
-          <Link 
-            href={homeHref} 
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-              isActive(homeHref) 
-                ? 'bg-primary/10 text-primary' 
-                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
-            }`}
-          >
-            {uiStrings.home}
-          </Link>
-          <Link 
-            href={servicesHref} 
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-              isActive(servicesHref) 
-                ? 'bg-primary/10 text-primary' 
-                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
-            }`}
-          >
-            {uiStrings.services}
-          </Link>
-          <Link 
-            href={faqHref} 
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-              isActive(faqHref) 
-                ? 'bg-primary/10 text-primary' 
-                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
-            }`}
-          >
-            {uiStrings.faq}
-          </Link>
-          <Link 
-            href={testimonialsHref} 
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-              isActive(testimonialsHref) 
-                ? 'bg-primary/10 text-primary' 
-                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
-            }`}
-          >
-            {uiStrings.testimonials}
-          </Link>
-          <Link 
-            href={contactHref} 
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-              isActive(contactHref) 
-                ? 'bg-primary/10 text-primary' 
-                : 'text-foreground/80 hover:text-foreground hover:bg-accent/50'
-            }`}
-          >
-            {uiStrings.contact}
-          </Link>
-          
-          {/* CTA Button */}
-          <Link href={appointmentsHref} className="ml-4">
-            <Button 
-              size="sm" 
-              className="relative overflow-hidden bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-xl transition-all duration-300 font-semibold px-6 py-5 hover:scale-[1.02] group"
+        <nav className="hidden items-center gap-1 md:flex" aria-label={uiStrings.home}>
+          {navLinks.map((link) => {
+            const active = isActive(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'rounded-lg px-3.5 py-2 text-sm transition-colors duration-200',
+                  active
+                    ? 'bg-primary/10 font-semibold text-primary'
+                    : 'font-medium text-foreground/75 hover:bg-accent hover:text-foreground',
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+
+          <Link href={appointmentsHref} className="ml-3">
+            <Button
+              size="sm"
+              className="btn-shine bg-primary px-6 py-5 font-semibold text-primary-foreground shadow-sm transition-all duration-300 hover:scale-[1.02] hover:bg-primary/90 hover:shadow-md"
             >
-              <span className="relative z-10">{uiStrings.appointments}</span>
-              <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+              {uiStrings.appointments}
             </Button>
           </Link>
         </nav>
 
         {/* Right Controls */}
         <div className="flex items-center gap-2">
-          {/* Theme Toggle */}
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/30 border border-border/40">
+          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 p-1">
             <ThemeToggleButton />
-            
-            {/* Language Toggle */}
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
               onClick={toggleLanguage}
-              className="h-8 w-8 text-xs font-bold hover:bg-accent transition-colors"
-              aria-label="Toggle language"
+              className="h-8 w-8 text-xs font-bold hover:bg-accent"
+              aria-label={switchLangLabel}
+              title={switchLangLabel}
             >
               {lang === 'es' ? 'EN' : 'ES'}
             </Button>
           </div>
-          
-          {/* Admin Icon */}
-          <Link href="/admin">
+
+          <Link href="/admin" className="hidden sm:inline-flex">
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 hover:bg-primary/10 transition-all duration-200 group"
+              className="group h-9 w-9 hover:bg-primary/10"
               aria-label="Admin"
             >
-              <ShieldCheck className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+              <ShieldCheck className="h-4 w-4 text-primary transition-transform group-hover:scale-110" />
             </Button>
           </Link>
-          
-          {/* Mobile Menu Button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="md:hidden h-9 w-9 hover:bg-accent transition-colors"
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 hover:bg-accent md:hidden"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Toggle menu"
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMenuOpen}
           >
-            {isMenuOpen ? (
-              <X className="h-5 w-5 transition-transform duration-200 rotate-90" />
-            ) : (
-              <Menu className="h-5 w-5 transition-transform duration-200" />
-            )}
+            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </div>
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden border-t border-border/40 bg-background animate-in slide-in-from-top-2 duration-200">
-          <nav className="container flex flex-col gap-1 py-4 px-4">
-            <Link 
-              href={homeHref} 
-              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                isActive(homeHref) 
-                  ? 'bg-primary/10 text-primary' 
-                  : 'hover:bg-accent/50'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {uiStrings.home}
-            </Link>
-            <Link 
-              href={servicesHref} 
-              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                isActive(servicesHref) 
-                  ? 'bg-primary/10 text-primary' 
-                  : 'hover:bg-accent/50'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {uiStrings.services}
-            </Link>
-            <Link 
-              href={faqHref} 
-              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                isActive(faqHref) 
-                  ? 'bg-primary/10 text-primary' 
-                  : 'hover:bg-accent/50'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {uiStrings.faq}
-            </Link>
-            <Link 
-              href={testimonialsHref} 
-              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                isActive(testimonialsHref) 
-                  ? 'bg-primary/10 text-primary' 
-                  : 'hover:bg-accent/50'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {uiStrings.testimonials}
-            </Link>
-            <Link 
-              href={contactHref} 
-              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                isActive(contactHref) 
-                  ? 'bg-primary/10 text-primary' 
-                  : 'hover:bg-accent/50'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {uiStrings.contact}
-            </Link>
-            
-            {/* Mobile Language Toggle */}
-            <Button 
-              variant="outline" 
-              size="sm" 
+        <div className="border-t border-border/60 bg-background/95 backdrop-blur-lg duration-200 animate-in slide-in-from-top-2 md:hidden">
+          <nav className="container flex flex-col gap-1 px-4 py-4" aria-label={uiStrings.home}>
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'rounded-lg px-4 py-3 text-sm font-medium transition-colors',
+                    active ? 'bg-primary/10 text-primary' : 'hover:bg-accent',
+                  )}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 toggleLanguage();
                 setIsMenuOpen(false);
               }}
               className="mt-2 w-full justify-center"
             >
-              {lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
+              {switchLangLabel}
             </Button>
-            
-            {/* Mobile CTA */}
+
             <Link href={appointmentsHref} onClick={() => setIsMenuOpen(false)}>
-              <Button 
-                size="sm" 
-                className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md font-medium py-6"
+              <Button
+                size="sm"
+                className="mt-2 w-full bg-primary py-6 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
               >
                 {uiStrings.appointments}
               </Button>

@@ -9,15 +9,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { AddTestimonialForm } from '@/components/add-testimonial-form';
 import { Quote, MessageSquareHeart } from 'lucide-react';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/language-context';
+import { SectionHeading } from '@/components/section-heading';
+import { Reveal, RevealGroup, RevealItem } from '@/components/reveal';
 
 interface TestimonialsSectionProps {
-  id: string; // Added id for anchor linking
+  id: string;
   title: string;
   description: string;
   testimonialsList: Testimonial[];
@@ -26,6 +28,15 @@ interface TestimonialsSectionProps {
   dialogDescriptionText: string;
 }
 
+const getInitials = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .map((word) => word[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
 export function TestimonialsSection({
   id,
   title,
@@ -33,70 +44,80 @@ export function TestimonialsSection({
   testimonialsList,
   ctaButtonText,
   dialogTitleText,
-  dialogDescriptionText
+  dialogDescriptionText,
 }: TestimonialsSectionProps) {
+  const { lang } = useLanguage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleSuccess = () => {
-    setIsDialogOpen(false);
-  };
+  const handleSuccess = () => setIsDialogOpen(false);
+
+  const hasTestimonials = testimonialsList.length > 0;
+  const emptyMessage =
+    lang === 'es'
+      ? 'Aún no hay testimonios publicados. ¡Sé el primero en compartir tu experiencia!'
+      : 'No testimonials published yet. Be the first to share your experience!';
 
   return (
-    <section id={id} className="bg-secondary py-12 md:py-20 lg:py-24">
+    <section id={id} className="bg-secondary">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-primary">{title}</h2>
-          <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">
-            {description}
-          </p>
-        </div>
+        <SectionHeading
+          eyebrow={lang === 'es' ? 'Testimonios' : 'Testimonials'}
+          title={title}
+          description={description}
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {testimonialsList.map((testimonial, index) => (
-            <Card
-              key={index}
-              className="shadow-lg bg-card transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-2xl flex flex-col rounded-xl overflow-hidden"
-            >
-              <CardContent className="p-6 flex flex-col items-center text-center flex-grow">
-                <Quote className="h-10 w-10 text-accent mb-4" />
-                <p className="text-foreground/80 italic mb-6 flex-grow text-base leading-relaxed">&quot;{testimonial.quote}&quot;</p>
-                <div className="flex items-center mt-auto pt-4 border-t border-border/50 w-full justify-center">
-                  <div className="relative w-12 h-12">
-                    <Image
-                      src={`https://picsum.photos/seed/patient${index}/100/100`}
-                      alt={testimonial.name}
-                      fill
-                      className="rounded-full object-cover border-2 border-primary"
-                      data-ai-hint="person happy"
-                    />
-                  </div>
-                  <div className="ml-4">
-                    <p className="font-semibold text-primary text-lg">{testimonial.name}</p>
-                    {testimonial.location && (
-                      <p className="text-sm text-muted-foreground">{testimonial.location}</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {hasTestimonials ? (
+          <RevealGroup className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {testimonialsList.map((testimonial, index) => (
+              <RevealItem key={index} className="h-full">
+                <Card className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg">
+                  <CardContent className="flex flex-grow flex-col p-6">
+                    <Quote className="mb-4 h-8 w-8 text-highlight/50" aria-hidden="true" />
+                    <p className="mb-6 flex-grow text-base italic leading-relaxed text-foreground/80">
+                      &quot;{testimonial.quote}&quot;
+                    </p>
+                    <div className="mt-auto flex items-center gap-3 border-t border-border/50 pt-4">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 font-heading text-sm font-semibold text-primary ring-1 ring-primary/15">
+                        {getInitials(testimonial.name)}
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-primary">{testimonial.name}</p>
+                        {testimonial.location && (
+                          <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </RevealItem>
+            ))}
+          </RevealGroup>
+        ) : (
+          <Reveal className="mx-auto max-w-md rounded-xl border border-dashed border-border bg-card/50 p-10 text-center">
+            <Quote className="mx-auto mb-4 h-10 w-10 text-highlight/40" aria-hidden="true" />
+            <p className="text-muted-foreground">{emptyMessage}</p>
+          </Reveal>
+        )}
 
-        <div className="mt-12 text-center">
+        <Reveal className="mt-12 text-center">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild> 
-              <Button className={cn(
-                buttonVariants({ variant: 'default', size: 'lg' }),
-                "shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out transform hover:scale-105"
-              )}>
+            <DialogTrigger asChild>
+              <Button
+                className={cn(
+                  buttonVariants({ variant: 'default', size: 'lg' }),
+                  'btn-shine shadow-md transition-all duration-300 hover:scale-[1.02] hover:shadow-lg',
+                )}
+              >
                 <MessageSquareHeart className="mr-2 h-5 w-5" />
                 {ctaButtonText}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px] bg-card rounded-lg shadow-xl">
+            <DialogContent className="rounded-xl bg-card shadow-xl sm:max-w-[480px]">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-primary text-center">{dialogTitleText}</DialogTitle>
-                <DialogDescription className="text-center text-muted-foreground mt-1">
+                <DialogTitle className="text-center font-heading text-2xl font-bold text-primary">
+                  {dialogTitleText}
+                </DialogTitle>
+                <DialogDescription className="mt-1 text-center text-muted-foreground">
                   {dialogDescriptionText}
                 </DialogDescription>
               </DialogHeader>
@@ -105,7 +126,7 @@ export function TestimonialsSection({
               </div>
             </DialogContent>
           </Dialog>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

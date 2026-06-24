@@ -6,16 +6,25 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { submitContactForm } from '@/app/actions';
 import type { ContactFormData } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
 import { formTranslations, actionMessages } from '@/lib/data';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Send, User, Mail, Phone, MessageSquare } from 'lucide-react';
 
-// Schema is now defined in actions.ts based on language
-// const contactFormSchema = z.object({ ... });
+const inputClass =
+  'h-12 border-2 border-muted-foreground/20 bg-background text-base transition-colors focus-visible:border-primary';
+const labelClass = 'flex items-center gap-2 text-base font-medium';
 
 export function ContactForm() {
   const { lang } = useLanguage();
@@ -23,37 +32,35 @@ export function ContactForm() {
   const currentFormStrings = formTranslations.contactForm[lang];
   const currentActionMessages = actionMessages[lang];
 
-  // Define schema dynamically for client-side validation hint, though server-side is authoritative
+  // Client-side validation hint; the server action is authoritative.
   const clientSchema = z.object({
     name: z.string().min(2, { message: currentActionMessages.zod.nameMin }),
     email: z.string().email({ message: currentActionMessages.zod.emailInvalid }),
-    phone: z.string().optional().refine(value => !value || /^[0-9+\s()-]*$/.test(value), {
-      message: currentActionMessages.zod.phoneInvalid
-    }),
+    phone: z
+      .string()
+      .optional()
+      .refine((value) => !value || /^[0-9+\s()-]*$/.test(value), {
+        message: currentActionMessages.zod.phoneInvalid,
+      }),
     message: z.string().min(10, { message: currentActionMessages.zod.messageMin }),
   });
-  
+
   const form = useForm<ContactFormData>({
-    resolver: zodResolver(clientSchema), // Zod schema for client-side, server uses its own
-    defaultValues: {
-      name: '',
-      email: '',
-      phone: '',
-      message: '',
-    },
+    resolver: zodResolver(clientSchema),
+    defaultValues: { name: '', email: '', phone: '', message: '' },
   });
 
-  const {formState: {isSubmitting}} = form;
+  const {
+    formState: { isSubmitting },
+    watch,
+  } = form;
+  const messageValue = watch('message');
 
   async function onSubmit(data: ContactFormData) {
     try {
-      // Pass lang to the server action
-      const result = await submitContactForm(data, lang); 
+      const result = await submitContactForm(data, lang);
       if (result.success) {
-        toast({
-          title: currentFormStrings.successToastTitle,
-          description: result.message,
-        });
+        toast({ title: currentFormStrings.successToastTitle, description: result.message });
         form.reset();
       } else {
         toast({
@@ -64,7 +71,10 @@ export function ContactForm() {
         if (result.errors) {
           Object.entries(result.errors).forEach(([field, messages]) => {
             if (messages && messages.length > 0) {
-              form.setError(field as keyof ContactFormData, { type: 'manual', message: messages.join(', ') });
+              form.setError(field as keyof ContactFormData, {
+                type: 'manual',
+                message: messages.join(', '),
+              });
             }
           });
         }
@@ -86,55 +96,110 @@ export function ContactForm() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{currentFormStrings.nameLabel}</FormLabel>
+              <FormLabel className={labelClass}>
+                <User className="h-4 w-4 text-primary" />
+                {currentFormStrings.nameLabel}
+                <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
-                <Input placeholder={currentFormStrings.namePlaceholder} {...field} className="bg-input"/>
+                <Input
+                  placeholder={currentFormStrings.namePlaceholder}
+                  autoComplete="name"
+                  maxLength={100}
+                  className={inputClass}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{currentFormStrings.emailLabel}</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder={currentFormStrings.emailPlaceholder} {...field} className="bg-input"/>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{currentFormStrings.phoneLabel}</FormLabel>
-              <FormControl>
-                <Input type="tel" placeholder={currentFormStrings.phonePlaceholder} {...field} className="bg-input"/>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className={labelClass}>
+                  <Mail className="h-4 w-4 text-primary" />
+                  {currentFormStrings.emailLabel}
+                  <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder={currentFormStrings.emailPlaceholder}
+                    autoComplete="email"
+                    maxLength={255}
+                    className={inputClass}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className={labelClass}>
+                  <Phone className="h-4 w-4 text-primary" />
+                  {currentFormStrings.phoneLabel}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="tel"
+                    placeholder={currentFormStrings.phonePlaceholder}
+                    autoComplete="tel"
+                    className={inputClass}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <FormField
           control={form.control}
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{currentFormStrings.messageLabel}</FormLabel>
+              <FormLabel className={labelClass}>
+                <MessageSquare className="h-4 w-4 text-primary" />
+                {currentFormStrings.messageLabel}
+                <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
-                <Textarea placeholder={currentFormStrings.messagePlaceholder} {...field} className="min-h-[120px] bg-input" />
+                <Textarea
+                  placeholder={currentFormStrings.messagePlaceholder}
+                  maxLength={2000}
+                  className="min-h-[140px] resize-none border-2 border-muted-foreground/20 bg-background text-base transition-colors focus-visible:border-primary"
+                  {...field}
+                />
               </FormControl>
+              <FormDescription className="text-right text-xs">
+                {messageValue?.length || 0} / 2000
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full shadow-md hover:shadow-lg transition-shadow" disabled={isSubmitting}>
-          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+
+        <Button
+          type="submit"
+          className="btn-shine w-full py-6 text-base font-semibold shadow-md transition-all hover:shadow-lg"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          ) : (
+            <Send className="mr-2 h-5 w-5" />
+          )}
           {isSubmitting ? currentFormStrings.submittingButtonText : currentFormStrings.submitButtonText}
         </Button>
       </form>
