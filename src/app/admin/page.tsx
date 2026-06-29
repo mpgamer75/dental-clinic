@@ -34,6 +34,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { DashboardCharts } from '@/components/admin/dashboard-charts';
@@ -97,6 +107,11 @@ export default function AdminPage() {
   const [recentMessages, setRecentMessages] = useState<ContactMessage[]>([]);
   const [recentTestimonials, setRecentTestimonials] = useState<Testimonial[]>([]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    table: 'appointments' | 'contact_messages' | 'testimonials';
+    id: string;
+    itemName: string;
+  } | null>(null);
 
   const supabase = createClient();
 
@@ -212,7 +227,7 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast({
-        title: "❌ Error al cargar datos",
+        title: "Error al cargar datos",
         description: "No se pudieron cargar los datos del dashboard",
         variant: "destructive",
       });
@@ -297,8 +312,9 @@ export default function AdminPage() {
       }
 
       toast({
-        title: "✅ Cita actualizada",
+        title: "Cita actualizada",
         description: `Estado cambiado a: ${getStatusLabel(status)}`,
+        variant: "success",
       });
 
       await fetchDashboardData();
@@ -306,7 +322,7 @@ export default function AdminPage() {
       console.error('Error updating appointment:', err);
       const errorMessage = err instanceof Error ? err.message : "No se pudo actualizar la cita. Verifica los permisos de la base de datos.";
       toast({
-        title: "❌ Error al actualizar",
+        title: "Error al actualizar",
         description: errorMessage,
         variant: "destructive",
       });
@@ -327,15 +343,16 @@ export default function AdminPage() {
       if (error) throw error;
 
       toast({
-        title: "✅ Mensaje actualizado",
+        title: "Mensaje actualizado",
         description: `Estado: ${getStatusLabel(status)}`,
+        variant: "success",
       });
 
       await fetchDashboardData();
     } catch (err) {
       console.error('Error updating message:', err);
       toast({
-        title: "❌ Error",
+        title: "Error",
         description: "No se pudo actualizar el mensaje",
         variant: "destructive",
       });
@@ -356,15 +373,16 @@ export default function AdminPage() {
       if (error) throw error;
 
       toast({
-        title: "✅ Testimonio actualizado",
+        title: "Testimonio actualizado",
         description: `Estado: ${getStatusLabel(status)}`,
+        variant: "success",
       });
 
       await fetchDashboardData();
     } catch (err) {
       console.error('Error updating testimonial:', err);
       toast({
-        title: "❌ Error",
+        title: "Error",
         description: "No se pudo actualizar el testimonio",
         variant: "destructive",
       });
@@ -373,9 +391,13 @@ export default function AdminPage() {
     }
   };
 
-  const deleteItem = async (table: 'appointments' | 'contact_messages' | 'testimonials', id: string, itemName: string) => {
-    if (!confirm(`¿Seguro que desea eliminar este ${itemName}?`)) return;
-
+  // Performs the deletion. Confirmation is handled by an accessible AlertDialog
+  // (see <AlertDialog> at the end of the dashboard) instead of window.confirm().
+  const performDelete = async (
+    table: 'appointments' | 'contact_messages' | 'testimonials',
+    id: string,
+    itemName: string,
+  ) => {
     setUpdatingId(id);
     try {
       const { error } = await supabase
@@ -386,17 +408,18 @@ export default function AdminPage() {
       if (error) throw error;
 
       toast({
-        title: "🗑️ Eliminado",
+        title: 'Eliminado',
         description: `${itemName} eliminado correctamente`,
+        variant: 'success',
       });
 
       await fetchDashboardData();
     } catch (err) {
       console.error('Error deleting item:', err);
       toast({
-        title: "❌ Error",
+        title: 'Error',
         description: `No se pudo eliminar el ${itemName}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setUpdatingId(null);
@@ -433,23 +456,23 @@ export default function AdminPage() {
   const getStatusBadge = (status: string) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const variants: Record<string, { color: string; label: string; icon?: any }> = {
-      pending: { color: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20', label: 'Pendiente', icon: Clock },
-      confirmed: { color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20', label: 'Confirmado', icon: CheckCircle2 },
-      cancelled: { color: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20', label: 'Cancelado', icon: XCircle },
-      completed: { color: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20', label: 'Completado', icon: CheckCircle2 },
-      unread: { color: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20', label: 'No leído', icon: AlertCircle },
-      read: { color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20', label: 'Leído', icon: CheckCircle2 },
-      archived: { color: 'bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20', label: 'Archivado', icon: Archive },
-      pending_approval: { color: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20', label: 'Por aprobar', icon: Clock },
-      approved: { color: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20', label: 'Aprobado', icon: CheckCircle2 },
-      rejected: { color: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20', label: 'Rechazado', icon: XCircle },
+      pending: { color: 'bg-warning/10 text-warning border-warning/25', label: 'Pendiente', icon: Clock },
+      confirmed: { color: 'bg-primary/10 text-primary border-primary/25', label: 'Confirmado', icon: CheckCircle2 },
+      cancelled: { color: 'bg-destructive/10 text-destructive border-destructive/25', label: 'Cancelado', icon: XCircle },
+      completed: { color: 'bg-success/10 text-success border-success/25', label: 'Completado', icon: CheckCircle2 },
+      unread: { color: 'bg-warning/10 text-warning border-warning/25', label: 'No leído', icon: AlertCircle },
+      read: { color: 'bg-primary/10 text-primary border-primary/25', label: 'Leído', icon: CheckCircle2 },
+      archived: { color: 'bg-muted text-muted-foreground border-border', label: 'Archivado', icon: Archive },
+      pending_approval: { color: 'bg-warning/10 text-warning border-warning/25', label: 'Por aprobar', icon: Clock },
+      approved: { color: 'bg-success/10 text-success border-success/25', label: 'Aprobado', icon: CheckCircle2 },
+      rejected: { color: 'bg-destructive/10 text-destructive border-destructive/25', label: 'Rechazado', icon: XCircle },
     };
 
     const variant = variants[status] || variants.pending;
     const Icon = variant.icon;
-    
+
     return (
-      <Badge className={cn(variant.color, 'border font-medium px-2.5 py-1 flex items-center gap-1.5 w-fit')}>
+      <Badge variant="outline" className={cn(variant.color, 'flex w-fit items-center gap-1.5 font-medium')}>
         {Icon && <Icon className="h-3 w-3" />}
         {variant.label}
       </Badge>
@@ -487,7 +510,7 @@ export default function AdminPage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 backdrop-blur ring-4 ring-primary/5 animate-pulse-soft">
               <ShieldCheck className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            <CardTitle className="text-center text-2xl font-bold text-primary">
               Panel de Administración
             </CardTitle>
             <CardDescription className="text-center text-base">
@@ -510,7 +533,8 @@ export default function AdminPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="pl-10 h-11 bg-background/50 border-muted-foreground/20 focus:border-primary transition-all"
+                    aria-describedby={error ? 'login-error' : undefined}
+                    className="pl-10 bg-background/50 border-muted-foreground/20 focus:border-primary transition-all"
                     disabled={isLoading}
                   />
                 </div>
@@ -529,16 +553,18 @@ export default function AdminPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pl-10 pr-10 h-11 bg-background/50 border-muted-foreground/20 focus:border-primary transition-all"
+                    aria-describedby={error ? 'login-error' : undefined}
+                    className="pl-10 pr-10 bg-background/50 border-muted-foreground/20 focus:border-primary transition-all"
                     disabled={isLoading}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 hover:bg-accent"
+                    className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 hover:bg-accent"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -549,12 +575,14 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {error && (
-                <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 animate-fade-in">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+              <div aria-live="polite">
+                {error && (
+                  <Alert variant="destructive" className="animate-fade-in border-destructive/20 bg-destructive/10">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription id="login-error">{error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
 
               <Button
                 type="submit"
@@ -586,7 +614,13 @@ export default function AdminPage() {
   // Admin Dashboard
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/5 to-background">
-      {/* Header avec theme toggle */}
+      <a
+        href="#admin-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:font-medium focus:text-primary-foreground focus:shadow-lg"
+      >
+        Saltar al contenido
+      </a>
+      {/* Header */}
       <header className="border-b bg-card/95 backdrop-blur-xl sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -595,7 +629,7 @@ export default function AdminPage() {
                 <ShieldCheck className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold text-primary">
                   Panel de Administración
                 </h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -620,10 +654,10 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main id="admin-content" className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
         <div className="grid gap-6 mb-8 md:grid-cols-3 animate-fade-in">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent hover:shadow-xl hover:scale-[1.02] transition-all duration-300 group cursor-pointer">
+          <Card className="border border-border/60 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent shadow-sm transition-shadow duration-300 hover:shadow-md">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -633,8 +667,8 @@ export default function AdminPage() {
                   </CardDescription>
                   <CardTitle className="text-4xl font-bold">{dashboardData?.appointmentsPendingCount || 0}</CardTitle>
                 </div>
-                <div className="h-14 w-14 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <CalendarCheck className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
+                  <CalendarCheck className="h-7 w-7 text-primary" />
                 </div>
               </div>
             </CardHeader>
@@ -646,7 +680,7 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent hover:shadow-xl hover:scale-[1.02] transition-all duration-300 group cursor-pointer">
+          <Card className="border border-border/60 bg-gradient-to-br from-highlight/10 via-highlight/5 to-transparent shadow-sm transition-shadow duration-300 hover:shadow-md">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -656,8 +690,8 @@ export default function AdminPage() {
                   </CardDescription>
                   <CardTitle className="text-4xl font-bold">{dashboardData?.messagesUnreadCount || 0}</CardTitle>
                 </div>
-                <div className="h-14 w-14 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <MessageCircle className="h-7 w-7 text-green-600 dark:text-green-400" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-highlight/10">
+                  <MessageCircle className="h-7 w-7 text-highlight" />
                 </div>
               </div>
             </CardHeader>
@@ -669,7 +703,7 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent hover:shadow-xl hover:scale-[1.02] transition-all duration-300 group cursor-pointer">
+          <Card className="border border-border/60 bg-gradient-to-br from-warning/10 via-warning/5 to-transparent shadow-sm transition-shadow duration-300 hover:shadow-md">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -679,8 +713,8 @@ export default function AdminPage() {
                   </CardDescription>
                   <CardTitle className="text-4xl font-bold">{dashboardData?.testimonialsPendingCount || 0}</CardTitle>
                 </div>
-                <div className="h-14 w-14 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-warning/10">
+                  <Users className="h-7 w-7 text-warning" />
                 </div>
               </div>
             </CardHeader>
@@ -707,8 +741,8 @@ export default function AdminPage() {
             <CardHeader className="border-b bg-card/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <CalendarCheck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <CalendarCheck className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <CardTitle className="text-lg font-semibold">Citas Recientes</CardTitle>
@@ -740,8 +774,8 @@ export default function AdminPage() {
                             <div className="flex items-center gap-2 mb-1">
                               <p className="font-semibold text-base">{apt.name}</p>
                               {apt.is_urgent && (
-                                <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 border text-xs px-2 py-0.5 animate-pulse">
-                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                <Badge variant="destructive" className="animate-pulse">
+                                  <AlertCircle className="mr-1 h-3 w-3" />
                                   Urgente
                                 </Badge>
                               )}
@@ -754,7 +788,8 @@ export default function AdminPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-8 w-8 hover:bg-accent transition-colors"
+                                  className="hover:bg-accent"
+                                  aria-label="Ver detalles"
                                 >
                                   <Info className="h-4 w-4" />
                                 </Button>
@@ -830,11 +865,11 @@ export default function AdminPage() {
                                     </div>
 
                                     {apt.is_urgent && (
-                                      <div className="flex items-start gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                                        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                                      <div className="flex items-start gap-3 rounded-lg border border-destructive/25 bg-destructive/10 p-3">
+                                        <AlertCircle className="mt-0.5 h-5 w-5 text-destructive" />
                                         <div className="flex-1">
-                                          <p className="text-xs text-red-700 dark:text-red-400 mb-1">Prioridad</p>
-                                          <p className="font-semibold text-sm text-red-700 dark:text-red-400">⚠️ URGENTE - Requiere atención prioritaria</p>
+                                          <p className="mb-1 text-xs text-destructive">Prioridad</p>
+                                          <p className="text-sm font-semibold text-destructive">URGENTE — Requiere atención prioritaria</p>
                                         </div>
                                       </div>
                                     )}
@@ -848,8 +883,9 @@ export default function AdminPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-8 w-8 hover:bg-accent transition-colors"
+                                  className="hover:bg-accent"
                                   disabled={updatingId === apt.id}
+                                  aria-label="Más opciones"
                                 >
                                   {updatingId === apt.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -860,20 +896,20 @@ export default function AdminPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
                                 <DropdownMenuItem onClick={() => updateAppointmentStatus(apt.id, 'confirmed')}>
-                                  <CheckCircle2 className="mr-2 h-4 w-4 text-blue-600" />
+                                  <CheckCircle2 className="mr-2 h-4 w-4 text-primary" />
                                   Confirmar
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => updateAppointmentStatus(apt.id, 'completed')}>
-                                  <Check className="mr-2 h-4 w-4 text-green-600" />
+                                  <Check className="mr-2 h-4 w-4 text-success" />
                                   Completar
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => updateAppointmentStatus(apt.id, 'cancelled')}>
-                                  <X className="mr-2 h-4 w-4 text-red-600" />
+                                  <X className="mr-2 h-4 w-4 text-destructive" />
                                   Cancelar
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
-                                  onClick={() => deleteItem('appointments', apt.id, 'cita')}
+                                  onClick={() => setPendingDelete({ table: 'appointments', id: apt.id, itemName: 'cita' })}
                                   className="text-destructive"
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
@@ -917,8 +953,8 @@ export default function AdminPage() {
             <CardHeader className="border-b bg-card/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                    <MessageCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-highlight/10">
+                    <MessageCircle className="h-5 w-5 text-highlight" />
                   </div>
                   <div>
                     <CardTitle className="text-lg font-semibold">Mensajes Recientes</CardTitle>
@@ -956,7 +992,8 @@ export default function AdminPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-8 w-8 hover:bg-accent transition-colors"
+                                  className="hover:bg-accent"
+                                  aria-label="Ver detalles"
                                 >
                                   <Info className="h-4 w-4" />
                                 </Button>
@@ -1032,8 +1069,9 @@ export default function AdminPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-8 w-8 hover:bg-accent transition-colors"
+                                  className="hover:bg-accent"
                                   disabled={updatingId === msg.id}
+                                  aria-label="Más opciones"
                                 >
                                   {updatingId === msg.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1044,16 +1082,16 @@ export default function AdminPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
                                 <DropdownMenuItem onClick={() => updateMessageStatus(msg.id, 'read')}>
-                                  <CheckCircle2 className="mr-2 h-4 w-4 text-blue-600" />
+                                  <CheckCircle2 className="mr-2 h-4 w-4 text-primary" />
                                   Marcar leído
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => updateMessageStatus(msg.id, 'archived')}>
-                                  <Archive className="mr-2 h-4 w-4 text-gray-600" />
+                                  <Archive className="mr-2 h-4 w-4 text-muted-foreground" />
                                   Archivar
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
-                                  onClick={() => deleteItem('contact_messages', msg.id, 'mensaje')}
+                                  onClick={() => setPendingDelete({ table: 'contact_messages', id: msg.id, itemName: 'mensaje' })}
                                   className="text-destructive"
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
@@ -1087,8 +1125,8 @@ export default function AdminPage() {
           <CardHeader className="border-b bg-card/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
+                  <Users className="h-5 w-5 text-warning" />
                 </div>
                 <div>
                   <CardTitle className="text-lg font-semibold">Testimonios Recientes</CardTitle>
@@ -1118,10 +1156,11 @@ export default function AdminPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 hover:bg-accent transition-colors"
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-accent"
                             disabled={updatingId === test.id}
+                            aria-label="Más opciones"
                           >
                             {updatingId === test.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1132,16 +1171,16 @@ export default function AdminPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
                           <DropdownMenuItem onClick={() => updateTestimonialStatus(test.id, 'approved')}>
-                            <Check className="mr-2 h-4 w-4 text-green-600" />
+                            <Check className="mr-2 h-4 w-4 text-success" />
                             Aprobar
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => updateTestimonialStatus(test.id, 'rejected')}>
-                            <X className="mr-2 h-4 w-4 text-red-600" />
+                            <X className="mr-2 h-4 w-4 text-destructive" />
                             Rechazar
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
-                            onClick={() => deleteItem('testimonials', test.id, 'testimonio')}
+                            onClick={() => setPendingDelete({ table: 'testimonials', id: test.id, itemName: 'testimonio' })}
                             className="text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -1174,6 +1213,39 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Accessible delete confirmation (replaces window.confirm) */}
+      <AlertDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              ¿Eliminar {pendingDelete?.itemName ?? 'elemento'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente de la base de datos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingDelete) {
+                  performDelete(pendingDelete.table, pendingDelete.id, pendingDelete.itemName);
+                }
+                setPendingDelete(null);
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
