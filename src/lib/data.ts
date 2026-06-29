@@ -1,4 +1,4 @@
-import type { ContactDetails, ServiceData, TestimonialData, FAQData, NavItemData, BaseMetadata, FormTranslations, ActionMessages, GeneralUIData, AdminNavItemData, CarouselImageItem, DiplomaData } from './types';
+import type { Language, ContactDetails, ServiceData, TestimonialData, FAQData, NavItemData, BaseMetadata, FormTranslations, ActionMessages, GeneralUIData, AdminNavItemData, CarouselImageItem, DiplomaData } from './types';
 import { Home, ShieldCheck, MessageCircleQuestion, BadgeInfo, Phone, CalendarDays, LayoutDashboard, MessagesSquare, ShieldAlert, Settings } from 'lucide-react'; 
 
 export const navItems: NavItemData = {
@@ -337,6 +337,88 @@ export const formTranslations: FormTranslations = {
       unexpectedErrorToastTitle: "Unexpected Error",
     }
   }
+};
+
+// Shared form copy: privacy/consent microcopy, response-time reassurance and the
+// persistent success-panel strings. Kept here (content-as-data) so it stays in
+// sync across the appointment, contact and testimonial forms.
+export const formCommon: Record<Language, {
+  charactersWord: string;
+  requiredFields: string;
+  responseTime: string;
+  consentBefore: string;
+  privacyLinkLabel: string;
+  consentAfter: string;
+  testimonialConsent: string;
+  successTitle: string;
+  successAnother: string;
+  urgencyHelpOn: string;
+  urgencyHelpOff: string;
+}> = {
+  es: {
+    charactersWord: "caracteres",
+    requiredFields: "Campos obligatorios",
+    responseTime: "Te responderemos en menos de 24 horas.",
+    consentBefore: "Tus datos solo se usan para gestionar tu solicitud y nunca se comparten. Consulta nuestra ",
+    privacyLinkLabel: "Política de Privacidad",
+    consentAfter: ".",
+    testimonialConsent: "Al enviar, autorizas a la clínica a publicar tu testimonio (nombre y ubicación) en este sitio. Puedes pedir que lo retiremos cuando quieras.",
+    successTitle: "¡Solicitud recibida!",
+    successAnother: "Enviar otra solicitud",
+    urgencyHelpOn: "Atención prioritaria activada",
+    urgencyHelpOff: "Marca esta casilla si necesitas atención inmediata",
+  },
+  en: {
+    charactersWord: "characters",
+    requiredFields: "Required fields",
+    responseTime: "We'll reply within 24 hours.",
+    consentBefore: "Your information is used only to manage your request and is never shared. See our ",
+    privacyLinkLabel: "Privacy Policy",
+    consentAfter: ".",
+    testimonialConsent: "By submitting, you authorize the clinic to publish your testimonial (name and location) on this site. You can ask us to remove it at any time.",
+    successTitle: "Request received!",
+    successAnother: "Send another request",
+    urgencyHelpOn: "Priority attention enabled",
+    urgencyHelpOff: "Check this box if you need immediate attention",
+  },
+};
+
+// Bilingual privacy notice. Describes the site's actual data handling (forms used
+// only to contact patients about their request; no sharing/selling). NOT a
+// substitute for legal review under DR Ley 172-13 — see FINAL_REPORT.md.
+export const privacyPolicy: Record<Language, {
+  title: string;
+  intro: string;
+  sections: { heading: string; body: string }[];
+  contactHeading: string;
+  contactBody: string;
+}> = {
+  es: {
+    title: "Política de Privacidad",
+    intro: "En Orthoprotesis Dental Clinic respetamos tu privacidad. Esta política explica qué datos recogemos a través de este sitio y cómo los usamos.",
+    sections: [
+      { heading: "Qué datos recogemos", body: "Cuando completas el formulario de cita, de contacto o de testimonio, recogemos los datos que nos facilitas: nombre, correo electrónico, teléfono y el motivo o mensaje de tu consulta." },
+      { heading: "Para qué los usamos", body: "Usamos tus datos únicamente para responder a tu solicitud y coordinar tu atención. No los vendemos ni los compartimos con terceros con fines comerciales." },
+      { heading: "Conservación", body: "Conservamos tus datos solo durante el tiempo necesario para atender tu solicitud y cumplir con nuestras obligaciones legales." },
+      { heading: "Tus derechos", body: "Puedes solicitar el acceso, la corrección o la eliminación de tus datos en cualquier momento contactándonos. Tratamos tus datos conforme a la Ley 172-13 sobre protección de datos personales de la República Dominicana." },
+      { heading: "Seguridad", body: "Aplicamos medidas técnicas razonables para proteger tu información. Las comunicaciones con este sitio se realizan mediante conexión cifrada (HTTPS)." },
+    ],
+    contactHeading: "Cómo contactarnos",
+    contactBody: "Para ejercer tus derechos o resolver dudas sobre tu privacidad, escríbenos a info@orthoprotesisdental.com o llámanos al 809-581-7059.",
+  },
+  en: {
+    title: "Privacy Policy",
+    intro: "At Orthoprotesis Dental Clinic we respect your privacy. This policy explains what data we collect through this website and how we use it.",
+    sections: [
+      { heading: "What we collect", body: "When you complete the appointment, contact or testimonial form, we collect the details you provide: name, email, phone, and the reason or message of your inquiry." },
+      { heading: "How we use it", body: "We use your data only to respond to your request and coordinate your care. We do not sell it or share it with third parties for commercial purposes." },
+      { heading: "Retention", body: "We keep your data only for as long as necessary to handle your request and meet our legal obligations." },
+      { heading: "Your rights", body: "You can request access to, correction of, or deletion of your data at any time by contacting us. We handle your data in accordance with Dominican Republic Law 172-13 on personal data protection." },
+      { heading: "Security", body: "We apply reasonable technical measures to protect your information. Communication with this site uses an encrypted connection (HTTPS)." },
+    ],
+    contactHeading: "How to reach us",
+    contactBody: "To exercise your rights or ask about your privacy, email us at info@orthoprotesisdental.com or call 809-581-7059.",
+  },
 };
 
 export const actionMessages: ActionMessages = {

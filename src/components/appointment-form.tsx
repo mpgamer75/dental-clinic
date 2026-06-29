@@ -14,16 +14,20 @@ import { submitAppointmentForm } from '@/app/actions';
 import type { AppointmentFormData } from '@/lib/types';
 import { Loader2, CalendarCheck, Mail, Phone, User, AlertCircle, FileText, Stethoscope } from 'lucide-react';
 import { useLanguage } from '@/contexts/language-context';
-import { formTranslations, actionMessages } from '@/lib/data';
+import { formTranslations, actionMessages, formCommon } from '@/lib/data';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
+import { FormSuccess, ConsentNotice } from '@/components/form-feedback';
 
 export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]}) {
   const { lang } = useLanguage();
   const { toast } = useToast();
   const currentFormStrings = formTranslations.appointmentForm[lang];
   const currentActionMessages = actionMessages[lang];
+  const c = formCommon[lang];
+  const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
-  // Schema avec validation améliorée
+  // Schema with refined validation
   const clientSchema = z.object({
     name: z.string()
       .min(2, { message: currentActionMessages.zod.nameMin })
@@ -92,6 +96,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
           description: result.message,
         });
         form.reset();
+        setSubmittedMessage(result.message);
       } else {
         toast({
           title: currentFormStrings.errorToastTitle,
@@ -113,6 +118,18 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
         variant: 'destructive',
       });
     }
+  }
+
+  if (submittedMessage) {
+    return (
+      <FormSuccess
+        title={c.successTitle}
+        message={submittedMessage}
+        responseTime={c.responseTime}
+        resetLabel={c.successAnother}
+        onReset={() => setSubmittedMessage(null)}
+      />
+    );
   }
 
   return (
@@ -253,7 +270,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
                 />
               </FormControl>
               <FormDescription className="text-xs text-muted-foreground">
-                {field.value?.length || 0} / 500 caractères
+                {field.value?.length || 0} / 500 {c.charactersWord}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -287,10 +304,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
                     "text-sm",
                     isUrgent ? "text-red-700/80 dark:text-red-400/80 font-medium" : "text-muted-foreground"
                   )}>
-                    {isUrgent 
-                      ? (lang === 'es' ? 'Atención prioritaria activada' : 'Priority attention enabled')
-                      : (lang === 'es' ? 'Marcar si requiere atención inmediata' : 'Mark if immediate attention required')
-                    }
+                    {isUrgent ? c.urgencyHelpOn : c.urgencyHelpOff}
                   </FormDescription>
                 </div>
                 <FormControl>
@@ -308,33 +322,31 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[]})
           )}
         />
 
-        {/* Bouton submit */}
-        <Button 
-          type="submit" 
-          className={cn(
-            "w-full text-lg py-7 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold relative overflow-hidden group",
-            isUrgent && "bg-red-600 hover:bg-red-700"
-          )}
+        {/* Submit */}
+        <Button
+          type="submit"
+          variant={isUrgent ? 'destructive' : 'cta'}
+          size="xl"
+          className="btn-shine w-full"
           disabled={isSubmitting}
         >
-          <span className="relative z-10 flex items-center justify-center gap-2">
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                {currentFormStrings.submittingButtonText}
-              </>
-            ) : (
-              <>
-                <CalendarCheck className="h-5 w-5" />
-                {currentFormStrings.submitButtonText}
-              </>
-            )}
-          </span>
-          <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              {currentFormStrings.submittingButtonText}
+            </>
+          ) : (
+            <>
+              <CalendarCheck className="h-5 w-5" />
+              {currentFormStrings.submitButtonText}
+            </>
+          )}
         </Button>
 
-        <p className="text-xs text-center text-muted-foreground mt-4">
-          <span className="text-destructive font-medium">*</span> {lang === 'es' ? 'Campos obligatorios' : 'Required fields'}
+        <ConsentNotice lang={lang} />
+
+        <p className="mt-1 text-center text-xs text-muted-foreground">
+          <span className="font-medium text-destructive">*</span> {c.requiredFields}
         </p>
       </form>
     </Form>

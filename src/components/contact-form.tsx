@@ -19,8 +19,10 @@ import { useToast } from '@/hooks/use-toast';
 import { submitContactForm } from '@/app/actions';
 import type { ContactFormData } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
-import { formTranslations, actionMessages } from '@/lib/data';
+import { formTranslations, actionMessages, formCommon } from '@/lib/data';
 import { Loader2, Send, User, Mail, Phone, MessageSquare } from 'lucide-react';
+import { useState } from 'react';
+import { FormSuccess, ConsentNotice } from '@/components/form-feedback';
 
 const inputClass =
   'h-12 border-2 border-muted-foreground/20 bg-background text-base transition-colors focus-visible:border-primary';
@@ -31,6 +33,8 @@ export function ContactForm() {
   const { toast } = useToast();
   const currentFormStrings = formTranslations.contactForm[lang];
   const currentActionMessages = actionMessages[lang];
+  const c = formCommon[lang];
+  const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
   // Client-side validation hint; the server action is authoritative.
   const clientSchema = z.object({
@@ -62,6 +66,7 @@ export function ContactForm() {
       if (result.success) {
         toast({ title: currentFormStrings.successToastTitle, description: result.message });
         form.reset();
+        setSubmittedMessage(result.message);
       } else {
         toast({
           title: currentFormStrings.errorToastTitle,
@@ -86,6 +91,18 @@ export function ContactForm() {
         variant: 'destructive',
       });
     }
+  }
+
+  if (submittedMessage) {
+    return (
+      <FormSuccess
+        title={c.successTitle}
+        message={submittedMessage}
+        responseTime={c.responseTime}
+        resetLabel={c.successAnother}
+        onReset={() => setSubmittedMessage(null)}
+      />
+    );
   }
 
   return (
@@ -192,16 +209,20 @@ export function ContactForm() {
 
         <Button
           type="submit"
-          className="btn-shine w-full py-6 text-base font-semibold shadow-md transition-all hover:shadow-lg"
+          variant="cta"
+          size="lg"
+          className="btn-shine w-full"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Send className="mr-2 h-5 w-5" />
+            <Send className="h-5 w-5" />
           )}
           {isSubmitting ? currentFormStrings.submittingButtonText : currentFormStrings.submitButtonText}
         </Button>
+
+        <ConsentNotice lang={lang} />
       </form>
     </Form>
   );

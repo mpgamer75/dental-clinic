@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Mail, MapPin, Phone, ArrowRight } from 'lucide-react';
-import { contactDetails, generalUiStrings } from '@/lib/data';
+import { contactDetails, generalUiStrings, formCommon } from '@/lib/data';
 import { useLanguage } from '@/contexts/language-context';
 import { Button } from '@/components/ui/button';
 
@@ -131,6 +131,14 @@ export function Footer() {
               .replace('{{clinicName}}', clinicName)}
           </p>
           <p>{footer.doctorAttribution.replace('{{doctorName}}', doctorName)}</p>
+          <p>
+            <Link
+              href={`/${lang}/privacidad`}
+              className="underline-offset-4 transition-colors hover:text-primary hover:underline"
+            >
+              {formCommon[lang].privacyLinkLabel}
+            </Link>
+          </p>
         </div>
       </div>
     </footer>

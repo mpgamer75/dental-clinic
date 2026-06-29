@@ -20,7 +20,8 @@ import { submitTestimonialForm } from '@/app/actions';
 import type { TestimonialFormSubmitData } from '@/lib/types';
 import { Loader2, Send, User, MessageSquareHeart, MapPin } from 'lucide-react';
 import { useLanguage } from '@/contexts/language-context';
-import { formTranslations, actionMessages } from '@/lib/data';
+import { formTranslations, actionMessages, formCommon } from '@/lib/data';
+import { ConsentNotice } from '@/components/form-feedback';
 
 const inputClass =
   'h-12 border-2 border-muted-foreground/20 bg-background text-base transition-colors focus-visible:border-primary';
@@ -35,6 +36,7 @@ export function AddTestimonialForm({ onSuccess }: AddTestimonialFormProps) {
   const { toast } = useToast();
   const currentFormStrings = formTranslations.testimonialForm[lang];
   const currentActionMessages = actionMessages[lang];
+  const c = formCommon[lang];
 
   const clientSchema = z.object({
     name: z.string().min(2, { message: currentActionMessages.zod.nameMin }),
@@ -167,16 +169,23 @@ export function AddTestimonialForm({ onSuccess }: AddTestimonialFormProps) {
 
         <Button
           type="submit"
-          className="btn-shine w-full py-6 text-base font-semibold shadow-md transition-all hover:shadow-lg"
+          variant="cta"
+          size="lg"
+          className="btn-shine w-full"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Send className="mr-2 h-5 w-5" />
+            <Send className="h-5 w-5" />
           )}
           {isSubmitting ? currentFormStrings.submittingButtonText : currentFormStrings.submitButtonText}
         </Button>
+
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">
+          {c.testimonialConsent}
+        </p>
+        <ConsentNotice lang={lang} />
       </form>
     </Form>
   );
