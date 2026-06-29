@@ -6,9 +6,12 @@ import { useReducedMotion, useInView } from 'framer-motion';
 /**
  * Animated count-up for stats (e.g. "30+", "9", "8").
  * - Parses a leading integer + suffix, animates only the number.
- * - Plays once when scrolled into view; respects prefers-reduced-motion.
- * - Screen-reader safe: the final value is exposed via aria-label while the
- *   animating digits are aria-hidden, so assistive tech never reads "1, 2, 3…".
+ * - Hydration-safe: SSR and the first client render emit the FINAL value (good
+ *   for no-JS / SEO and avoids a server/client mismatch). After mount it counts
+ *   up from 0 once the element scrolls into view.
+ * - Respects prefers-reduced-motion (shows the final value, no animation).
+ * - Screen-reader safe: the final value is exposed via aria-label; the animating
+ *   digits are aria-hidden, so assistive tech never reads "1, 2, 3…".
  */
 export function CountUp({
   value,
@@ -26,14 +29,20 @@ export function CountUp({
   const reduce = useReducedMotion();
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: '-60px' });
+  const [mounted, setMounted] = useState(false);
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (!match) return;
-    if (reduce || !inView) {
+    if (reduce) {
       setDisplay(target);
       return;
     }
+    if (!inView) return; // stay at 0 until scrolled into view
     let raf = 0;
     let start: number | null = null;
     const step = (ts: number) => {
@@ -53,10 +62,7 @@ export function CountUp({
 
   return (
     <span ref={ref} className={className} aria-label={value}>
-      <span aria-hidden="true">
-        {display}
-        {suffix}
-      </span>
+      <span aria-hidden="true">{mounted ? `${display}${suffix}` : value}</span>
     </span>
   );
 }

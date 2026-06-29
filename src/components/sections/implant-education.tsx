@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { SectionHeading } from '@/components/section-heading';
 import { Reveal } from '@/components/reveal';
@@ -12,14 +11,14 @@ import { CalendarCheck } from 'lucide-react';
 /**
  * Calm, educational dental-implant cross-section.
  *
- * Implemented as a token-themed SVG (adapts to light/dark) rather than WebGL/3D:
- * zero JS-bundle/perf cost, fully accessible (labelled + a text legend so nothing
- * is conveyed by colour or motion alone), and degrades to a clean static image
- * under prefers-reduced-motion. Content is general patient education only.
+ * Implemented as a token-themed static SVG (adapts to light/dark) rather than
+ * WebGL/3D: zero JS-bundle/perf cost, fully accessible (labelled + a text legend
+ * so nothing is conveyed by colour or motion alone). The gentle entrance is the
+ * shared <Reveal> wrapper, which already respects prefers-reduced-motion.
+ * Content is general patient education only.
  */
 export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
   const { lang } = useLanguage();
-  const reduce = useReducedMotion();
   const t = implantEducation[lang];
   const appointmentHref = `/${lang}/agendar-cita`;
 
@@ -30,16 +29,6 @@ export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
     { x: 168, y: 232 }, // titanium post
     { x: 52, y: 300 }, // bone
   ];
-
-  const partAnim = (i: number) =>
-    reduce
-      ? {}
-      : {
-          initial: { opacity: 0, y: 8 },
-          whileInView: { opacity: 1, y: 0 },
-          viewport: { once: true, margin: '-60px' },
-          transition: { duration: 0.5, delay: 0.1 + i * 0.12, ease: [0.22, 1, 0.36, 1] as const },
-        };
 
   return (
     <section id={id} className="bg-background">
@@ -57,55 +46,43 @@ export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
                 className="mx-auto h-auto w-full max-w-[260px]"
               >
                 {/* Bone (4) */}
-                <motion.rect
-                  {...partAnim(3)}
-                  x="26" y="132" width="168" height="208" rx="22"
-                  className="fill-secondary"
-                />
+                <rect x="26" y="132" width="168" height="208" rx="22" className="fill-secondary" />
                 {/* Gum band */}
                 <rect x="14" y="116" width="192" height="22" rx="8" className="fill-muted" />
 
                 {/* Titanium implant post (3) */}
-                <motion.g {...partAnim(2)}>
-                  <path
-                    d="M92 122 H128 L122 318 Q110 332 98 318 Z"
-                    className="fill-primary"
+                <path d="M92 122 H128 L122 318 Q110 332 98 318 Z" className="fill-primary" />
+                {[150, 174, 198, 222, 246, 270, 294].map((y) => (
+                  <line
+                    key={y}
+                    x1="96"
+                    y1={y}
+                    x2="124"
+                    y2={y - 8}
+                    className="stroke-primary-foreground/40"
+                    strokeWidth="3"
+                    strokeLinecap="round"
                   />
-                  {/* threads */}
-                  {[150, 174, 198, 222, 246, 270, 294].map((y) => (
-                    <line
-                      key={y}
-                      x1="96" y1={y} x2="124" y2={y - 8}
-                      className="stroke-primary-foreground/40"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                  ))}
-                </motion.g>
+                ))}
 
                 {/* Abutment (2) */}
-                <motion.path
-                  {...partAnim(1)}
-                  d="M96 92 H124 L120 120 H100 Z"
-                  className="fill-primary/80"
-                />
+                <path d="M96 92 H124 L120 120 H100 Z" className="fill-primary/80" />
 
                 {/* Crown (1) */}
-                <motion.g {...partAnim(0)}>
-                  <path
-                    d="M74 86 Q70 40 110 34 Q150 40 146 86 Q132 96 110 96 Q88 96 74 86 Z"
-                    className="fill-card stroke-primary"
-                    strokeWidth="3"
-                  />
-                  <path d="M110 40 V92" className="stroke-primary/25" strokeWidth="2.5" />
-                </motion.g>
+                <path
+                  d="M74 86 Q70 40 110 34 Q150 40 146 86 Q132 96 110 96 Q88 96 74 86 Z"
+                  className="fill-card stroke-primary"
+                  strokeWidth="3"
+                />
+                <path d="M110 40 V92" className="stroke-primary/25" strokeWidth="2.5" />
 
                 {/* Numbered markers */}
                 {markers.map((m, i) => (
-                  <motion.g key={i} {...partAnim(i)}>
+                  <g key={i}>
                     <circle cx={m.x} cy={m.y} r="13" className="fill-primary" />
                     <text
-                      x={m.x} y={m.y + 5}
+                      x={m.x}
+                      y={m.y + 5}
                       textAnchor="middle"
                       className="fill-primary-foreground"
                       fontSize="14"
@@ -113,7 +90,7 @@ export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
                     >
                       {i + 1}
                     </text>
-                  </motion.g>
+                  </g>
                 ))}
               </svg>
             </div>
