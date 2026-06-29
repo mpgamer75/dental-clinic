@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Star, Award, Clock, Phone } from 'lucide-react';
 import { contactDetails, services as allServices, faqItems, visitUsCarouselImages, diplomas } from '@/lib/data';
 import { ServicesSection } from '@/components/sections/services-section';
+import { ImplantEducation } from '@/components/sections/implant-education';
 import { TestimonialsSection } from '@/components/sections/testimonials-section';
 import { FaqSection } from '@/components/sections/faq-section';
 import { ContactSection } from '@/components/sections/contact-section';
@@ -266,7 +267,9 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
         description={currentServicesSectionContent.description.replace('{{clinicName}}', currentClinicName).replace('{{doctorName}}', currentDoctorName)}
         servicesList={servicesList}
       />
-      
+
+      <ImplantEducation id="implantes" />
+
       <TestimonialsSection
         id="testimonios"
         title={currentTestimonialsSectionContent.title}

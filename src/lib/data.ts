@@ -421,6 +421,59 @@ export const privacyPolicy: Record<Language, {
   },
 };
 
+// General, factual patient education for the implants section (no clinic-specific
+// claims, statistics or guarantees). Rendered with a calm, accessible SVG
+// cross-section in src/components/sections/implant-education.tsx.
+export const implantEducation: Record<Language, {
+  eyebrow: string;
+  title: string;
+  description: string;
+  svgAlt: string;
+  parts: { label: string; desc: string }[];
+  stepsTitle: string;
+  steps: { title: string; desc: string }[];
+  ctaLabel: string;
+}> = {
+  es: {
+    eyebrow: "Educación para el paciente",
+    title: "¿Cómo funciona un implante dental?",
+    description: "Un implante reemplaza la raíz de un diente perdido y sostiene una corona que luce y funciona como un diente natural.",
+    svgAlt: "Diagrama en corte de un implante dental: corona, pilar, poste de titanio integrado en el hueso.",
+    parts: [
+      { label: "Corona", desc: "La parte visible, hecha a medida para imitar tu diente natural." },
+      { label: "Pilar", desc: "Conecta la corona con el implante de forma segura." },
+      { label: "Implante de titanio", desc: "Un poste de titanio biocompatible que reemplaza la raíz." },
+      { label: "Hueso", desc: "El implante se integra con el hueso para dar firmeza (osteointegración)." },
+    ],
+    stepsTitle: "El proceso, paso a paso",
+    steps: [
+      { title: "Evaluación", desc: "Revisamos tu salud bucal y planificamos tu tratamiento contigo." },
+      { title: "Colocación", desc: "Se coloca el implante de titanio en el hueso con cuidado." },
+      { title: "Corona definitiva", desc: "Tras la cicatrización, se coloca tu corona personalizada." },
+    ],
+    ctaLabel: "Consultar sobre implantes",
+  },
+  en: {
+    eyebrow: "Patient education",
+    title: "How does a dental implant work?",
+    description: "An implant replaces the root of a missing tooth and supports a crown that looks and works like a natural tooth.",
+    svgAlt: "Cross-section diagram of a dental implant: crown, abutment and a titanium post fused into the bone.",
+    parts: [
+      { label: "Crown", desc: "The visible part, custom-made to match your natural tooth." },
+      { label: "Abutment", desc: "Securely connects the crown to the implant." },
+      { label: "Titanium implant", desc: "A biocompatible titanium post that replaces the root." },
+      { label: "Bone", desc: "The implant fuses with the bone for stability (osseointegration)." },
+    ],
+    stepsTitle: "The process, step by step",
+    steps: [
+      { title: "Assessment", desc: "We review your oral health and plan your treatment with you." },
+      { title: "Placement", desc: "The titanium implant is carefully placed in the bone." },
+      { title: "Final crown", desc: "After healing, your custom crown is fitted." },
+    ],
+    ctaLabel: "Ask about implants",
+  },
+};
+
 export const actionMessages: ActionMessages = {
   es: {
     formCorrection: "Por favor, corrija los errores en el formulario.",

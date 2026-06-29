@@ -42,6 +42,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Key on-page sections (anchored on the homepage).
   const sections = [
     { path: 'servicios', priority: 0.8 },
+    { path: 'implantes', priority: 0.7 },
     { path: 'testimonios', priority: 0.7 },
     { path: 'preguntas-frecuentes', priority: 0.7 },
     { path: 'contacto', priority: 0.8 },

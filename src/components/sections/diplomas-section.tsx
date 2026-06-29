@@ -6,6 +6,7 @@ import { GraduationCap, Calendar, Building2, Award, BookOpen, TrendingUp } from 
 import { useLanguage } from '@/contexts/language-context';
 import { SectionHeading } from '@/components/section-heading';
 import { Reveal, RevealGroup, RevealItem } from '@/components/reveal';
+import { CountUp } from '@/components/count-up';
 import { cn } from '@/lib/utils';
 
 interface Diploma {
@@ -104,7 +105,9 @@ export function DiplomasSection({ id, title, description, diplomasList }: Diplom
                   <stat.icon className="h-5 w-5 text-primary" aria-hidden="true" />
                 </div>
                 <div className="text-left">
-                  <p className="font-heading text-2xl font-bold text-foreground">{stat.value}</p>
+                  <p className="font-heading text-2xl font-bold text-foreground">
+                    <CountUp value={stat.value} />
+                  </p>
                   <p className="text-xs text-muted-foreground">{stat.label}</p>
                 </div>
               </div>
