@@ -1,15 +1,14 @@
 import { MetadataRoute } from 'next';
+import { SITE_URL } from '@/lib/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://orthoprotesis-dental.com';
+  const baseUrl = SITE_URL;
   const currentDate = new Date();
 
-  // Pages principales en espagnol et anglais
   const languages = ['es', 'en'] as const;
-
   const routes: MetadataRoute.Sitemap = [];
 
-  // Page d'accueil pour chaque langue
+  // Home + appointment page per language, with hreflang alternates.
   languages.forEach((lang) => {
     routes.push({
       url: `${baseUrl}/${lang}`,
@@ -18,13 +17,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
       alternates: {
         languages: {
-          es: `${baseUrl}/es`,
-          en: `${baseUrl}/en`,
+          'es-DO': `${baseUrl}/es`,
+          'en-US': `${baseUrl}/en`,
+          'x-default': `${baseUrl}/es`,
         },
       },
     });
 
-    // Page de prise de rendez-vous
     routes.push({
       url: `${baseUrl}/${lang}/agendar-cita`,
       lastModified: currentDate,
@@ -32,14 +31,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
       alternates: {
         languages: {
-          es: `${baseUrl}/es/agendar-cita`,
-          en: `${baseUrl}/en/agendar-cita`,
+          'es-DO': `${baseUrl}/es/agendar-cita`,
+          'en-US': `${baseUrl}/en/agendar-cita`,
+          'x-default': `${baseUrl}/es/agendar-cita`,
         },
       },
     });
   });
 
-  // Sections importantes de la page d'accueil (avec anchors)
+  // Key on-page sections (anchored on the homepage).
   const sections = [
     { path: 'servicios', priority: 0.8 },
     { path: 'testimonios', priority: 0.7 },

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Configuration de sécurité améliorée
+// Enhanced security headers
 const SECURITY_HEADERS = {
   'X-XSS-Protection': '1; mode=block',
   'X-Frame-Options': 'DENY',
@@ -29,15 +29,22 @@ const SUPPORTED_LANGUAGES = ['es', 'en'];
 const DEFAULT_LANGUAGE = 'es';
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
   const { pathname } = req.nextUrl;
 
-  // Ajouter les headers de sécurité
+  // Resolve the active locale from the path and forward it to the server via a
+  // request header, so the root layout can render the correct <html lang>.
+  const activeLang = pathname.startsWith('/en/') || pathname === '/en' ? 'en' : DEFAULT_LANGUAGE;
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-lang', activeLang);
+
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // Apply security headers to every response
   Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
     res.headers.set(key, value);
   });
 
-  // Ne pas traiter les routes statiques et admin
+  // Skip static assets and admin routes (admin is not locale-prefixed)
   if (
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/images/') ||
@@ -48,13 +55,13 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // Gestion des langues pour les routes publiques
+  // Locale handling for public routes
   if (pathname === '/') {
     return NextResponse.redirect(new URL(`/${DEFAULT_LANGUAGE}`, req.url));
   }
 
-  // Si pas de préfixe de langue, ajouter le préfixe par défaut
-  const hasLangPrefix = SUPPORTED_LANGUAGES.some(lang => 
+  // If no locale prefix is present, add the default one
+  const hasLangPrefix = SUPPORTED_LANGUAGES.some(lang =>
     pathname.startsWith(`/${lang}/`) || pathname === `/${lang}`
   );
 

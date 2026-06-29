@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Figtree, Noto_Sans } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -24,13 +25,18 @@ export const metadata: Metadata = {
   description: 'Clínica dental especializada Orthoprotesis. Specialized dental clinic Orthoprotesis.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The active locale is forwarded by middleware so the document language is
+  // correct for SEO and screen readers (e.g. /en pages render lang="en").
+  const requestHeaders = await headers();
+  const lang = requestHeaders.get('x-lang') === 'en' ? 'en' : 'es';
+
   return (
-    <html lang="es" className={`${fontHeading.variable} ${fontBody.variable}`} suppressHydrationWarning>
+    <html lang={lang} className={`${fontHeading.variable} ${fontBody.variable}`} suppressHydrationWarning>
       <body className="antialiased font-sans flex flex-col min-h-screen bg-background text-foreground">
         <ThemeProvider
           attribute="class"

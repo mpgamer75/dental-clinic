@@ -18,9 +18,11 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       .replace('{{clinicName}}', clinicName)
       .replace('{{doctorName}}', doctorName),
     alternates: {
+      canonical: `/${lang}/agendar-cita`,
       languages: {
-        'es': '/es/agendar-cita',
-        'en': '/en/agendar-cita',
+        'es-DO': '/es/agendar-cita',
+        'en-US': '/en/agendar-cita',
+        'x-default': '/es/agendar-cita',
       },
     },
   };

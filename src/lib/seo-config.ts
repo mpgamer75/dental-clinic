@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { Language } from './types';
+import { SITE_URL } from './site';
 
 interface SEOConfig {
   title: string;
@@ -113,10 +114,13 @@ export const seoConfig: Record<Language, SEOConfig> = {
   },
 };
 
-// Métadonnées pour la page d'accueil
+// Per-language page metadata for the homepage.
+// OG/Twitter images are produced by the file-based `opengraph-image` route
+// (src/app/[lang]/opengraph-image.tsx), so no static image paths are referenced
+// here (the previously referenced JPGs did not exist and broke social previews).
 export function getHomeMetadata(lang: Language): Metadata {
   const config = seoConfig[lang];
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://orthoprotesis-dental.com';
+  const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
 
   return {
     title: config.title,
@@ -130,29 +134,21 @@ export function getHomeMetadata(lang: Language): Metadata {
       address: false,
       telephone: false,
     },
-    metadataBase: new URL(baseUrl),
+    metadataBase: new URL(SITE_URL),
     alternates: {
       canonical: `/${lang}`,
       languages: {
         'es-DO': '/es',
         'en-US': '/en',
+        'x-default': '/es',
       },
     },
     openGraph: {
       ...config.openGraph,
-      url: `${baseUrl}/${lang}`,
-      images: [
-        {
-          url: '/images/og-image-implants.jpg', // À créer
-          width: 1200,
-          height: 630,
-          alt: config.openGraph.title,
-        },
-      ],
+      url: `${SITE_URL}/${lang}`,
     },
     twitter: {
       ...config.twitter,
-      images: ['/images/twitter-image-implants.jpg'], // À créer
     },
     robots: {
       index: true,
@@ -165,11 +161,7 @@ export function getHomeMetadata(lang: Language): Metadata {
         'max-snippet': -1,
       },
     },
-    verification: {
-      google: 'votre-code-verification-google', // À remplacer
-      // yandex: 'votre-code-yandex',
-      // bing: 'votre-code-bing',
-    },
+    ...(googleVerification ? { verification: { google: googleVerification } } : {}),
   };
 }
 
@@ -179,19 +171,23 @@ export function getDentalClinicStructuredData(lang: Language) {
 
   return {
     '@context': 'https://schema.org',
-    '@type': 'Dentist',
-    '@id': 'https://orthoprotesis-dental.com',
+    '@type': ['Dentist', 'MedicalClinic'],
+    '@id': `${SITE_URL}/#clinic`,
     name: 'Orthoprotesis Dental Clinic',
     alternateName: 'Dr. Francis Valerio - Orthoprotesis',
     description: isSpanish
       ? 'Clínica dental especializada en implantes dentales en Santiago, República Dominicana. Más de 30 años de experiencia.'
       : 'Dental clinic specialized in dental implants in Santiago, Dominican Republic. Over 30 years of experience.',
-    url: 'https://orthoprotesis-dental.com',
+    url: SITE_URL,
     telephone: '+1-809-581-7059',
     email: 'info@orthoprotesisdental.com',
     priceRange: '$$',
-    image: 'https://orthoprotesis-dental.com/images/clinic-exterior.jpg',
-    logo: 'https://orthoprotesis-dental.com/logo.png',
+    image: [
+      `${SITE_URL}/images/vitrine_clinique1.jpg`,
+      `${SITE_URL}/images/vitrine_clinique2.jpg`,
+      `${SITE_URL}/images/vitrine_clinique3.jpg`,
+    ],
+    logo: `${SITE_URL}/images/logo_valerio.png`,
     address: {
       '@type': 'PostalAddress',
       streetAddress: 'Plaza Las Ramblas, Módulo 101',
@@ -269,13 +265,11 @@ export function getDentalClinicStructuredData(lang: Language) {
       jobTitle: isSpanish ? 'Doctor en Odontología' : 'Doctor of Dental Surgery',
       alumniOf: 'Universidad Autónoma de Santo Domingo',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      reviewCount: '150',
-      bestRating: '5',
-      worstRating: '1',
-    },
+    // NOTE: a fabricated aggregateRating (4.9 / 150 reviews) was removed here.
+    // It had no backing data and risks Google structured-data penalties + erodes
+    // trust on a health site. To re-introduce it legitimately, compute it from
+    // verified reviews (e.g. the Supabase `testimonials` table or the Google
+    // Business Profile) — do not hardcode.
     sameAs: [
       // À ajouter : liens vers réseaux sociaux
       // 'https://www.facebook.com/orthoprotesis',
@@ -287,7 +281,7 @@ export function getDentalClinicStructuredData(lang: Language) {
 
 // Breadcrumb structured data
 export function getBreadcrumbStructuredData(lang: Language, path: string) {
-  const baseUrl = 'https://orthoprotesis-dental.com';
+  const baseUrl = SITE_URL;
   const isSpanish = lang === 'es';
 
   const breadcrumbItems = [
