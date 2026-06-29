@@ -9,11 +9,13 @@
    ============================================================ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 215 28% 17%;
+    /* Warm off-white canvas (not clinical pure white) — calmer, more human.
+       Cards stay pure white so they lift gently off the page. */
+    --background: 40 33% 98%;
+    --foreground: 215 30% 16%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 28% 17%;
+    --card-foreground: 215 30% 16%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 215 28% 17%;
@@ -35,11 +37,18 @@
     --highlight: 186 64% 32%;
     --highlight-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214 22% 89%;
-    --input: 214 22% 91%;
+    /* Success / warning — semantic feedback (AA on white). Success green is
+       distinct from the teal highlight so "valid" never reads as brand color. */
+    --success: 152 56% 30%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 90% 40%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 214 22% 88%;
+    --input: 214 22% 90%;
     --ring: 215 85% 32%;
 
     --radius: 0.625rem;
@@ -88,6 +97,11 @@
     --destructive: 0 70% 55%;
     --destructive-foreground: 210 40% 98%;
 
+    --success: 152 48% 46%;
+    --success-foreground: 220 40% 9%;
+    --warning: 38 90% 56%;
+    --warning-foreground: 220 40% 9%;
+
     --border: 217 25% 22%;
     --input: 217 25% 18%;
     --ring: 213 85% 62%;
@@ -116,17 +130,32 @@
 
   html {
     scroll-behavior: smooth;
+    /* Elder-friendly base: 17px root scales type AND touch targets together.
+       Implant/prosthetics patients skew older — bias up from the 16px default. */
+    font-size: 106.25%;
+    /* Sticky-header offset for in-page anchor links (#servicios, #contacto…) */
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+    line-height: 1.65;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
     letter-spacing: -0.02em;
+    line-height: 1.18;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
   }
 
   /* Smooth, scoped theme transition (avoids global flicker) */
