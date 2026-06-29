@@ -23,6 +23,7 @@ interface TestimonialsSectionProps {
   title: string;
   description: string;
   testimonialsList: Testimonial[];
+  loadError?: boolean;
   ctaButtonText: string;
   dialogTitleText: string;
   dialogDescriptionText: string;
@@ -42,6 +43,7 @@ export function TestimonialsSection({
   title,
   description,
   testimonialsList,
+  loadError = false,
   ctaButtonText,
   dialogTitleText,
   dialogDescriptionText,
@@ -52,8 +54,11 @@ export function TestimonialsSection({
   const handleSuccess = () => setIsDialogOpen(false);
 
   const hasTestimonials = testimonialsList.length > 0;
-  const emptyMessage =
-    lang === 'es'
+  const emptyMessage = loadError
+    ? lang === 'es'
+      ? 'No pudimos cargar los testimonios en este momento. Por favor, vuelve a intentarlo más tarde.'
+      : "We couldn't load testimonials right now. Please try again later."
+    : lang === 'es'
       ? 'Aún no hay testimonios publicados. ¡Sé el primero en compartir tu experiencia!'
       : 'No testimonials published yet. Be the first to share your experience!';
 

@@ -42,7 +42,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
 
   // Fetch approved testimonials from database
   const supabase = await createServerClient();
-  const { data } = await supabase
+  const { data, error: testimonialsError } = await supabase
     .from('testimonials')
     .select('*')
     .eq('status', 'approved')
@@ -149,13 +149,14 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-4">
-                <Button 
-                  asChild 
-                  size="lg" 
-                  className="shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 btn-shine group"
+                <Button
+                  asChild
+                  variant="cta"
+                  size="lg"
+                  className="btn-shine group transition-all duration-300 hover:scale-105 hover:shadow-xl"
                 >
                   <Link href={appointmentHref}>
-                    <Phone className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
+                    <Phone className="mr-2 h-5 w-5 transition-transform group-hover:rotate-12" />
                     {currentHeroContent.ctaAppointment}
                   </Link>
                 </Button>
@@ -192,7 +193,9 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
                   <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px]">
                     <Image
                       src="/images/vitrine_clinique1.jpg"
-                      alt={`Fotografía del ${currentDoctorName}`}
+                      alt={lang === 'es'
+                        ? `Consultorio de ${currentClinicName} en Plaza Las Ramblas, Santiago`
+                        : `${currentClinicName} clinic at Plaza Las Ramblas, Santiago`}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
                       className="object-cover transition-transform duration-700 group-hover:scale-110"
@@ -269,6 +272,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
         title={currentTestimonialsSectionContent.title}
         description={currentTestimonialsSectionContent.description.replace('{{clinicName}}', currentClinicName).replace('{{doctorName}}', currentDoctorName)}
         testimonialsList={testimonialsList}
+        loadError={!!testimonialsError}
         ctaButtonText={currentTestimonialsSectionContent.ctaButton}
         dialogTitleText={currentTestimonialsSectionContent.dialogTitle}
         dialogDescriptionText={currentTestimonialsSectionContent.dialogDescription}
