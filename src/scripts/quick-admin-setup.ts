@@ -1,19 +1,19 @@
-// Script rapide pour configurer un admin
+// Quick script to configure an admin
 // Usage: npx tsx src/scripts/quick-admin-setup.ts
 
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 
-// Charger les variables d'environnement depuis .env.local
+// Load environment variables from .env.local
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Variables d\'environnement Supabase manquantes');
-  console.log('Vérifiez votre fichier .env.local');
+  console.error('❌ Missing Supabase environment variables');
+  console.log('Check your .env.local file');
   process.exit(1);
 }
 
@@ -25,42 +25,42 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 async function quickSetup() {
-  console.log('🚀 Configuration rapide de l\'admin...\n');
+  console.log('🚀 Quick admin setup...\n');
 
   try {
-    // 1. Lister les utilisateurs
-    console.log('1️⃣ Recherche des utilisateurs...');
+    // 1. List users
+    console.log('1️⃣ Looking up users...');
     const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
-    
+
     if (usersError) {
-      console.error('❌ Erreur:', usersError.message);
+      console.error('❌ Error:', usersError.message);
       return;
     }
 
     if (users.users.length === 0) {
-      console.log('⚠️  Aucun utilisateur trouvé. Créez d\'abord un compte via /admin/login');
+      console.log('⚠️  No users found. Create an account first via /admin/login');
       return;
     }
 
-    console.log(`📋 ${users.users.length} utilisateur(s) trouvé(s):`);
+    console.log(`📋 ${users.users.length} user(s) found:`);
     users.users.forEach((user, index) => {
       console.log(`   ${index + 1}. ${user.email} (ID: ${user.id})`);
     });
 
-    // 2. Prendre le premier utilisateur
+    // 2. Use the first user
     const user = users.users[0];
-    console.log(`\n2️⃣ Configuration de ${user.email} comme admin...`);
+    console.log(`\n2️⃣ Configuring ${user.email} as admin...`);
 
-    // 3. Créer la table admin_users si nécessaire
+    // 3. Create the admin_users table if needed
     const { error: tableError } = await supabase
       .from('admin_users')
       .select('id')
       .limit(1);
 
     if (tableError && tableError.message.includes('does not exist')) {
-      console.log('📋 Création de la table admin_users...');
-      
-      // Exécuter le SQL de création
+      console.log('📋 Creating the admin_users table...');
+
+      // Run the creation SQL
       const { error: sqlError } = await supabase.rpc('exec_sql', {
         sql: `
           CREATE TABLE IF NOT EXISTS public.admin_users (
@@ -68,7 +68,7 @@ async function quickSetup() {
             created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
           );
-          
+
           ALTER TABLE public.admin_users DISABLE ROW LEVEL SECURITY;
           GRANT ALL ON public.admin_users TO authenticated;
           GRANT SELECT ON public.admin_users TO anon;
@@ -76,8 +76,8 @@ async function quickSetup() {
       });
 
       if (sqlError) {
-        console.log('⚠️  Impossible de créer la table automatiquement.');
-        console.log('📋 Exécutez manuellement dans Supabase SQL Editor:');
+        console.log('⚠️  Could not create the table automatically.');
+        console.log('📋 Run this manually in the Supabase SQL Editor:');
         console.log(`
 CREATE TABLE IF NOT EXISTS public.admin_users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -93,27 +93,27 @@ INSERT INTO public.admin_users (id) VALUES ('${user.id}');
       }
     }
 
-    // 4. Ajouter l'utilisateur comme admin
+    // 4. Add the user as an admin
     const { error: insertError } = await supabase
       .from('admin_users')
       .upsert({ id: user.id });
 
     if (insertError) {
-      console.error('❌ Erreur lors de l\'ajout:', insertError.message);
-      console.log('\n📋 Exécutez manuellement dans Supabase:');
+      console.error('❌ Error adding the admin:', insertError.message);
+      console.log('\n📋 Run this manually in Supabase:');
       console.log(`INSERT INTO public.admin_users (id) VALUES ('${user.id}') ON CONFLICT (id) DO NOTHING;`);
       return;
     }
 
-    console.log('✅ Configuration terminée avec succès!');
+    console.log('✅ Setup completed successfully!');
     console.log(`📧 Admin: ${user.email}`);
     console.log(`🆔 ID: ${user.id}`);
-    console.log('\n🔗 Vous pouvez maintenant accéder à:');
+    console.log('\n🔗 You can now access:');
     console.log('   • http://localhost:9003/admin/login');
-    console.log('   • http://localhost:9003/admin (après connexion)');
+    console.log('   • http://localhost:9003/admin (after signing in)');
 
   } catch (error) {
-    console.error('❌ Erreur inattendue:', error);
+    console.error('❌ Unexpected error:', error);
   }
 }
 

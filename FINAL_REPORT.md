@@ -38,7 +38,8 @@ Highest-impact outcomes:
 - Structured data: real domain; `image` → real clinic photos; `logo` → real logo; `@type` now `['Dentist','MedicalClinic']`; **fabricated `aggregateRating` removed**; Google verification is now env-driven (`NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`) instead of a shipped French placeholder.
 - hreflang standardized to **`es-DO` / `en-US` / `x-default`** (home, agendar-cita, sitemap).
 - `<html lang>` is now correct per route (middleware forwards an `x-lang` header → root layout) — fixes SSR/SEO/screen-reader language.
-- `error.tsx` + `global-error.tsx` rewritten **bilingual** (were 100% French with `lang="fr"`).
+- `error.tsx`, `global-error.tsx`, and the root **`not-found.tsx`** (404) rewritten **bilingual** (were 100% French; `global-error` had `lang="fr"`).
+- Admin CLI scripts (`src/scripts/{setup-admin,quick-admin-setup,diagnose-admin}.ts`) translated to English.
 - Google Maps embed locale fixed (`!1sfr` → `!1ses` / `!1sen`) in `data.ts`. Dead `language-toggle-button.tsx` removed.
 
 ### Forms & privacy (`appointment-form`, `contact-form`, `add-testimonial-form`, `form-feedback` (new), `privacidad/page` (new), `data.ts`)
@@ -131,7 +132,7 @@ These are advertising-of-health-services sensitivities, not defects. Do not stre
 - **`dashboard-charts.tsx`** keeps its own multi-color data palette (Recharts needs concrete colors; CSS `var()` doesn't resolve in SVG presentation attributes). Charts are functional and modern; a future pass could hardcode token-matched hexes.
 - **Two admin routes** (`/admin` live, `/admin-dashboard` server variant) both still exist. `/admin` was the focus. Consider consolidating.
 - **Real-device CWV** (LCP/CLS/INP) should be measured on the live domain after deploy.
-- French **code comments** remain in some untouched files (e.g. `content-moderation.ts`); user-visible/config French was removed. Low priority.
+- The only remaining French is **one code comment** in the untouched business-logic file `content-moderation.ts:180` (not shipped, not user-visible). All shipped strings, the 404, error pages, and admin scripts are now English/bilingual. Low priority.
 
 ---
 

@@ -1,4 +1,4 @@
-// Script pour configurer automatiquement un utilisateur admin
+// Script to automatically configure an admin user
 // Usage: npx tsx src/scripts/setup-admin.ts <email>
 
 import { createClient } from '@supabase/supabase-js';
@@ -6,15 +6,15 @@ import type { Database } from '../lib/types_db';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 
-// Charger les variables d'environnement depuis .env.local
+// Load environment variables from .env.local
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Variables d\'environnement Supabase manquantes');
-  console.log('Assurez-vous d\'avoir NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans votre .env.local');
+  console.error('❌ Missing Supabase environment variables');
+  console.log('Make sure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in your .env.local');
   process.exit(1);
 }
 
@@ -27,65 +27,65 @@ const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
 
 async function setupAdmin(email?: string) {
   try {
-    console.log('🔍 Recherche des utilisateurs...');
-    
-    // Récupérer tous les utilisateurs
+    console.log('🔍 Looking up users...');
+
+    // Fetch all users
     const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
-    
+
     if (usersError) {
-      console.error('❌ Erreur lors de la récupération des utilisateurs:', usersError);
+      console.error('❌ Error fetching users:', usersError);
       return;
     }
 
-    console.log(`📋 ${users.users.length} utilisateur(s) trouvé(s):`);
+    console.log(`📋 ${users.users.length} user(s) found:`);
     users.users.forEach((user, index) => {
       console.log(`${index + 1}. ${user.email} (ID: ${user.id})`);
     });
 
     let targetUser;
-    
+
     if (email) {
       targetUser = users.users.find(user => user.email === email);
       if (!targetUser) {
-        console.error(`❌ Utilisateur avec l'email ${email} non trouvé`);
+        console.error(`❌ User with email ${email} not found`);
         return;
       }
     } else {
-      // Prendre le premier utilisateur s'il n'y en a qu'un
+      // Use the only user if there is exactly one
       if (users.users.length === 1) {
         targetUser = users.users[0];
       } else {
-        console.log('⚠️  Plusieurs utilisateurs trouvés. Spécifiez un email:');
+        console.log('⚠️  Multiple users found. Specify an email:');
         console.log('npx tsx src/scripts/setup-admin.ts <email>');
         return;
       }
     }
 
-    console.log(`👤 Configuration de ${targetUser.email} comme admin...`);
+    console.log(`👤 Configuring ${targetUser.email} as admin...`);
 
-    // Vérifier si la table admin_users existe et créer si nécessaire
+    // Check whether the admin_users table exists and create it if needed
     const { error: tableError } = await supabase
       .from('admin_users')
       .select('id')
       .limit(1);
 
     if (tableError && tableError.message.includes('relation "admin_users" does not exist')) {
-      console.log('📋 Création de la table admin_users...');
+      console.log('📋 Creating the admin_users table...');
       const { error: createError } = await supabase.rpc('exec_sql', {
         sql: `
           CREATE TABLE IF NOT EXISTS public.admin_users (
             id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
             created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
           );
-          
+
           ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
-          
-          CREATE POLICY "Admins can view admin_users" 
-          ON public.admin_users FOR SELECT 
-          TO authenticated 
+
+          CREATE POLICY "Admins can view admin_users"
+          ON public.admin_users FOR SELECT
+          TO authenticated
           USING (
             EXISTS (
-              SELECT 1 FROM public.admin_users 
+              SELECT 1 FROM public.admin_users
               WHERE admin_users.id = auth.uid()
             )
           );
@@ -93,23 +93,23 @@ async function setupAdmin(email?: string) {
       });
 
       if (createError) {
-        console.error('❌ Erreur lors de la création de la table:', createError);
+        console.error('❌ Error creating the table:', createError);
         return;
       }
     }
 
-    // Ajouter l'utilisateur comme admin
+    // Add the user as an admin
     const { error: insertError } = await supabase
       .from('admin_users')
       .insert({ id: targetUser.id })
       .select();
 
     if (insertError && !insertError.message.includes('duplicate key')) {
-      console.error('❌ Erreur lors de l\'ajout de l\'admin:', insertError);
+      console.error('❌ Error adding the admin:', insertError);
       return;
     }
 
-    // Vérifier que ça a marché
+    // Verify it worked
     const { data: adminCheck, error: checkError } = await supabase
       .from('admin_users')
       .select('*')
@@ -117,20 +117,20 @@ async function setupAdmin(email?: string) {
       .single();
 
     if (checkError) {
-      console.error('❌ Erreur lors de la vérification:', checkError);
+      console.error('❌ Error during verification:', checkError);
       return;
     }
 
-    console.log('✅ Utilisateur configuré comme admin avec succès!');
+    console.log('✅ User configured as admin successfully!');
     console.log(`📧 Email: ${targetUser.email}`);
     console.log(`🆔 ID: ${targetUser.id}`);
-    console.log(`📅 Ajouté le: ${adminCheck.created_at}`);
-    
+    console.log(`📅 Added on: ${adminCheck.created_at}`);
+
   } catch (error) {
-    console.error('❌ Erreur inattendue:', error);
+    console.error('❌ Unexpected error:', error);
   }
 }
 
-// Récupérer l'email depuis les arguments de ligne de commande
+// Read the email from the command-line arguments
 const email = process.argv[2];
 setupAdmin(email);
