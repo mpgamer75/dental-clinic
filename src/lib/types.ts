@@ -108,18 +108,48 @@ export interface TestimonialSupabase {
   status: 'pending_approval' | 'approved' | 'rejected';
 }
 
+/** Time-of-day the patient would prefer. `any` = no preference. */
+export type AppointmentTimePreference = 'morning' | 'afternoon' | 'any';
+
+/**
+ * The exact payload the appointment form hands to `submitAppointmentForm`.
+ *
+ * This type is deliberately narrow, and that narrowness is the point.
+ *
+ * It previously declared BOTH spellings of two fields — `serviceType` AND
+ * `service_type`, `isUrgent` AND `is_urgent` — with the snake_case pair
+ * optional. Either spelling therefore typechecked at the component boundary,
+ * so the compiler could not tell the difference between "the form sent the
+ * urgency flag" and "the form sent nothing and Zod's `.default(false)` filled
+ * it in". That is exactly the hole that let a real bug ship: every appointment
+ * was stored with `is_urgent = false` while the patient saw the toggle turn on
+ * and got a success message, and the clinic lost its entire triage signal
+ * silently.
+ *
+ * Rule: this is the CAMEL-CASE form shape only. The snake_case mapping to the
+ * database columns happens in one place — `submitAppointmentForm` — and nowhere
+ * else. Row shapes live in `AppointmentSupabase` / `types_db.ts`.
+ *
+ * `phone` is required here because the clinic calls back to confirm; a request
+ * with no callback number is not actionable. The server schema enforces it too,
+ * so a directly-invoked server action cannot bypass it.
+ */
 export interface AppointmentFormData {
-  id?: string; 
   name: string;
   email: string;
-  phone?: string;
-  serviceType: string; 
-  service_type?: string; 
+  phone: string;
+  serviceType: string;
   reason: string;
-  is_urgent?: boolean; 
-  isUrgent: boolean; // From form state, changed from optional to required
-  submitted_at?: string | Date; 
-  status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  isUrgent: boolean;
+  /**
+   * Local calendar date as `YYYY-MM-DD`.
+   *
+   * NOT an ISO timestamp: `new Date().toISOString()` would shift a date-only
+   * value across midnight for every timezone west of UTC, so a patient in
+   * Santiago (UTC-4) asking for Tuesday would be recorded as Monday.
+   */
+  preferredDate: string;
+  timePreference: AppointmentTimePreference;
 }
 
 export interface TestimonialFormSubmitData {
@@ -159,7 +189,12 @@ export interface FormTranslations {
   testimonialForm: { es: FormUIStrings; en: FormUIStrings };
 }
 
-interface ZodMessages {
+/**
+ * Exported so the client-side schema in `appointment-form.tsx` can be built
+ * from the same message contract the server action uses. Validation is
+ * intentionally duplicated client + server; the *copy* is not.
+ */
+export interface ZodMessages {
   nameMin: string;
   emailInvalid: string;
   phoneInvalid: string;
@@ -178,6 +213,20 @@ interface ZodMessages {
   nameMax: string;
   emailMax: string;
   locationMax: string;
+  /* The two checks below run only on the server (validateEmail /
+     validatePhone in content-moderation.ts). They used to return a bare
+     `message` with no `errors` key, so the rejection had no field to attach
+     to: it flashed past in a toast and nothing on the form was marked. They
+     are field-scoped now, which is why they need their own copy. */
+  emailUnverifiable: string;
+  phoneUnverifiable: string;
+  /* Preferred date + time-of-day. */
+  preferredDateRequired: string;
+  preferredDateInvalid: string;
+  preferredDatePast: string;
+  preferredDateClosed: string;
+  preferredDateTooFar: string;
+  timePreferenceRequired: string;
 }
 
 export interface ActionMessages {

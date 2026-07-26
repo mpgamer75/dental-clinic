@@ -15,15 +15,15 @@ type Problem = (typeof homeContent)['es']['problem'];
  */
 export function ProblemSection({ id, content }: { id?: string; content: Problem }) {
   return (
-    <Section id={id} tone="canvas" grain>
-      <div className="grid gap-x-16 gap-y-8 lg:grid-cols-12">
-        <div className="lg:col-span-5">
+    <Section id={id} tone="canvas" grain space="loose">
+      <div className="grid gap-x-[6%] gap-y-8 lg:col-span-12 lg:grid-cols-12">
+        <div className="lg:col-span-4">
           <SectionHeading title={content.title} align="left" className="mb-0" />
         </div>
 
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-7 lg:col-start-6">
           <Reveal>
-            <p className="max-w-measure text-lg leading-relaxed text-ink-soft">
+            <p className="max-w-measure text-body leading-relaxed text-ink-soft">
               {content.description}
             </p>
           </Reveal>
@@ -34,12 +34,12 @@ export function ProblemSection({ id, content }: { id?: string; content: Problem 
                 <div className="grid grid-cols-[auto_1fr] gap-x-5 border-t border-line py-6">
                   <span
                     aria-hidden="true"
-                    className="mt-1 font-heading text-sm font-medium text-brass-ink tabular"
+                    className="mt-1 font-heading text-small font-medium text-brass-ink tabular"
                   >
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <div>
-                    <dt className="font-heading text-xl font-medium text-ink">{p.title}</dt>
+                    <dt className="font-heading text-h4 font-medium text-ink">{p.title}</dt>
                     <dd className="mt-2 max-w-measure leading-relaxed text-ink-soft">
                       {p.desc}
                     </dd>

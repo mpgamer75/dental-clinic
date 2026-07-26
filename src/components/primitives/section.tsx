@@ -11,32 +11,45 @@ const TONE: Record<Tone, string> = {
   'drench-deep': 'drenched-deep',
 };
 
+const SPACE = {
+  none: '',
+  tight: 'py-section-tight',
+  normal: 'py-section',
+  loose: 'py-section-loose',
+} as const;
+
 interface SectionProps {
   id?: string;
   children: ReactNode;
   /** Surface colour. `drench` bands are where colour carries the page. */
   tone?: Tone;
-  /** Vertical rhythm. Vary this between sections — uniform spacing reads flat. */
-  space?: 'tight' | 'normal' | 'none';
+  /** Vertical rhythm. VARY this between sections — uniform spacing reads flat. */
+  space?: keyof typeof SPACE;
   /** Adds the plaster grain overlay. Only meaningful on canvas/drench tones. */
   grain?: boolean;
   className?: string;
-  /** Container width. `wide` for grids, `prose` for reading. */
-  width?: 'default' | 'wide' | 'prose';
+  /** Extra classes on the inner grid, e.g. row gaps. */
+  shellClassName?: string;
 }
 
-const WIDTH: Record<NonNullable<SectionProps['width']>, string> = {
-  default: 'max-w-6xl',
-  wide: 'max-w-7xl',
-  prose: 'max-w-3xl',
-};
-
 /**
- * Section shell: owns surface tone, vertical rhythm and the content measure.
+ * Section shell: owns surface tone, vertical rhythm, and the page's one
+ * horizontal grid.
  *
- * Replaces the old global `section { @apply py-12 … }` base rule, which
- * double-padded any nested section and gave every band identical spacing.
- * Rhythm is now explicit per section so it can actually vary.
+ * The inner element is `.shell` (see globals.css), a named-line breakout grid.
+ * Children land on the `content` track (68ch) unless they opt into a wider one
+ * with `col-popout` / `col-feature` / `col-wide` / `col-full`, or an asymmetric
+ * span with `col-lead` / `col-trail`.
+ *
+ * This replaces a single centered `max-w-6xl` div. That shell had two faults at
+ * once, measured: at 2560px it used 48% of the viewport, while the prose inside
+ * it already ran 88–90 characters — past the 80ch WCAG ceiling. Widening it
+ * would have made the text worse; narrowing it would have wasted more screen.
+ * A breakout grid is the only thing that fixes both, because the measure and
+ * the page width stop being the same number.
+ *
+ * The corollary, which matters more than the grid: DO NOT give every band the
+ * same span. Identical spans at a wider measure is the same stack, just bigger.
  */
 export function Section({
   id,
@@ -45,23 +58,18 @@ export function Section({
   space = 'normal',
   grain = false,
   className,
-  width = 'default',
+  shellClassName,
 }: SectionProps) {
   return (
     <section
       id={id}
-      className={cn(
-        'relative isolate',
-        TONE[tone],
-        space === 'normal' && 'py-section',
-        space === 'tight' && 'py-section-tight',
-        grain && 'grain',
-        className,
-      )}
+      className={cn('relative isolate', TONE[tone], SPACE[space], grain && 'grain', className)}
     >
-      <div className={cn('relative z-raised mx-auto w-full px-5 sm:px-8', WIDTH[width])}>
-        {children}
-      </div>
+      {/* No `w-full` here. Tailwind utilities are emitted after the components
+          layer, so `w-full` beat `.shell`'s own
+          `width: min(100% - gap*2, --shell-max)` and the grid ran edge to edge
+          with no gutters at all. */}
+      <div className={cn('shell relative z-raised', shellClassName)}>{children}</div>
     </section>
   );
 }

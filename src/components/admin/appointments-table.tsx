@@ -185,7 +185,7 @@ export function AppointmentsTable({ appointments: initialAppointments }: Props) 
                             <p className="text-sm">
                               <span className="font-medium">Razón:</span>
                               <br />
-                              <span className="text-muted-foreground">{appointment.reason}</span>
+                              <span className="whitespace-pre-line text-muted-foreground">{appointment.reason}</span>
                             </p>
                           </motion.div>
                         )}

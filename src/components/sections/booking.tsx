@@ -32,14 +32,14 @@ export function BookingSection({
   const tel = `tel:${phone.replace(/[^\d+]/g, '')}`;
 
   return (
-    <Section id={id} tone="drench">
-      <div className="grid gap-x-16 gap-y-12 lg:grid-cols-12">
+    <Section id={id} tone="drench" space="loose">
+      <div className="grid gap-x-[6%] gap-y-12 lg:col-span-12 lg:grid-cols-12">
         <div className="lg:col-span-5">
           <Reveal>
-            <h2 className="font-heading text-[clamp(1.9rem,4.4vw,3.1rem)] font-medium leading-[1.08] text-drench-on">
+            <h2 className="font-heading text-h2 font-medium text-drench-on">
               {content.title}
             </h2>
-            <p className="mt-5 max-w-measure text-lg leading-relaxed text-drench-on/80">
+            <p className="mt-5 max-w-measure text-body leading-relaxed text-drench-on/80">
               {content.description}
             </p>
 
@@ -81,7 +81,7 @@ export function BookingSection({
                     {i + 1}
                   </span>
                   <div className="pt-1.5">
-                    <h3 className="font-heading text-xl font-medium text-drench-on">
+                    <h3 className="font-heading text-h4 font-medium text-drench-on">
                       {s.title}
                     </h3>
                     <p className="mt-1.5 max-w-measure leading-relaxed text-drench-on/70">

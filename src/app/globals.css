@@ -47,7 +47,11 @@
     --petrol-soft: 0.935 0.021 240.4;
 
     --brass: 0.6742 0.1014 67.5;
-    --brass-ink: 0.515 0.085 67.5; /* text-safe brass */
+    --brass-ink: 0.515 0.085 67.5; /* text-safe brass on LIGHT grounds */
+    /* text-safe brass on DARK grounds. Plain --brass measures 4.27:1 on
+       --drench-deep, just under the 4.5 body threshold, so small brass text on
+       a drenched band needs this instead. */
+    --brass-lift: 0.762 0.093 67.5;
     --brass-soft: 0.942 0.03 67.5;
     /* The colour that sits ON a brass fill. Brass is mid-light in light mode
        and lighter still in dark mode, so this must stay DARK in both — using
@@ -161,6 +165,7 @@
 
     --brass: 0.79 0.105 67.5;
     --brass-ink: 0.84 0.095 67.5;
+    --brass-lift: 0.84 0.095 67.5;
     --brass-soft: 0.305 0.043 67.5;
     --on-brass: 0.16 0.012 48; /* stays dark: brass is light in this theme too */
 
@@ -266,8 +271,12 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
-    line-height: 1.6;
+    /* NO `ssXX` here. Stylistic sets are per-family and mean something
+       different in every one: Instrument Sans `ss01` substitutes 68 glyphs,
+       every one an accented capital, which would silently restyle Á É Í Ó Ú Ü
+       across all Spanish copy. Only `rlig`/`calt` are safe to blanket-enable. */
+    font-feature-settings: "rlig" 1, "calt" 1;
+    line-height: 1.65;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -280,7 +289,12 @@
     font-family: var(--font-heading), ui-serif, Georgia, serif;
     font-weight: 500;
     letter-spacing: -0.014em;
-    line-height: 1.12;
+    /* 1.18, not 1.12. Newsreader's accented capitals (Á Ó Í Ñ Ü) reach about
+       0.127em ABOVE its typo ascender while its descenders fall to -0.256em.
+       At 1.12 a two-line Spanish heading leaves ~0.002em between line 2's
+       acute and line 1's descender — they touch. Spanish sets accents on
+       capitals constantly, so this is a floor, not a preference. */
+    line-height: 1.18;
     text-wrap: balance;
   }
 
@@ -294,22 +308,165 @@
   }
 
   /* Tabular figures everywhere a number can change in place — prevents the
-     jitter that makes counters and data tables look cheap. */
+     jitter that makes counters and data tables look cheap.
+
+     `font-variant-numeric` alone, deliberately: `font-feature-settings`
+     REPLACES the inherited value wholesale rather than adding to it, so
+     declaring it here would drop the inherited rlig/calt. The two properties
+     do not compose. */
   .tabular,
   table td,
   table th,
   time,
   output {
     font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1;
+    /* Instrument Sans fits figures and middots tightly; "809-581-7059" and
+       "2000 · 2017" visibly crowd at default tracking. */
+    letter-spacing: 0.012em;
   }
 
-  /* Prose measure. Applied deliberately, not globally. */
+  /* Prose measure. Applied deliberately, not globally.
+
+     CSS `ch` is the advance width of "0", which is wider than the average
+     lowercase letter, so a `ch` cap always renders MORE characters than its
+     number suggests. The multiplier is font-specific and was re-measured on
+     the rendered page after the body face changed:
+
+       Archivo          "0" / avg lowercase  ~1.30   (68ch rendered ~88 chars)
+       Instrument Sans                       ~1.57   (54ch rendered ~85 chars)
+
+     46ch lands near the ~70 characters the typographic guidance actually
+     means. Re-measure this if the body face is ever changed again. */
   .measure {
-    max-width: 68ch;
+    max-width: 46ch;
   }
   .measure-tight {
-    max-width: 52ch;
+    max-width: 34ch;
+  }
+}
+
+/* ============================================================================
+   Fluid type scale
+   ----------------------------------------------------------------------------
+   NOTE: `html` is 106.25%, so 1rem = 17px here, not 16px.
+
+   Every clamp() middle term keeps a rem component. A pure-vw middle term would
+   defeat user text resizing (WCAG 1.4.4).
+   ========================================================================== */
+@layer base {
+  :root {
+    --step-h1: clamp(2.85rem, 1.6rem + 5.3vw, 5.2rem);
+    --step-h2: clamp(2.05rem, 1.3rem + 3.2vw, 3.45rem);
+    --step-h3: clamp(1.55rem, 1.25rem + 1.3vw, 2.15rem);
+    --step-h4: clamp(1.2rem, 1.08rem + 0.5vw, 1.42rem);
+    --step-body: clamp(1rem, 0.97rem + 0.15vw, 1.08rem);
+    --step-small: clamp(0.8rem, 0.78rem + 0.08vw, 0.85rem);
+    --step-eyebrow: 0.78rem;
+  }
+}
+
+/* ============================================================================
+   Breakout grid — the page's one horizontal structure.
+   ----------------------------------------------------------------------------
+   Replaces the old single centered `max-w-6xl` shell, which produced eleven
+   identical 1152px boxes: at 2560px that used 48% of the screen while the prose
+   inside it was ALREADY running 88–90 characters, over the 80ch WCAG ceiling.
+   Both faults at once, which is exactly what this grid is for.
+
+   The rule: widen the GRID, never the text. `content` stays pinned in `ch`;
+   the extra width goes to media, rails and asymmetric placement.
+
+   Children opt in by class; anything unannotated lands on `content`.
+   ========================================================================== */
+@layer components {
+  .shell {
+    --gap: clamp(1.25rem, 4vw, 5rem);
+    /* 1598px at this project's 17px root. Wide enough that a 2560px display is
+       not mostly margin, narrow enough that a 12-column track stays usable. */
+    --shell-max: 94rem;
+
+    position: relative; /* containing block for `.rail` */
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(0.9rem, 1.5vw, 1.75rem);
+    width: min(100% - var(--gap) * 2, var(--shell-max));
+    margin-inline: auto;
+  }
+
+  /* Everything spans the full 12 unless a component says otherwise. Prose is
+     kept readable by `.measure` (54ch), NOT by the grid — that separation is
+     the whole point: the column controls POSITION, the measure controls LINE
+     LENGTH, and they are no longer the same number.
+
+     A named-line breakout grid was tried first and rejected: with a centred
+     `content` track, a section heading sat 220px inboard of the media it
+     headed, which reads as misalignment rather than intention. An explicit
+     12-column grid shares one left rule by default and makes every deviation a
+     decision someone had to write down. */
+  .shell > * {
+    grid-column: 1 / -1;
+  }
+
+  /* Escapes the shell to the viewport edges. Exact while the shell is
+     gap-limited; beyond --shell-max it reaches the shell's own margins, which
+     is the intent there anyway. Deliberately NOT `width: 100vw`, which
+     includes the scrollbar and causes horizontal overflow. */
+  .bleed {
+    grid-column: 1 / -1;
+    margin-inline: calc(-1 * var(--gap));
+  }
+
+  /* Span helpers. All start on the SAME left rule — that shared rule is the
+     point of a 12-column grid, and centring these would reintroduce exactly the
+     heading-vs-media misalignment the named-line grid was dropped for.
+     Narrow → wide: content < popout < feature < wide = full. */
+  .col-content {
+    grid-column: 1 / span 6;
+  }
+  .col-popout {
+    grid-column: 1 / span 8;
+  }
+  .col-feature {
+    grid-column: 1 / span 10;
+  }
+  .col-wide,
+  .col-full {
+    grid-column: 1 / -1;
+  }
+  /* Below the lg breakpoint every span collapses — the composition is a
+     desktop affordance, and a 6-of-12 column on a phone is unreadable. */
+  @media (max-width: 1023.98px) {
+    .col-content,
+    .col-popout,
+    .col-feature,
+    .col-wide,
+    .col-full {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* Edge rail: a vertical label in the outer gutter.
+
+     ABSOLUTELY POSITIONED, deliberately. As an in-flow grid item it inherited
+     `.shell > * { grid-column: 1 / -1 }` and became its own full-width row —
+     inserting a ~230px empty band above the heading and pushing the whole
+     section down, which is the opposite of "fills the gutter". Out of flow it
+     claims no row at all.
+
+     Hidden below xl: the gutter is only ~20px there, so the label would sit on
+     top of the content. */
+  .rail {
+    display: none;
+  }
+  @media (min-width: 1280px) {
+    .rail {
+      position: absolute;
+      top: 0;
+      left: calc(-1 * var(--gap) * 0.58);
+      display: block;
+      writing-mode: vertical-lr;
+      text-orientation: mixed;
+    }
   }
 }
 

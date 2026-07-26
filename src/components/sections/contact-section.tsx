@@ -65,19 +65,24 @@ export function ContactSection({
   ];
 
   return (
-    <Section id={id} tone="sunk">
-      <SectionHeading title={title} description={description} align="left" />
+    <Section id={id} tone="sunk" space="normal">
+      <SectionHeading
+        title={title}
+        description={description}
+        align="left"
+        className="lg:col-span-6"
+      />
 
-      <div className="grid items-start gap-x-14 gap-y-12 lg:grid-cols-2">
-        <Reveal>
-          <h3 className="font-heading text-xl font-medium text-ink">{formTitleText}</h3>
+      <div className="grid items-start gap-x-[6%] gap-y-12 lg:col-span-12 lg:grid-cols-12">
+        <Reveal className="lg:col-span-6">
+          <h3 className="font-heading text-h4 font-medium text-ink">{formTitleText}</h3>
           <div className="mt-6">
             <ContactForm />
           </div>
         </Reveal>
 
-        <Reveal delay={0.08}>
-          <h3 className="font-heading text-xl font-medium text-ink">{detailsTitleText}</h3>
+        <Reveal delay={0.08} className="lg:col-span-5 lg:col-start-8">
+          <h3 className="font-heading text-h4 font-medium text-ink">{detailsTitleText}</h3>
 
           <dl className="mt-6 space-y-5">
             {details.map((item) => (
@@ -94,7 +99,7 @@ export function ContactSection({
                       {...(item.external
                         ? { target: '_blank', rel: 'noopener noreferrer' }
                         : {})}
-                      className="break-words text-ink underline-offset-4 transition-colors duration-fast hover:text-terracotta hover:underline"
+                      className="-my-2.5 inline-block break-words py-2.5 text-ink underline-offset-4 transition-colors duration-fast hover:text-terracotta hover:underline"
                     >
                       {item.value}
                     </a>
@@ -120,7 +125,7 @@ export function ContactSection({
               Google Maps. The link is now a sibling control below the map, so
               the embed stays usable. */}
           <div className="mt-9">
-            <h3 className="font-heading text-xl font-medium text-ink">{mapTitleText}</h3>
+            <h3 className="font-heading text-h4 font-medium text-ink">{mapTitleText}</h3>
             <div className="mt-4 overflow-hidden rounded-xl border border-line shadow-e1">
               <iframe
                 src={embedMapLinkUrl}

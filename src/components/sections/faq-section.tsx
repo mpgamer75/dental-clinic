@@ -23,13 +23,15 @@ interface FaqSectionProps {
  */
 export function FaqSection({ id, title, description, faqItemsList }: FaqSectionProps) {
   return (
-    <Section id={id} tone="canvas">
-      <div className="grid gap-x-16 gap-y-8 lg:grid-cols-12">
-        <div className="lg:col-span-4">
+    <Section id={id} tone="canvas" space="normal">
+      <div className="grid gap-x-[6%] gap-y-8 lg:col-span-12 lg:grid-cols-12">
+        {/* Sticky: the question list is long, and the heading should stay with
+            it rather than scrolling away at the top. */}
+        <div className="lg:col-span-4 lg:sticky lg:top-28 lg:self-start">
           <SectionHeading title={title} description={description} align="left" className="mb-0" />
         </div>
 
-        <Reveal className="lg:col-span-8">
+        <Reveal className="lg:col-span-7 lg:col-start-6">
           <Accordion type="single" collapsible className="w-full">
             {faqItemsList.map((item) => (
               <AccordionItem
@@ -37,7 +39,7 @@ export function FaqSection({ id, title, description, faqItemsList }: FaqSectionP
                 value={item.id}
                 className="border-b border-line last:border-b-0"
               >
-                <AccordionTrigger className="py-6 text-left font-heading text-lg font-medium text-ink hover:no-underline data-[state=open]:text-terracotta">
+                <AccordionTrigger className="py-6 text-left font-heading text-h4 font-medium text-ink hover:no-underline data-[state=open]:text-terracotta">
                   {item.question}
                 </AccordionTrigger>
                 <AccordionContent className="max-w-measure pb-6 text-base leading-relaxed text-ink-soft">

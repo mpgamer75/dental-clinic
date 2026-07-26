@@ -39,6 +39,94 @@ export const adminNavItems: AdminNavItemData = {
   ]
 };
 
+/**
+ * Header / mobile-menu copy.
+ *
+ * Deliberately shorter than `generalUiStrings` equivalents: the bar sets its
+ * links in tracked uppercase, where "Preguntas Frecuentes" runs 21 characters
+ * and breaks the rhythm of the row. `generalUiStrings` still carries the long
+ * forms for the footer and the page bodies.
+ */
+export const navStrings: Record<Language, {
+  /** Accessible name for both <nav> landmarks (header + overlay). */
+  primaryLabel: string;
+  /** Sits beside the wordmark behind a hairline, from 1700px up. */
+  tagline: string;
+  openMenu: string;
+  closeMenu: string;
+  menuTitle: string;
+  alsoOnPage: string;
+  links: { implants: string; services: string; doctor: string; faq: string; contact: string };
+  secondary: { testimonials: string; diplomas: string; clinic: string };
+  callAria: string;
+  callLabel: string;
+  addressLabel: string;
+  hoursLabel: string;
+  languageLabel: string;
+  /** Accessible name for the language switch. */
+  switchTo: string;
+  /** Visible label on the language switch. */
+  switchToShort: string;
+  viewMap: string;
+}> = {
+  es: {
+    primaryLabel: 'Principal',
+    tagline: 'Odontología especializada',
+    openMenu: 'Abrir menú',
+    closeMenu: 'Cerrar menú',
+    menuTitle: 'Menú principal',
+    alsoOnPage: 'También en esta página',
+    links: {
+      implants: 'Implantes',
+      services: 'Servicios',
+      doctor: 'El doctor',
+      faq: 'Preguntas',
+      contact: 'Contacto',
+    },
+    secondary: {
+      testimonials: 'Testimonios',
+      diplomas: 'Diplomas',
+      clinic: 'La consulta',
+    },
+    callAria: 'Llamar al {{phone}}',
+    callLabel: 'Teléfono',
+    addressLabel: 'Dirección',
+    hoursLabel: 'Horario',
+    languageLabel: 'Idioma y tema',
+    switchTo: 'Switch to English',
+    switchToShort: 'English',
+    viewMap: 'Ver en el mapa',
+  },
+  en: {
+    primaryLabel: 'Main',
+    tagline: 'Specialist dentistry',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    menuTitle: 'Main menu',
+    alsoOnPage: 'Also on this page',
+    links: {
+      implants: 'Implants',
+      services: 'Services',
+      doctor: 'The doctor',
+      faq: 'FAQ',
+      contact: 'Contact',
+    },
+    secondary: {
+      testimonials: 'Testimonials',
+      diplomas: 'Diplomas',
+      clinic: 'The clinic',
+    },
+    callAria: 'Call {{phone}}',
+    callLabel: 'Phone',
+    addressLabel: 'Address',
+    hoursLabel: 'Hours',
+    languageLabel: 'Language and theme',
+    switchTo: 'Cambiar a Español',
+    switchToShort: 'Español',
+    viewMap: 'View on map',
+  },
+};
+
 export const services: ServiceData = {
   es: [
     {
@@ -383,6 +471,144 @@ export const formCommon: Record<Language, {
   },
 };
 
+/**
+ * Booking page + appointment form copy.
+ *
+ * `reasonPrefix` is the only entry here that is not shown on the page: the
+ * server action folds the chosen day and time-of-day into the `reason` column
+ * using these strings, because `appointments` has no date column yet. See
+ * `submitAppointmentForm` in src/app/actions.ts and the OPTIONAL, NOT-APPLIED
+ * migration at supabase/migrations/manual/0002_optional_appointment_datetime.sql.
+ */
+export const appointmentBooking: Record<Language, {
+  standfirst: string;
+  requiredMark: string;
+  groupWho: string;
+  groupWhoHint: string;
+  groupWhat: string;
+  groupWhatHint: string;
+  groupWhen: string;
+  groupWhenHint: string;
+  phoneHelp: string;
+  emailHelp: string;
+  reasonHelp: string;
+  preferredDateLabel: string;
+  preferredDateHelp: string;
+  preferredDatePicked: string;
+  preferredDateFix: string;
+  timePreferenceLabel: string;
+  timePreferenceHelp: string;
+  timeOptions: { value: 'morning' | 'afternoon' | 'any'; label: string; hint: string }[];
+  liveSubmitting: string;
+  errorSummary: string;
+  asideStepsTitle: string;
+  asideHoursNote: string;
+  asideCallTitle: string;
+  asideCallBody: string;
+  asidePhoneLabel: string;
+  asideAddressLabel: string;
+  urgentTitle: string;
+  urgentBody: string;
+  urgentCta: string;
+  reasonPrefix: {
+    label: string;
+    times: { morning: string; afternoon: string; any: string };
+  };
+}> = {
+  es: {
+    standfirst:
+      "Rellene el formulario y le llamamos para acordar el día y la hora definitivos. La primera visita es una evaluación: revisamos su caso, le explicamos las opciones y le damos el presupuesto antes de empezar nada.",
+    requiredMark: "obligatorio",
+    groupWho: "Quién es usted",
+    groupWhoHint: "Lo justo para poder llamarle y confirmar la cita.",
+    groupWhat: "Qué necesita",
+    groupWhatHint: "Así el Dr. Valerio llega a la consulta sabiendo de qué se trata.",
+    groupWhen: "Cuándo le conviene",
+    groupWhenHint: "Es una preferencia, no una reserva en firme: la confirmamos por teléfono.",
+    phoneHelp: "Es por donde le llamamos para confirmar.",
+    emailHelp: "Le enviamos el resguardo de la solicitud.",
+    reasonHelp: "Molestia, pieza afectada, desde cuándo…",
+    preferredDateLabel: "Día que prefiere",
+    preferredDateHelp: "Atendemos de lunes a viernes, de 9:00 a 18:00.",
+    preferredDatePicked: "Ha elegido:",
+    preferredDateFix: "Elegir el {{date}}",
+    timePreferenceLabel: "Franja horaria",
+    timePreferenceHelp: "Elija el momento del día que mejor le venga.",
+    timeOptions: [
+      { value: 'morning', label: "Por la mañana", hint: "Antes del mediodía" },
+      { value: 'afternoon', label: "Por la tarde", hint: "Después del mediodía" },
+      { value: 'any', label: "Cualquier hora", hint: "Me adapto a la clínica" },
+    ],
+    liveSubmitting: "Enviando su solicitud…",
+    errorSummary:
+      "Faltan {{count}} campo(s) por corregir. Los hemos señalado más abajo y hemos llevado el cursor al primero.",
+    asideStepsTitle: "Qué pasa después",
+    asideHoursNote: "Fuera de ese horario puede enviar el formulario igualmente: le contestamos al día siguiente laborable.",
+    asideCallTitle: "¿Prefiere llamar?",
+    asideCallBody: "También puede pedir la cita por teléfono en horario de consulta.",
+    asidePhoneLabel: "Teléfono",
+    asideAddressLabel: "Dirección",
+    urgentTitle: "¿Necesita que le vean hoy?",
+    urgentBody:
+      "Si tiene dolor fuerte, un golpe o una infección, llame directamente a la clínica en horario de consulta en lugar de esperar a que le contestemos el formulario.",
+    urgentCta: "Llamar a la clínica",
+    reasonPrefix: {
+      label: "Preferencia de cita",
+      times: {
+        morning: "por la mañana",
+        afternoon: "por la tarde",
+        any: "cualquier hora",
+      },
+    },
+  },
+  en: {
+    standfirst:
+      "Fill in the form and we will call you to agree the final day and time. The first visit is an assessment: we review your case, explain the options, and give you a quote before anything begins.",
+    requiredMark: "required",
+    groupWho: "Who you are",
+    groupWhoHint: "Just enough for us to call you back and confirm.",
+    groupWhat: "What you need",
+    groupWhatHint: "So Dr. Valerio walks into the room already knowing the situation.",
+    groupWhen: "When it suits you",
+    groupWhenHint: "A preference, not a firm booking — we confirm it by phone.",
+    phoneHelp: "This is the number we call to confirm.",
+    emailHelp: "We send you a copy of the request.",
+    reasonHelp: "Discomfort, which tooth, how long it has been going on…",
+    preferredDateLabel: "Preferred day",
+    preferredDateHelp: "We are open Monday to Friday, 9:00 to 18:00.",
+    preferredDatePicked: "You chose:",
+    preferredDateFix: "Use {{date}} instead",
+    timePreferenceLabel: "Time of day",
+    timePreferenceHelp: "Pick whichever part of the day suits you best.",
+    timeOptions: [
+      { value: 'morning', label: "Morning", hint: "Before midday" },
+      { value: 'afternoon', label: "Afternoon", hint: "After midday" },
+      { value: 'any', label: "Any time", hint: "I'll fit around the clinic" },
+    ],
+    liveSubmitting: "Sending your request…",
+    errorSummary:
+      "{{count}} field(s) still need fixing. They are marked below and we have moved the cursor to the first one.",
+    asideStepsTitle: "What happens next",
+    asideHoursNote: "Outside those hours you can still send the form — we reply on the next working day.",
+    asideCallTitle: "Prefer to call?",
+    asideCallBody: "You can also book by phone during opening hours.",
+    asidePhoneLabel: "Phone",
+    asideAddressLabel: "Address",
+    urgentTitle: "Need to be seen today?",
+    urgentBody:
+      "If you have severe pain, an injury or an infection, call the clinic directly during opening hours rather than waiting for a reply to the form.",
+    urgentCta: "Call the clinic",
+    reasonPrefix: {
+      label: "Appointment preference",
+      times: {
+        morning: "morning",
+        afternoon: "afternoon",
+        any: "any time",
+      },
+    },
+  },
+};
+
 // Bilingual privacy notice. Describes the site's actual data handling (forms used
 // only to contact patients about their request; no sharing/selling). NOT a
 // substitute for legal review under DR Ley 172-13 — see FINAL_REPORT.md.
@@ -486,22 +712,32 @@ export const actionMessages: ActionMessages = {
     testimonialModerationFailed: "El contenido del testimonio no es apropiado y no puede ser enviado.",
     testimonialModerationReasonPrefix: "Motivo: ",
     testimonialModerationApiError: "Error durante la moderación del contenido. Por favor, revise su texto e intente de nuevo.",
+    // Every message names the PROBLEM and the RECOVERY. "Número inválido" tells
+    // a patient nothing they can act on; "escríbalo con 7 a 15 dígitos" does.
     zod: {
-      nameMin: "El nombre debe tener al menos 2 caracteres.",
-      emailInvalid: "Por favor, ingrese un correo electrónico válido.",
-      phoneInvalid: "Número de teléfono inválido.",
+      nameMin: "Escriba su nombre completo (al menos 2 caracteres).",
+      emailInvalid: "Ese correo no parece completo. Debe incluir @ y un dominio, por ejemplo maria@correo.com.",
+      phoneInvalid: "Ese teléfono no parece válido. Escríbalo con 7 a 15 dígitos, por ejemplo (829) 123-4567.",
       messageMin: "El mensaje debe tener al menos 10 caracteres.",
       messageMax: "El mensaje no debe exceder los 2000 caracteres.",
-      serviceTypeRequired: "Por favor, seleccione un tipo de servicio.",
-      reasonMin: "El motivo debe tener al menos 10 caracteres.",
-      reasonMax: "El motivo no debe exceder los 500 caracteres.",
+      serviceTypeRequired: "Seleccione un servicio de la lista. Si no está seguro, elija «Consulta General/Revisión».",
+      reasonMin: "Cuéntenos algo más: al menos 10 caracteres para que podamos preparar su consulta.",
+      reasonMax: "El motivo no debe exceder los 500 caracteres. Resuma lo esencial; lo demás lo vemos en consulta.",
       quoteMin: "El testimonio debe tener al menos 15 caracteres.",
       quoteMax: "El testimonio no debe exceder los 500 caracteres.",
       serviceTypeMax: "El tipo de servicio es demasiado largo.",
-      invalidCharacters: "El texto contiene caracteres no válidos.",
+      invalidCharacters: "El texto contiene caracteres no válidos. Borre símbolos raros o texto pegado de otra aplicación.",
       nameMax: "El nombre es demasiado largo.",
       emailMax: "El correo electrónico es demasiado largo.",
       locationMax: "La ubicación es demasiado larga.",
+      emailUnverifiable: "No podemos usar esa dirección de correo. Escriba un correo personal o de trabajo (no uno temporal o desechable).",
+      phoneUnverifiable: "No podemos usar ese número. Revise que sean 7 a 15 dígitos reales, por ejemplo (829) 123-4567.",
+      preferredDateRequired: "Elija el día que prefiere. Es solo una preferencia: le llamamos para confirmarla.",
+      preferredDateInvalid: "Esa fecha no es válida. Use el selector del campo o escríbala como día/mes/año.",
+      preferredDatePast: "Esa fecha ya pasó. Elija hoy o un día posterior.",
+      preferredDateClosed: "La clínica atiende de lunes a viernes. Elija un día entre semana.",
+      preferredDateTooFar: "Solo tomamos solicitudes con hasta 6 meses de antelación. Elija una fecha más cercana.",
+      timePreferenceRequired: "Indique si prefiere mañana o tarde. Si le da igual, elija «Cualquier hora».",
     }
   },
   en: {
@@ -515,22 +751,32 @@ export const actionMessages: ActionMessages = {
     testimonialModerationFailed: "The content of the testimonial is not appropriate and cannot be submitted.",
     testimonialModerationReasonPrefix: "Reason: ",
     testimonialModerationApiError: "Error during content moderation. Please review your text and try again.",
+    // Every message names the PROBLEM and the RECOVERY. "Invalid phone number"
+    // tells a patient nothing they can act on; "use 7 to 15 digits" does.
     zod: {
-      nameMin: "Name must be at least 2 characters long.",
-      emailInvalid: "Please enter a valid email address.",
-      phoneInvalid: "Invalid phone number.",
+      nameMin: "Enter your full name (at least 2 characters).",
+      emailInvalid: "That email looks incomplete. It needs an @ and a domain, e.g. mary@email.com.",
+      phoneInvalid: "That phone number doesn't look right. Use 7 to 15 digits, e.g. (555) 987-6543.",
       messageMin: "Message must be at least 10 characters long.",
       messageMax: "Message must not exceed 2000 characters.",
-      serviceTypeRequired: "Please select a service type.",
-      reasonMin: "The reason must be at least 10 characters long.",
-      reasonMax: "The reason must not exceed 500 characters.",
+      serviceTypeRequired: "Pick a service from the list. If you're not sure, choose “General Consultation/Check-up”.",
+      reasonMin: "Tell us a little more — at least 10 characters, so we can prepare for your visit.",
+      reasonMax: "The reason must not exceed 500 characters. Summarise the essentials; we'll cover the rest in the chair.",
       quoteMin: "Testimonial must be at least 15 characters long.",
       quoteMax: "Testimonial must not exceed 500 characters.",
       serviceTypeMax: "The service type is too long.",
-      invalidCharacters: "The text contains invalid characters.",
+      invalidCharacters: "The text contains invalid characters. Remove any odd symbols or text pasted from another app.",
       nameMax: "The name is too long.",
       emailMax: "The email address is too long.",
       locationMax: "The location is too long.",
+      emailUnverifiable: "We can't use that email address. Please use a personal or work address (not a temporary or disposable one).",
+      phoneUnverifiable: "We can't use that number. Check it is 7 to 15 real digits, e.g. (555) 987-6543.",
+      preferredDateRequired: "Pick the day you'd prefer. It's only a preference — we call you to confirm it.",
+      preferredDateInvalid: "That date isn't valid. Use the field's date picker, or type it as day/month/year.",
+      preferredDatePast: "That date has already passed. Choose today or a later day.",
+      preferredDateClosed: "The clinic is open Monday to Friday. Please choose a weekday.",
+      preferredDateTooFar: "We only take requests up to 6 months ahead. Please choose a nearer date.",
+      timePreferenceRequired: "Tell us whether you prefer morning or afternoon. If it makes no difference, choose “Any time”.",
     }
   }
 };
@@ -1060,6 +1306,68 @@ export const visitUsCarouselImages: CarouselImageItem[] = [
   { src: "/images/vitrine_clinique2.jpg", altEs: "Interior de la clínica dental Orthoprotesis, Santiago de los Caballeros", altEn: "Interior of Orthoprotesis dental clinic, Santiago de los Caballeros", hint: "clinic interior" },
   { src: "/images/vitrine_clinique3.jpg", altEs: "Vista exterior de la clínica dental Orthoprotesis en Plaza Las Ramblas", altEn: "Exterior view of Orthoprotesis dental clinic in Plaza Las Ramblas", hint: "clinic exterior view" },
 ];
+
+/**
+ * Diplomas section — interface copy.
+ *
+ * Every label the certificate gallery and its lightbox need. The previous
+ * version of that section built its two strings inline with a
+ * `lang === 'es' ? … : …` ternary inside the component, which is the same
+ * problem this file exists to solve, just in a smaller box: the copy could not
+ * be read or corrected from here.
+ *
+ * `{{title}}`, `{{institution}}`, `{{year}}`, `{{index}}` and `{{total}}` are
+ * substituted at render time — the same convention as `{{clinicName}}`.
+ */
+export const diplomasUi: Record<
+  Language,
+  {
+    /** Vertical label in the outer gutter. `{{range}}` = earliest–latest year. */
+    rail: string;
+    /** Sets expectations: these are phone photographs, not flat scans. */
+    photoNote: string;
+    empty: string;
+    /** Visible hover/tap hint on a certificate. */
+    openHint: string;
+    /** Accessible name of the trigger button. Must name the specific document. */
+    openLabel: string;
+    counter: string;
+    prev: string;
+    next: string;
+    close: string;
+    fullSize: string;
+    keyboardHint: string;
+  }
+> = {
+  es: {
+    rail: 'Formación continua · {{range}}',
+    photoNote:
+      'Fotografías de los documentos originales. Abra cualquiera para leerlo a tamaño completo.',
+    empty: 'No hay diplomas registrados.',
+    openHint: 'Ampliar',
+    openLabel: 'Ampliar el certificado {{title}}, {{institution}}, {{year}}',
+    counter: '{{index}} de {{total}}',
+    prev: 'Certificado anterior',
+    next: 'Certificado siguiente',
+    close: 'Cerrar',
+    fullSize: 'Abrir la imagen original',
+    keyboardHint: 'Use las flechas ← y → para pasar de un certificado a otro.',
+  },
+  en: {
+    rail: 'Continuing education · {{range}}',
+    photoNote:
+      'Photographs of the original documents. Open any of them to read it at full size.',
+    empty: 'No diplomas on record.',
+    openHint: 'Enlarge',
+    openLabel: 'Enlarge the certificate {{title}}, {{institution}}, {{year}}',
+    counter: '{{index}} of {{total}}',
+    prev: 'Previous certificate',
+    next: 'Next certificate',
+    close: 'Close',
+    fullSize: 'Open the original image',
+    keyboardHint: 'Use the ← and → arrow keys to move between certificates.',
+  },
+};
 
 export const diplomas: DiplomaData = {
   es: [

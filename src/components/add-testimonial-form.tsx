@@ -171,7 +171,7 @@ export function AddTestimonialForm({ onSuccess }: AddTestimonialFormProps) {
           type="submit"
           variant="cta"
           size="lg"
-          className="btn-shine w-full"
+          className="w-full"
           disabled={isSubmitting}
         >
           {isSubmitting ? (

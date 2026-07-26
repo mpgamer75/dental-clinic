@@ -28,6 +28,11 @@ export function Footer() {
     { href: `/${lang}#implantes`, label: lang === 'es' ? 'Implantes' : 'Implants' },
     { href: `/${lang}#servicios`, label: ui.services },
     { href: `/${lang}#el-doctor`, label: lang === 'es' ? 'El doctor' : 'The doctor' },
+    // The desktop bar was trimmed from six links to five and Testimonios was
+    // the one dropped. It lives in the mobile overlay's secondary list, but
+    // that panel is xl:hidden — so without this entry the section had no route
+    // in from anywhere at >=1280px.
+    { href: `/${lang}#testimonios`, label: ui.testimonials },
     { href: `/${lang}#preguntas-frecuentes`, label: ui.faq },
     { href: `/${lang}#contacto`, label: ui.contact },
   ];

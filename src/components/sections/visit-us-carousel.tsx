@@ -88,8 +88,8 @@ export function VisitUsCarousel({
 
   return (
     <Section id={id} tone="canvas" space="tight">
-      <div className="grid items-center gap-x-14 gap-y-10 lg:grid-cols-12">
-        <div className="lg:col-span-4">
+      <div className="grid items-center gap-x-[6%] gap-y-10 lg:col-span-12 lg:grid-cols-12">
+        <div className="lg:col-span-3">
           <SectionHeading
             title={visitUsContent.title}
             description={visitUsContent.description}
@@ -103,7 +103,7 @@ export function VisitUsCarousel({
           </Reveal>
         </div>
 
-        <Reveal className="lg:col-span-8">
+        <Reveal className="lg:col-span-8 lg:col-start-5">
           <div
             className="group relative aspect-[16/10] w-full overflow-hidden rounded-2xl shadow-e3"
             aria-roledescription="carousel"

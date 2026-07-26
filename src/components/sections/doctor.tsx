@@ -33,8 +33,8 @@ export function DoctorSection({
   imageAlt,
 }: DoctorSectionProps) {
   return (
-    <Section id={id} tone="sunk">
-      <div className="grid items-start gap-x-16 gap-y-12 lg:grid-cols-12">
+    <Section id={id} tone="sunk" space="loose">
+      <div className="grid items-start gap-x-[6%] gap-y-12 lg:col-span-12 lg:grid-cols-12">
         {/* Portrait column — the practice interior stands in for a headshot,
             which the clinic hasn't supplied. */}
         <Reveal className="lg:col-span-5">
@@ -51,13 +51,13 @@ export function DoctorSection({
             </div>
             {/* Credential count as a brass plate, seated on the image edge. */}
             <figcaption className="absolute -bottom-5 left-6 right-6 rounded-xl bg-brass px-5 py-4 text-brass-on shadow-e3">
-              <p className="font-heading text-2xl font-medium tabular">{diplomaCount}</p>
+              <p className="font-heading text-h3 font-medium tabular">{diplomaCount}</p>
               <p className="text-sm leading-snug">{content.credentialsTitle}</p>
             </figcaption>
           </figure>
         </Reveal>
 
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-6 lg:col-start-7">
           <SectionHeading
             lead={content.lead}
             title={content.title}
@@ -66,7 +66,7 @@ export function DoctorSection({
           />
 
           <Reveal>
-            <div className="max-w-measure space-y-4 text-lg leading-relaxed text-ink-soft">
+            <div className="max-w-measure space-y-4 text-body leading-relaxed text-ink-soft">
               {content.body.map((para) => (
                 <p key={para.slice(0, 32)}>{para}</p>
               ))}
