@@ -44,10 +44,16 @@ export function ServicesSection({
   const appointmentsHref = `/${lang}/agendar-cita`;
 
   return (
-    <Section id={id} tone="canvas">
-      <SectionHeading lead={lead} title={title} description={description} align="left" />
+    <Section id={id} tone="canvas" space="normal">
+      <SectionHeading
+        lead={lead}
+        title={title}
+        description={description}
+        align="left"
+        className="lg:col-span-6"
+      />
 
-      <RevealGroup className="grid gap-x-12 sm:grid-cols-2">
+      <RevealGroup className="grid gap-x-[5%] sm:grid-cols-2 xl:grid-cols-3">
         {servicesList.map((service) => {
           const Icon =
             DENTAL_ICONS[service.iconName as DentalIconName] ?? ToothIcon;
@@ -61,7 +67,7 @@ export function ServicesSection({
                 <div className="flex items-start gap-4">
                   <Icon className="mt-0.5 h-8 w-8 shrink-0 text-brass-ink" strokeWidth={1.4} />
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-heading text-xl font-medium text-ink">
+                    <h3 className="font-heading text-h4 font-medium text-ink">
                       {service.title}
                     </h3>
 
@@ -83,7 +89,11 @@ export function ServicesSection({
                         }
                         aria-expanded={isOpen}
                         aria-controls={panelId}
-                        className="mt-3 inline-flex items-center gap-1.5 rounded text-sm font-medium text-terracotta underline-offset-4 transition-colors duration-fast hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        // `-my-3 py-3` grows the hit area to ~45px without
+                        // moving anything: the rendered control was 86×21,
+                        // under the 24px WCAG 2.2 AA minimum, on a site whose
+                        // patients skew older.
+                        className="-my-3 mt-3 inline-flex items-center gap-1.5 rounded py-3 text-small font-medium text-terracotta underline-offset-4 transition-colors duration-fast hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       >
                         {isOpen ? ui.readLess : ui.readMore}
                         <ChevronDown

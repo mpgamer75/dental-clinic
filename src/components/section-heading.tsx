@@ -41,26 +41,24 @@ export function SectionHeading({
       {lead && (
         <p
           className={cn(
-            'mb-3 font-body text-sm font-medium text-brass-ink',
+            'mb-3 font-body text-small font-medium text-brass-ink',
             centered && 'mx-auto',
           )}
         >
           {lead}
         </p>
       )}
-      <Tag
-        className={cn(
-          'font-heading text-[clamp(1.9rem,4.4vw,3.1rem)] font-medium text-ink',
-          centered ? 'mx-auto max-w-3xl' : 'max-w-3xl',
-          titleClassName,
-        )}
-      >
+      {/* The heading takes the full content track. A display serif at this size
+          holds only ~25–35 characters per line, so it does not need the prose
+          measure — capping it at the same width as body copy is what makes
+          headings look timid. */}
+      <Tag className={cn('font-heading text-h2 font-medium text-ink', titleClassName)}>
         {title}
       </Tag>
       {description && (
         <p
           className={cn(
-            'mt-4 text-lg leading-relaxed text-ink-soft',
+            'mt-4 text-body leading-relaxed text-ink-soft',
             centered ? 'mx-auto max-w-measure' : 'max-w-measure',
           )}
         >

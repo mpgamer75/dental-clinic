@@ -14,6 +14,20 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // Every `quality` value used anywhere in the app MUST be listed here.
+    //
+    // Declaring this key at all switches Next 15 from warning to THROWING on an
+    // unlisted value — "Invalid quality prop (80) … does not match
+    // images.qualities" — which 500s the whole route. It is not a
+    // Next-16-only concern. Keep this in sync with:
+    //   60  diplomas-section (doc-comment example)
+    //   78  visit-us-carousel
+    //   80  doctor
+    //   82  hero
+    //   88  certificate-gallery cards
+    //   92  certificate-gallery lightbox
+    // 75 is next/image's own default and is required for any unannotated <Image>.
+    qualities: [60, 75, 78, 80, 82, 88, 92],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',

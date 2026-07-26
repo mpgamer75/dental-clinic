@@ -52,7 +52,13 @@ export default {
         },
         drench: { DEFAULT: ok("drench"), deep: ok("drench-deep"), on: ok("on-drench") },
         petrol: { DEFAULT: ok("petrol"), soft: ok("petrol-soft") },
-        brass: { DEFAULT: ok("brass"), ink: ok("brass-ink"), soft: ok("brass-soft"), on: ok("on-brass") },
+        brass: {
+          DEFAULT: ok("brass"),
+          ink: ok("brass-ink"),
+          lift: ok("brass-lift"),
+          soft: ok("brass-soft"),
+          on: ok("on-brass"),
+        },
         line: { DEFAULT: ok("line"), strong: ok("line-strong") },
 
         chart: {
@@ -78,6 +84,20 @@ export default {
         sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
         body: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
         heading: ["var(--font-heading)", "ui-serif", "Georgia", "serif"],
+      },
+
+      /* Semantic type scale. Use `text-h1`…`text-eyebrow` rather than picking a
+         raw size — the tracking and leading travel with the step, which is what
+         keeps the scale coherent as it goes fluid. Steps are defined in
+         globals.css so the clamp() maths lives in one place. */
+      fontSize: {
+        h1: ["var(--step-h1)", { lineHeight: "1.18", letterSpacing: "-0.02em" }],
+        h2: ["var(--step-h2)", { lineHeight: "1.2", letterSpacing: "-0.015em" }],
+        h3: ["var(--step-h3)", { lineHeight: "1.28", letterSpacing: "-0.008em" }],
+        h4: ["var(--step-h4)", { lineHeight: "1.34", letterSpacing: "-0.005em" }],
+        body: ["var(--step-body)", { lineHeight: "1.65" }],
+        small: ["var(--step-small)", { lineHeight: "1.5", letterSpacing: "0.01em" }],
+        eyebrow: ["var(--step-eyebrow)", { lineHeight: "1.4", letterSpacing: "0.09em" }],
       },
 
       borderRadius: {
@@ -120,15 +140,21 @@ export default {
         tooltip: "70",
       },
 
-      /* Fluid section rhythm. Varies deliberately — not one uniform gap. */
+      /* Fluid section rhythm. Varies deliberately — not one uniform gap.
+         Three steps, because identical `py-section` on ten of eleven bands
+         reads flat no matter how much horizontal work the grid is doing. */
       spacing: {
         section: "clamp(4rem, 9vw, 8.5rem)",
         "section-tight": "clamp(2.75rem, 6vw, 5.5rem)",
+        "section-loose": "clamp(5.5rem, 12vw, 11rem)",
       },
 
+      /* See the note in globals.css: `ch` is the "0" advance and the ratio to
+         the average lowercase letter is font-specific (~1.57 for Instrument
+         Sans), so 46ch renders about 70 real characters. */
       maxWidth: {
-        measure: "68ch",
-        "measure-tight": "52ch",
+        measure: "46ch",
+        "measure-tight": "34ch",
       },
 
       keyframes: {

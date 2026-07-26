@@ -911,7 +911,7 @@ export default function AdminPage() {
                                       <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
                                       <div className="flex-1">
                                         <p className="text-xs text-muted-foreground mb-1">Motivo / Detalles</p>
-                                        <p className="text-sm leading-relaxed">{apt.reason}</p>
+                                        <p className="whitespace-pre-line text-sm leading-relaxed">{apt.reason}</p>
                                       </div>
                                     </div>
 

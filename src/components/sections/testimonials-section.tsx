@@ -79,14 +79,19 @@ export function TestimonialsSection({
   const [featured, ...rest] = testimonialsList;
 
   return (
-    <Section id={id} tone="sunk">
-      <SectionHeading title={title} description={description} align="left" />
+    <Section id={id} tone="sunk" space="normal">
+      <SectionHeading
+        title={title}
+        description={description}
+        align="left"
+        className="lg:col-span-5"
+      />
 
       {hasTestimonials ? (
         <>
           <Reveal>
             <figure className="border-y border-line py-9">
-              <blockquote className="font-heading text-[clamp(1.4rem,2.9vw,2.1rem)] font-normal italic leading-[1.32] text-ink">
+              <blockquote className="font-heading text-h3 font-normal italic text-ink">
                 <p className="max-w-[38ch]">&ldquo;{featured.quote}&rdquo;</p>
               </blockquote>
               <figcaption className="mt-6 flex items-center gap-3">
@@ -138,7 +143,7 @@ export function TestimonialsSection({
             ) : (
               <MessageSquareQuote className="h-7 w-7 text-brass-ink" aria-hidden="true" />
             )}
-            <h3 className="mt-4 font-heading text-xl font-medium text-ink">{empty.title}</h3>
+            <h3 className="mt-4 font-heading text-h4 font-medium text-ink">{empty.title}</h3>
             <p className="mt-2 leading-relaxed text-ink-soft">{empty.body}</p>
           </div>
         </Reveal>

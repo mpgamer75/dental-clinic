@@ -1,29 +1,44 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { Piazzolla, Archivo } from 'next/font/google';
+import { Newsreader, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 
 /**
- * Piazzolla (Huerta Tipográfica, Buenos Aires) — bookish humanist serif with a
- * real optical-size axis. Carries headings and pull-quotes. Its Spanish
- * diacritics and ¿ ¡ are drawn, not bolted on, which matters when the primary
- * language is Spanish.
+ * Newsreader (Production Type) — headings, pull-quotes, display.
  *
- * Archivo (Omnibus-Type, Buenos Aires) — sturdy grotesk for UI, body, forms and
- * data. Paired with Piazzolla on the serif↔grotesk contrast axis rather than
- * two near-identical sans faces.
+ * Chosen over the previous Piazzolla for one measurable reason: Piazzolla's
+ * optical-size axis stops at 30, so an 88px hero headline was a 30pt TEXT
+ * master scaled up, and its stroke contrast is a near-monolinear ~1.5:1 at
+ * every size — at display sizes that reads as an even grey slab rather than a
+ * drawn letter. Newsreader runs opsz 6–72 and its contrast modulates from
+ * ~2.1:1 to ~4.6:1 as size rises, which is the whole reason display serifs
+ * look expensive. Optical sizing is free via the CSS default
+ * `font-optical-sizing: auto` — do NOT set `font-variation-settings: 'opsz'`,
+ * which disables it and also overrides font-weight.
+ *
+ * Its digits are monowidth by default, which matters here: the stat counters,
+ * phone numbers and diploma years all carry `.tabular`.
+ *
+ * Instrument_Sans (Rodrigo Fuenzalida / Jordan Egstad) — body, UI, forms.
+ * Paired on the serif↔grotesk axis. Its `wdth` 75–100 axis is genuinely useful
+ * for Spanish, which runs 20–25% longer than English.
+ *
+ * `latin-ext` is loaded alongside `latin` — Latin-1 already covers ñ á é í ó ú
+ * ü ¿ ¡, but patient and doctor names are not guaranteed to stay inside it.
  */
-const fontHeading = Piazzolla({
-  subsets: ['latin'],
+const fontHeading = Newsreader({
+  subsets: ['latin', 'latin-ext'],
+  axes: ['opsz'],
+  style: ['normal', 'italic'],
   variable: '--font-heading',
   display: 'swap',
-  axes: ['opsz'],
 });
 
-const fontBody = Archivo({
-  subsets: ['latin'],
+const fontBody = Instrument_Sans({
+  subsets: ['latin', 'latin-ext'],
+  axes: ['wdth'],
   variable: '--font-body',
   display: 'swap',
 });

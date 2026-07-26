@@ -59,3 +59,16 @@ edits are needed.
 | Order | File | Required? | Notes |
 |-------|------|-----------|-------|
 | 1 | `0001_optional_form_consent.sql` | No (optional) | Persist form consent + source locale |
+| 2 | `0002_optional_appointment_datetime.sql` | **No (optional, NOT APPLIED)** | First-class `preferred_date` / `preferred_time` columns on `appointments` |
+
+## About `0002_optional_appointment_datetime.sql`
+
+The booking form asks for a preferred day and a morning/afternoon/any choice.
+`appointments` has no date column, so the shipped server action folds that
+preference into the existing `reason` text column as a labelled first line —
+the clinic sees it in the admin panel today with **zero schema change**.
+
+`0002` adds the real columns for when the clinic wants to sort or filter by
+requested day. **Applying it alone changes nothing**: the columns stay NULL
+until the code change described in the file's "AFTER APPLYING" section ships in
+the same deploy. It makes no RLS changes.

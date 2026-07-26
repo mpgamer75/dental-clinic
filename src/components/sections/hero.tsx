@@ -40,19 +40,23 @@ export function Hero({ content, trust, appointmentHref, implantHref, phone }: He
         />
       </div>
 
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-y-12 px-5 pb-[clamp(3.5rem,7vw,6rem)] pt-[clamp(4.5rem,9vw,8rem)] sm:px-8 lg:grid-cols-12 lg:gap-x-12 lg:pb-0 lg:pt-0">
+      {/* The shell, so the hero's left rule is the SAME rule every other band
+          and the header align to. A hero on its own container is the classic
+          "stretched template" tell: it promises a wide composition the rest of
+          the page then fails to deliver. */}
+      <div className="shell items-center gap-y-12 pb-[clamp(3.5rem,7vw,6rem)] pt-[clamp(4.5rem,9vw,8rem)] lg:pb-0 lg:pt-0">
         {/* ── Copy ─────────────────────────────────────────────── */}
-        <div className="lg:col-span-7 lg:py-[clamp(5rem,9vw,9rem)]">
-          <p className="flex items-center gap-2 font-body text-sm text-brass">
+        <div className="lg:col-span-6 lg:py-[clamp(5rem,9vw,9rem)]">
+          <p className="flex items-center gap-2 font-body text-small text-brass-lift">
             <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
             {content.locationNote}
           </p>
 
-          <h1 className="mt-5 max-w-[15ch] font-heading text-[clamp(2.5rem,6.2vw,4.75rem)] font-medium leading-[1.04] tracking-[-0.022em] text-drench-on">
+          <h1 className="mt-5 max-w-[16ch] font-heading text-h1 font-medium text-drench-on">
             {content.title}
           </h1>
 
-          <p className="mt-6 max-w-measure text-lg leading-relaxed text-drench-on/80 sm:text-xl">
+          <p className="mt-6 max-w-measure text-body leading-relaxed text-drench-on/80">
             {content.standfirst}
           </p>
 
@@ -81,17 +85,17 @@ export function Hero({ content, trust, appointmentHref, implantHref, phone }: He
           <dl className="mt-10 grid grid-cols-1 gap-x-8 gap-y-5 border-t border-drench-on/15 pt-7 sm:grid-cols-3">
             {trust.map((t) => (
               <div key={t.label}>
-                <dt className="font-heading text-3xl font-medium text-brass tabular">
+                <dt className="font-heading text-h3 font-medium text-brass tabular">
                   {t.value}
                 </dt>
-                <dd className="mt-1 text-sm leading-snug text-drench-on/70">{t.label}</dd>
+                <dd className="mt-1 text-small leading-snug text-drench-on/70">{t.label}</dd>
               </div>
             ))}
           </dl>
         </div>
 
         {/* ── Photograph ───────────────────────────────────────── */}
-        <div className="relative lg:col-span-5 lg:h-full">
+        <div className="relative lg:col-span-6 lg:col-start-7 lg:h-full">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl lg:absolute lg:inset-y-0 lg:right-[calc(50%-50vw)] lg:aspect-auto lg:h-full lg:w-[calc(100%+50vw-50%)] lg:rounded-none lg:rounded-l-2xl">
             <Image
               src="/images/vitrine_clinique1.jpg"
