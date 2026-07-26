@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { Language } from '@/lib/types';
 
 type LanguageContextType = {
@@ -32,24 +32,49 @@ export const LanguageProvider = ({
   const [lang, setLang] = useState<Language>(initialLanguage);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Keep context state in sync when the locale changes by navigation rather
+  // than by the toggle (back/forward, a direct /en link, a redirect).
+  useEffect(() => {
+    setLang(initialLanguage);
+  }, [initialLanguage]);
+
+  // Keep <html lang> honest.
+  //
+  // The root layout sets it from the `x-lang` request header, but the root
+  // layout does NOT re-render on a client-side navigation between /es and /en
+  // — App Router layouts persist across route changes. So after the toggle the
+  // document still claimed lang="es" while displaying English, which misleads
+  // screen readers (wrong pronunciation rules) and translation tooling.
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = lang;
+    }
+  }, [lang]);
 
   const toggleLanguage = () => {
-    const newLang = lang === 'es' ? 'en' : 'es';
+    const newLang: Language = lang === 'es' ? 'en' : 'es';
     setLang(newLang);
-    
-    // Update URL to reflect language change
-    if (pathname) {
-      const currentLangPrefix = `/${lang}`;
-      const newLangPrefix = `/${newLang}`;
-      
-      if (pathname.startsWith(currentLangPrefix)) {
-        const newPath = pathname.replace(currentLangPrefix, newLangPrefix);
-        router.push(newPath);
-      } else {
-        // If somehow we're not on a language prefixed route, just go to the home page
-        router.push(`/${newLang}`);
-      }
-    }
+
+    if (!pathname) return;
+
+    // Swap ONLY the leading locale segment.
+    //
+    // `pathname.replace('/es', '/en')` replaced the first occurrence anywhere
+    // in the string, so a path that happened to contain the locale later on
+    // was silently corrupted. Anchoring to the start makes that impossible.
+    const rest = pathname.startsWith(`/${lang}`) ? pathname.slice(`/${lang}`.length) : '';
+    const nextPath = `/${newLang}${rest}`;
+
+    // Preserve the query string and the hash. The previous implementation
+    // dropped both, so switching language on `/es/agendar-cita?utm_source=…`
+    // lost the campaign attribution, and switching on `/es#contacto` bounced
+    // the visitor back to the top of the page instead of holding their place.
+    const query = searchParams?.toString();
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+
+    router.push(`${nextPath}${query ? `?${query}` : ''}${hash}`);
   };
 
   return (

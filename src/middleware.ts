@@ -55,18 +55,27 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // Locale handling for public routes
+  // Locale handling for public routes.
+  //
+  // `req.nextUrl` is cloned rather than rebuilt from a string so the query
+  // string survives the redirect. Building `new URL('/es' + pathname)` dropped
+  // it, which silently destroyed every campaign parameter: a visitor arriving
+  // on /?utm_source=facebook or /agendar-cita?gclid=… landed on the right page
+  // with the attribution stripped.
   if (pathname === '/') {
-    return NextResponse.redirect(new URL(`/${DEFAULT_LANGUAGE}`, req.url));
+    const url = req.nextUrl.clone();
+    url.pathname = `/${DEFAULT_LANGUAGE}`;
+    return NextResponse.redirect(url);
   }
 
-  // If no locale prefix is present, add the default one
-  const hasLangPrefix = SUPPORTED_LANGUAGES.some(lang =>
-    pathname.startsWith(`/${lang}/`) || pathname === `/${lang}`
+  const hasLangPrefix = SUPPORTED_LANGUAGES.some(
+    (lang) => pathname.startsWith(`/${lang}/`) || pathname === `/${lang}`,
   );
 
   if (!hasLangPrefix) {
-    return NextResponse.redirect(new URL(`/${DEFAULT_LANGUAGE}${pathname}`, req.url));
+    const url = req.nextUrl.clone();
+    url.pathname = `/${DEFAULT_LANGUAGE}${pathname}`;
+    return NextResponse.redirect(url);
   }
 
   return res;

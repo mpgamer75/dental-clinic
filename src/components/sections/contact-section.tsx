@@ -1,10 +1,11 @@
-import { Mail, MapPin, Phone, Clock } from 'lucide-react';
+import { Mail, MapPin, Phone, Clock, ExternalLink } from 'lucide-react';
 import { ContactForm } from '@/components/contact-form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Language } from '@/lib/types';
 import { contactDetails as allContactDetails } from '@/lib/data';
+import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { Reveal } from '@/components/reveal';
+import { Button } from '@/components/ui/button';
 
 interface ContactSectionProps {
   id: string;
@@ -47,104 +48,104 @@ export function ContactSection({
   scheduleLabel,
   viewMapButtonText,
 }: ContactSectionProps) {
-  const cardClass =
-    'rounded-xl border border-border/60 bg-card shadow-sm transition-shadow duration-300 hover:shadow-md';
-  const titleClass = 'font-heading text-2xl text-primary';
+  const clinicName = allContactDetails.clinicName[lang];
+  // Strip formatting so the dialler gets a clean number.
+  const telHref = `tel:${phoneText.replace(/[^\d+]/g, '')}`;
 
   const details = [
-    { icon: MapPin, label: addressLabel, value: addressText, href: mapLinkUrl, external: true },
-    { icon: Phone, label: phoneLabel, value: phoneText, href: `tel:${phoneText}` },
-    { icon: Mail, label: emailLabel, value: emailText, href: `mailto:${emailText}` },
+    {
+      icon: MapPin,
+      label: addressLabel,
+      value: addressText,
+      href: mapLinkUrl,
+      external: true,
+    },
+    { icon: Phone, label: phoneLabel, value: phoneText, href: telHref, external: false },
+    { icon: Mail, label: emailLabel, value: emailText, href: `mailto:${emailText}`, external: false },
   ];
 
   return (
-    <section id={id} className="bg-secondary">
-      <div className="container mx-auto px-4 md:px-6">
-        <SectionHeading title={title} description={description} />
+    <Section id={id} tone="sunk">
+      <SectionHeading title={title} description={description} align="left" />
 
-        <div className="grid items-start gap-8 lg:grid-cols-2">
-          <Reveal>
-            <Card className={cardClass}>
-              <CardHeader>
-                <CardTitle className={titleClass}>{formTitleText}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ContactForm />
-              </CardContent>
-            </Card>
-          </Reveal>
+      <div className="grid items-start gap-x-14 gap-y-12 lg:grid-cols-2">
+        <Reveal>
+          <h3 className="font-heading text-xl font-medium text-ink">{formTitleText}</h3>
+          <div className="mt-6">
+            <ContactForm />
+          </div>
+        </Reveal>
 
-          <Reveal delay={0.1} className="space-y-8">
-            <Card className={cardClass}>
-              <CardHeader>
-                <CardTitle className={titleClass}>{detailsTitleText}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {details.map((item) => (
-                  <div key={item.label} className="flex items-start gap-4">
-                    <span className="rounded-lg bg-highlight/10 p-2 text-highlight">
-                      <item.icon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <div>
-                      <h4 className="font-semibold text-foreground">{item.label}</h4>
-                      <a
-                        href={item.href}
-                        {...(item.external
-                          ? { target: '_blank', rel: 'noopener noreferrer' }
-                          : {})}
-                        className="text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
-                      >
-                        {item.value}
-                      </a>
-                    </div>
-                  </div>
-                ))}
-                <div className="flex items-start gap-4">
-                  <span className="rounded-lg bg-highlight/10 p-2 text-highlight">
-                    <Clock className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <h4 className="font-semibold text-foreground">{scheduleLabel}</h4>
-                    <p className="whitespace-pre-line text-muted-foreground">{scheduleText}</p>
-                  </div>
+        <Reveal delay={0.08}>
+          <h3 className="font-heading text-xl font-medium text-ink">{detailsTitleText}</h3>
+
+          <dl className="mt-6 space-y-5">
+            {details.map((item) => (
+              <div key={item.label} className="flex items-start gap-4">
+                <item.icon
+                  className="mt-1 h-5 w-5 shrink-0 text-brass-ink"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <dt className="text-sm font-medium text-ink-soft">{item.label}</dt>
+                  <dd>
+                    <a
+                      href={item.href}
+                      {...(item.external
+                        ? { target: '_blank', rel: 'noopener noreferrer' }
+                        : {})}
+                      className="break-words text-ink underline-offset-4 transition-colors duration-fast hover:text-terracotta hover:underline"
+                    >
+                      {item.value}
+                    </a>
+                  </dd>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            ))}
 
-            <Card className={`overflow-hidden ${cardClass}`}>
-              <CardHeader>
-                <CardTitle className={titleClass}>{mapTitleText}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="group relative h-64 overflow-hidden rounded-md md:h-80">
-                  <iframe
-                    src={embedMapLinkUrl}
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title={`${mapTitleText} - ${allContactDetails.clinicName[lang]}`}
-                    className="h-full w-full"
-                  />
-                  <a
-                    href={mapLinkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute inset-0 flex items-center justify-center bg-primary/50 opacity-0 transition-opacity duration-300 hover:opacity-100 focus-visible:opacity-100"
-                    aria-label={`${viewMapButtonText} - ${allContactDetails.clinicName[lang]}`}
-                  >
-                    <span className="rounded-full bg-background px-5 py-2 text-sm font-semibold text-primary shadow-lg">
-                      {viewMapButtonText}
-                    </span>
-                  </a>
-                </div>
-              </CardContent>
-            </Card>
-          </Reveal>
-        </div>
+            <div className="flex items-start gap-4">
+              <Clock className="mt-1 h-5 w-5 shrink-0 text-brass-ink" aria-hidden="true" />
+              <div>
+                <dt className="text-sm font-medium text-ink-soft">{scheduleLabel}</dt>
+                <dd className="whitespace-pre-line text-ink">{scheduleText}</dd>
+              </div>
+            </div>
+          </dl>
+
+          {/* Map.
+
+              The previous build laid a full-bleed <a> over this iframe, which
+              swallowed every pointer event — the embedded map could not be
+              panned or zoomed at all, and any click bounced the visitor out to
+              Google Maps. The link is now a sibling control below the map, so
+              the embed stays usable. */}
+          <div className="mt-9">
+            <h3 className="font-heading text-xl font-medium text-ink">{mapTitleText}</h3>
+            <div className="mt-4 overflow-hidden rounded-xl border border-line shadow-e1">
+              <iframe
+                src={embedMapLinkUrl}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title={`${mapTitleText} — ${clinicName}`}
+                className="block h-64 w-full md:h-72"
+              />
+            </div>
+            <Button asChild variant="outline" size="sm" className="mt-4">
+              <a href={mapLinkUrl} target="_blank" rel="noopener noreferrer">
+                {viewMapButtonText}
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">
+                  {lang === 'es' ? '(se abre en una pestaña nueva)' : '(opens in a new tab)'}
+                </span>
+              </a>
+            </Button>
+          </div>
+        </Reveal>
       </div>
-    </section>
+    </Section>
   );
 }

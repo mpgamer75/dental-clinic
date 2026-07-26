@@ -1,312 +1,260 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import Script from 'next/script';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, Star, Award, Clock, Phone } from 'lucide-react';
-import { contactDetails, services as allServices, faqItems, visitUsCarouselImages, diplomas } from '@/lib/data';
-import { ServicesSection } from '@/components/sections/services-section';
+import { notFound } from 'next/navigation';
+import {
+  contactDetails,
+  services as allServices,
+  faqItems,
+  visitUsCarouselImages,
+  diplomas,
+  homeContent,
+} from '@/lib/data';
+import { Hero } from '@/components/sections/hero';
+import { ProblemSection } from '@/components/sections/problem';
 import { ImplantEducation } from '@/components/sections/implant-education';
+import { ServicesSection } from '@/components/sections/services-section';
 import { TestimonialsSection } from '@/components/sections/testimonials-section';
-import { FaqSection } from '@/components/sections/faq-section';
-import { ContactSection } from '@/components/sections/contact-section';
-import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
+import { DoctorSection } from '@/components/sections/doctor';
 import { DiplomasSection } from '@/components/sections/diplomas-section';
+import { FaqSection } from '@/components/sections/faq-section';
+import { BookingSection } from '@/components/sections/booking';
+import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
+import { ContactSection } from '@/components/sections/contact-section';
 import type { Language, TestimonialSupabase } from '@/lib/types';
 import { createServerClient } from '@/lib/supabase-server';
-import { getDentalClinicStructuredData, getBreadcrumbStructuredData, getFAQStructuredData } from '@/lib/seo-config';
+import {
+  getDentalClinicStructuredData,
+  getBreadcrumbStructuredData,
+  getFAQStructuredData,
+} from '@/lib/seo-config';
+
+/**
+ * Next.js signals control flow by THROWING: `notFound()`, `redirect()`, and the
+ * dynamic-rendering bailout all surface as errors carrying a `digest`. A
+ * catch-all in a Server Component must re-throw these or it silently breaks the
+ * framework — swallowing DYNAMIC_SERVER_USAGE in particular made this route
+ * look statically renderable, so an empty testimonial list risked being baked
+ * into the prerendered HTML.
+ */
+function isNextControlFlow(err: unknown): boolean {
+  const digest = (err as { digest?: unknown })?.digest;
+  return (
+    typeof digest === 'string' &&
+    (digest === 'DYNAMIC_SERVER_USAGE' ||
+      digest === 'NEXT_NOT_FOUND' ||
+      digest.startsWith('NEXT_REDIRECT'))
+  );
+}
+
+/**
+ * Loads approved testimonials.
+ *
+ * The homepage must render whether or not the database is reachable, so every
+ * genuine failure — unreachable host, missing env, RLS rejection, malformed
+ * row — collapses to `{ testimonials: [], failed: true }` and the section shows
+ * its error state. Previously an unguarded query here took the whole page down
+ * with it.
+ */
+async function loadTestimonials(): Promise<{
+  testimonials: { name: string; quote: string; location?: string }[];
+  failed: boolean;
+}> {
+  try {
+    const supabase = await createServerClient();
+    const { data, error } = await supabase
+      .from('testimonials')
+      .select('*')
+      .eq('status', 'approved')
+      .order('submitted_at', { ascending: false });
+
+    if (error) {
+      console.error('[home] testimonials query failed:', error.message);
+      return { testimonials: [], failed: true };
+    }
+
+    const rows = (data ?? []) as TestimonialSupabase[];
+    return {
+      testimonials: rows
+        .filter((t) => t?.name && t?.quote)
+        .map((t) => ({
+          name: t.name,
+          quote: t.quote,
+          location: t.location || undefined,
+        })),
+      failed: false,
+    };
+  } catch (err) {
+    if (isNextControlFlow(err)) throw err;
+    console.error('[home] testimonials unavailable:', err);
+    return { testimonials: [], failed: true };
+  }
+}
+
+/**
+ * This page reads cookies (Supabase SSR client) and live testimonial data, so
+ * it is dynamic by nature. Declaring it explicitly stops Next attempting a
+ * prerender that can only ever bail out.
+ */
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage({ params }: { params: Promise<{ lang: Language }> }) {
-  const resolvedParams = await params;
-  const lang: Language = resolvedParams?.lang || 'es';
+  const resolved = await params;
 
-  const currentClinicName = contactDetails.clinicName[lang];
-  const currentDoctorName = contactDetails.doctorName[lang];
-  const currentAddress = contactDetails.address[lang];
-  const currentPhone = contactDetails.phone[lang];
-  const currentEmail = contactDetails.email[lang];
-  const currentSchedule = contactDetails.schedule[lang];
-  const currentMapLink = contactDetails.mapLink[lang];
-  const currentEmbedMapLink = contactDetails.embedMapLink[lang];
-  
-  const currentQualifications = contactDetails.qualifications[lang];
-  const currentHeroContent = contactDetails.hero[lang];
-  const currentVisitUsContent = contactDetails.visitUs[lang];
-  const currentServicesSectionContent = contactDetails.servicesSection[lang];
-  const currentTestimonialsSectionContent = contactDetails.testimonialsSection[lang];
-  const currentFaqSectionContent = contactDetails.faqSection[lang];
-  const currentContactSectionContent = contactDetails.contactSection[lang];
+  // Defence in depth. `dynamicParams = false` in the layout already 404s any
+  // unknown segment at the router level; this guarantees the page can never
+  // index a content dictionary with an unvalidated path segment even if that
+  // routing config is later changed.
+  if (resolved?.lang !== 'es' && resolved?.lang !== 'en') notFound();
+  const lang: Language = resolved.lang;
+
+  const clinicName = contactDetails.clinicName[lang];
+  const doctorName = contactDetails.doctorName[lang];
+  const t = homeContent[lang];
+
+  const fill = (s: string) =>
+    s.replace(/\{\{clinicName\}\}/g, clinicName).replace(/\{\{doctorName\}\}/g, doctorName);
+
+  const base = `/${lang}`;
+  const appointmentHref = `${base}/agendar-cita`;
+  const contactHref = `${base}#contacto`;
+  const implantHref = `${base}#implantes`;
+  const diplomasHref = `${base}#diplomas`;
 
   const servicesList = allServices[lang];
   const faqItemsList = faqItems[lang];
   const diplomasList = diplomas[lang];
 
-  // Fetch approved testimonials from database
-  const supabase = await createServerClient();
-  const { data, error: testimonialsError } = await supabase
-    .from('testimonials')
-    .select('*')
-    .eq('status', 'approved')
-    .order('submitted_at', { ascending: false });
+  const { testimonials, failed } = await loadTestimonials();
 
-  const dbTestimonials = data as TestimonialSupabase[] | null;
-
-  // Transform database testimonials to match the expected format
-  const testimonialsList = dbTestimonials && dbTestimonials.length > 0
-    ? dbTestimonials.map(t => ({
-        name: t.name,
-        quote: t.quote,
-        location: t.location || undefined,
-      }))
-    : [];
-
-  const baseLangPath = `/${lang}`;
-  const appointmentHref = `${baseLangPath}/agendar-cita`;
-  const servicesHref = `${baseLangPath}#servicios`; 
-  const contactHref = `${baseLangPath}#contacto`;
-
-  const carouselImagesForLang = visitUsCarouselImages.map(img => ({
+  const carouselImages = visitUsCarouselImages.map((img) => ({
     src: img.src,
     alt: lang === 'es' ? img.altEs : img.altEn,
     hint: img.hint,
   }));
 
-  const currentDiplomasSectionContent = contactDetails.diplomasSection[lang];
+  const structuredData = [
+    getDentalClinicStructuredData(lang),
+    getBreadcrumbStructuredData(lang, ''),
+    getFAQStructuredData(faqItemsList),
+  ];
 
-  // Generate structured data for SEO
-  const clinicStructuredData = getDentalClinicStructuredData(lang);
-  const breadcrumbStructuredData = getBreadcrumbStructuredData(lang, '');
-  const faqStructuredData = getFAQStructuredData(faqItemsList);
-
-  const heroExtras =
-    lang === 'es'
-      ? {
-          experience: '+30 años de experiencia',
-          guarantee: '100% Garantizado',
-          immediate: 'Atención Inmediata',
-          certified: 'Certificado Internacional',
-          yearsBadge: 'Años de Experiencia',
-        }
-      : {
-          experience: '+30 years of experience',
-          guarantee: '100% Guaranteed',
-          immediate: 'Immediate Care',
-          certified: 'Internationally Certified',
-          yearsBadge: 'Years of Experience',
-        };
+  // JSON.stringify does not escape `<`, so a `</script>` sequence appearing in
+  // any FAQ answer would terminate the tag early and inject markup. The content
+  // is first-party today, but escaping here makes that class of bug impossible
+  // rather than dependent on nobody ever pasting the wrong thing into data.ts.
+  const structuredDataJson = JSON.stringify(structuredData).replace(/</g, '\\u003c');
 
   return (
     <>
-      {/* Structured Data for SEO */}
-      <Script
-        id="clinic-structured-data"
+      {/* Structured data as a plain <script>, not next/script.
+          In the App Router, next/script with an inline body does not emit a
+          real tag: it rewrites the content into a `self.__next_s.push(...)`
+          bootstrap array, so the server HTML contained no
+          `type="application/ld+json"` element at all and crawlers that read
+          raw HTML saw no structured data. A plain tag is also what Next's own
+          docs recommend for JSON-LD. */}
+      <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(clinicStructuredData) }}
-        strategy="beforeInteractive"
-      />
-      <Script
-        id="breadcrumb-structured-data"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
-        strategy="beforeInteractive"
-      />
-      <Script
-        id="faq-structured-data"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
-        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{ __html: structuredDataJson }}
       />
 
-      {/* Hero Section Améliorée */}
-      <section className="relative bg-gradient-to-br from-primary/10 via-background to-accent/10 pt-20 md:pt-28 lg:pt-32 pb-12 md:pb-20 lg:pb-24 overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-pulse-soft" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent/10 rounded-full blur-3xl animate-pulse-soft" style={{ animationDelay: '2s' }} />
-        </div>
-
-        <div className="container mx-auto px-4 md:px-6 relative z-10">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6 text-center md:text-left animate-slide-up">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-highlight/20 bg-highlight/10 px-4 py-2">
-                <Star className="h-4 w-4 text-highlight" />
-                <span className="text-sm font-medium text-highlight">{heroExtras.experience}</span>
-              </div>
-              
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-primary">
-                {currentDoctorName}
-              </h1>
-              
-              <p className="text-2xl md:text-3xl font-semibold text-foreground/90">
-                {currentHeroContent.subtitle.replace('{{clinicName}}', currentClinicName)}
-              </p>
-              
-              <p className="text-lg md:text-xl text-foreground/80 leading-relaxed">
-                {currentHeroContent.welcome}
-              </p>
-              
-              <p className="text-md md:text-lg text-muted-foreground">
-                {currentHeroContent.description.replace('{{doctorName}}', currentDoctorName)}
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-4">
-                <Button
-                  asChild
-                  variant="cta"
-                  size="lg"
-                  className="btn-shine group transition-all duration-300 hover:scale-105 hover:shadow-xl"
-                >
-                  <Link href={appointmentHref}>
-                    <Phone className="mr-2 h-5 w-5 transition-transform group-hover:rotate-12" />
-                    {currentHeroContent.ctaAppointment}
-                  </Link>
-                </Button>
-                <Button 
-                  asChild 
-                  variant="outline" 
-                  size="lg" 
-                  className="shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border-2"
-                >
-                  <Link href={servicesHref}>{currentHeroContent.ctaServices}</Link>
-                </Button>
-              </div>
-
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap gap-x-6 gap-y-3 justify-center md:justify-start pt-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-muted-foreground">{heroExtras.guarantee}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-muted-foreground">{heroExtras.immediate}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-muted-foreground">{heroExtras.certified}</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="relative group animate-fade-in" style={{ animationDelay: '0.3s' }}>
-              <Card className="overflow-hidden shadow-2xl transform group-hover:scale-[1.02] transition-all duration-500 border-0 bg-gradient-to-br from-card via-card to-card/90">
-                <CardContent className="p-0">
-                  <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px]">
-                    <Image
-                      src="/images/vitrine_clinique1.jpg"
-                      alt={lang === 'es'
-                        ? `Consultorio de ${currentClinicName} en Plaza Las Ramblas, Santiago`
-                        : `${currentClinicName} clinic at Plaza Las Ramblas, Santiago`}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
-                      className="object-cover transition-transform duration-700 group-hover:scale-110"
-                      priority
-                      quality={90}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Floating Badge */}
-              <div className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground p-6 rounded-full shadow-2xl animate-pulse-soft">
-                <CheckCircle size={32} />
-              </div>
-              
-              {/* Experience Badge */}
-              <div className="absolute -top-4 -left-4 bg-card p-4 rounded-xl shadow-xl border-2 border-primary/20">
-                <div className="text-center">
-                  <p className="font-heading text-3xl font-bold text-primary">30+</p>
-                  <p className="text-xs text-muted-foreground">{heroExtras.yearsBadge}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Qualifications Section with Enhanced Design */}
-          <div className="mt-16 md:mt-24">
-            <h2 className="text-2xl md:text-3xl font-semibold text-center mb-10 text-primary">
-              {currentHeroContent.qualificationsTitle.replace('{{doctorName}}', currentDoctorName)}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-              {currentQualifications.map((q, index) => (
-                <Card 
-                  key={index} 
-                  className="bg-card/80 backdrop-blur-sm shadow-lg transition-all duration-500 hover:shadow-primary/30 hover:scale-105 hover:border-primary border-2 border-transparent group hover-lift"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <CardContent className="p-6 flex items-center gap-4">
-                    <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
-                      <CheckCircle className="h-8 w-8 text-primary shrink-0" />
-                    </div>
-                    <p className="text-sm text-card-foreground font-medium">{q}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      <DiplomasSection
-        id="diplomas"
-        title={currentDiplomasSectionContent.title.replace('{{doctorName}}', currentDoctorName).replace('{{clinicName}}', currentClinicName)}
-        description={currentDiplomasSectionContent.description.replace('{{doctorName}}', currentDoctorName).replace('{{clinicName}}', currentClinicName)}
-        diplomasList={diplomasList}
-      />
-      
-      <VisitUsCarousel 
-        images={carouselImagesForLang}
-        visitUsContent={currentVisitUsContent}
-        contactHref={contactHref}
+      {/* 1 — the claim, and one action. */}
+      <Hero
+        content={t.hero}
+        trust={t.trust}
+        appointmentHref={appointmentHref}
+        implantHref={implantHref}
+        phone={contactDetails.phone[lang]}
       />
 
-      <ServicesSection 
-        id="servicios" 
-        title={currentServicesSectionContent.title}
-        description={currentServicesSectionContent.description.replace('{{clinicName}}', currentClinicName).replace('{{doctorName}}', currentDoctorName)}
+      {/* 2 — why it matters, before anything is sold. */}
+      <ProblemSection id="por-que" content={t.problem} />
+
+      {/* 3 — the mechanism. The page's hero object. */}
+      <ImplantEducation id="implantes" />
+
+      {/* 4 — everything else the practice does, as supporting detail. */}
+      <ServicesSection
+        id="servicios"
+        lead={t.servicesLead}
+        title={contactDetails.servicesSection[lang].title}
+        description={fill(contactDetails.servicesSection[lang].description)}
         servicesList={servicesList}
       />
 
-      <ImplantEducation id="implantes" />
-
+      {/* 5 — proof from patients. */}
       <TestimonialsSection
         id="testimonios"
-        title={currentTestimonialsSectionContent.title}
-        description={currentTestimonialsSectionContent.description.replace('{{clinicName}}', currentClinicName).replace('{{doctorName}}', currentDoctorName)}
-        testimonialsList={testimonialsList}
-        loadError={!!testimonialsError}
-        ctaButtonText={currentTestimonialsSectionContent.ctaButton}
-        dialogTitleText={currentTestimonialsSectionContent.dialogTitle}
-        dialogDescriptionText={currentTestimonialsSectionContent.dialogDescription}
+        title={t.proof.title}
+        description={t.proof.description}
+        testimonialsList={testimonials}
+        loadError={failed}
+        ctaButtonText={contactDetails.testimonialsSection[lang].ctaButton}
+        dialogTitleText={contactDetails.testimonialsSection[lang].dialogTitle}
+        dialogDescriptionText={contactDetails.testimonialsSection[lang].dialogDescription}
       />
-      
+
+      {/* 6 — who is actually going to treat you. */}
+      <DoctorSection
+        id="el-doctor"
+        content={t.doctor}
+        qualifications={contactDetails.qualifications[lang]}
+        diplomaCount={diplomasList.length}
+        diplomasHref={diplomasHref}
+        imageAlt={carouselImages[1]?.alt ?? t.hero.imageAlt}
+      />
+
+      {/* 7 — the evidence behind the credentials. */}
+      <DiplomasSection
+        id="diplomas"
+        title={fill(contactDetails.diplomasSection[lang].title)}
+        description={fill(contactDetails.diplomasSection[lang].description)}
+        diplomasList={diplomasList}
+      />
+
+      {/* 8 — the room. */}
+      <VisitUsCarousel
+        id="la-consulta"
+        images={carouselImages}
+        visitUsContent={contactDetails.visitUs[lang]}
+        contactHref={contactHref}
+      />
+
+      {/* 9 — objections, immediately before the ask. */}
       <FaqSection
         id="preguntas-frecuentes"
-        title={currentFaqSectionContent.title}
-        description={currentFaqSectionContent.description.replace('{{clinicName}}', currentClinicName).replace('{{doctorName}}', currentDoctorName)}
+        title={contactDetails.faqSection[lang].title}
+        description={fill(contactDetails.faqSection[lang].description)}
         faqItemsList={faqItemsList}
       />
-      
+
+      {/* 10 — the ask, with what happens next spelled out. */}
+      <BookingSection
+        id="agendar"
+        content={t.booking}
+        appointmentHref={appointmentHref}
+        phone={contactDetails.phone[lang]}
+        schedule={contactDetails.schedule[lang]}
+      />
+
+      {/* 11 — form, details and map. */}
       <ContactSection
         id="contacto"
         lang={lang}
-        title={currentContactSectionContent.title}
-        description={currentContactSectionContent.description.replace('{{clinicName}}', currentClinicName).replace('{{doctorName}}', currentDoctorName)}
-        formTitleText={currentContactSectionContent.formTitle}
-        detailsTitleText={currentContactSectionContent.detailsTitle}
-        addressText={currentAddress}
-        phoneText={currentPhone}
-        emailText={currentEmail}
-        scheduleText={currentSchedule}
-        mapTitleText={currentContactSectionContent.mapTitle}
-        mapLinkUrl={currentMapLink}
-        embedMapLinkUrl={currentEmbedMapLink}
-        addressLabel={currentContactSectionContent.addressLabel}
-        phoneLabel={currentContactSectionContent.phoneLabel}
-        emailLabel={currentContactSectionContent.emailLabel}
-        scheduleLabel={currentContactSectionContent.scheduleLabel}
-        viewMapButtonText={currentContactSectionContent.viewMapButton}
+        title={contactDetails.contactSection[lang].title}
+        description={fill(contactDetails.contactSection[lang].description)}
+        formTitleText={contactDetails.contactSection[lang].formTitle}
+        detailsTitleText={contactDetails.contactSection[lang].detailsTitle}
+        addressText={contactDetails.address[lang]}
+        phoneText={contactDetails.phone[lang]}
+        emailText={contactDetails.email[lang]}
+        scheduleText={contactDetails.schedule[lang]}
+        mapTitleText={contactDetails.contactSection[lang].mapTitle}
+        mapLinkUrl={contactDetails.mapLink[lang]}
+        embedMapLinkUrl={contactDetails.embedMapLink[lang]}
+        addressLabel={contactDetails.contactSection[lang].addressLabel}
+        phoneLabel={contactDetails.contactSection[lang].phoneLabel}
+        emailLabel={contactDetails.contactSection[lang].emailLabel}
+        scheduleLabel={contactDetails.contactSection[lang].scheduleLabel}
+        viewMapButtonText={contactDetails.contactSection[lang].viewMapButton}
       />
     </>
   );

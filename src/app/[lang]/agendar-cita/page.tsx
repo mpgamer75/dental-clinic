@@ -12,11 +12,14 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   const clinicName = contactDetails.clinicName[lang];
   const doctorName = contactDetails.doctorName[lang];
 
+  const title = `${pageContent.title} - ${clinicName}`;
+  const description = pageContent.description
+    .replace('{{clinicName}}', clinicName)
+    .replace('{{doctorName}}', doctorName);
+
   return {
-    title: `${pageContent.title} - ${clinicName}`,
-    description: pageContent.description
-      .replace('{{clinicName}}', clinicName)
-      .replace('{{doctorName}}', doctorName),
+    title,
+    description,
     alternates: {
       canonical: `/${lang}/agendar-cita`,
       languages: {
@@ -24,6 +27,23 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
         'en-US': '/en/agendar-cita',
         'x-default': '/es/agendar-cita',
       },
+    },
+    // Metadata is merged, not replaced, so without an explicit openGraph block
+    // this page inherited the [lang] layout's — which describes the homepage.
+    // Sharing the booking link on WhatsApp showed the homepage's title, blurb
+    // and URL instead of the booking page's.
+    openGraph: {
+      title,
+      description,
+      url: `/${lang}/agendar-cita`,
+      type: 'website',
+      locale: lang === 'es' ? 'es_DO' : 'en_US',
+      siteName: clinicName,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
     },
   };
 }

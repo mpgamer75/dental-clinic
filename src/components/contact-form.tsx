@@ -36,17 +36,36 @@ export function ContactForm() {
   const c = formCommon[lang];
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
-  // Client-side validation hint; the server action is authoritative.
+  // Client-side validation hint; the server action remains authoritative.
+  //
+  // These rules must MIRROR createContactFormSchema in src/app/actions.ts.
+  // They had drifted: the client checked only the character set, while the
+  // server additionally required 7-15 digits and capped the message at 2000.
+  // So "555" looked valid, submitted cleanly, and came back rejected after a
+  // network round-trip with no field highlighted — the worst kind of form
+  // error, because nothing on screen said what was wrong.
   const clientSchema = z.object({
     name: z.string().min(2, { message: currentActionMessages.zod.nameMin }),
     email: z.string().email({ message: currentActionMessages.zod.emailInvalid }),
     phone: z
       .string()
       .optional()
-      .refine((value) => !value || /^[0-9+\s()-]*$/.test(value), {
-        message: currentActionMessages.zod.phoneInvalid,
-      }),
-    message: z.string().min(10, { message: currentActionMessages.zod.messageMin }),
+      .refine(
+        (value) => {
+          if (!value || value.trim() === '') return true;
+          const digitsOnly = value.replace(/[^0-9]/g, '');
+          return (
+            digitsOnly.length >= 7 &&
+            digitsOnly.length <= 15 &&
+            /^[0-9+\s()-]*$/.test(value)
+          );
+        },
+        { message: currentActionMessages.zod.phoneInvalid },
+      ),
+    message: z
+      .string()
+      .min(10, { message: currentActionMessages.zod.messageMin })
+      .max(2000, { message: currentActionMessages.zod.messageMax }),
   });
 
   const form = useForm<ContactFormData>({

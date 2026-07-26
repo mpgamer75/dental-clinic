@@ -118,7 +118,7 @@ export function BarChart({ data, title, maxValue }: BarChartProps) {
                 className="h-2 rounded-full transition-all duration-300"
                 style={{
                   width: `${(item.value / max) * 100}%`,
-                  backgroundColor: item.color || 'hsl(var(--primary))',
+                  backgroundColor: item.color || 'oklch(var(--primary))',
                 }}
               />
             </div>

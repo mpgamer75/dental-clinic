@@ -37,20 +37,36 @@ export function BackToTop() {
     <Button
       onClick={scrollToTop}
       size="icon"
+      /*
+       * Removed from the tab order and the accessibility tree while hidden.
+       *
+       * The button was only visually hidden (opacity 0 + pointer-events-none),
+       * so it stayed focusable: a keyboard user tabbing through the page hit an
+       * invisible control announced as "Volver arriba". Opacity is not a
+       * focus-management tool.
+       *
+       * (`inert` would express this in one attribute, but it is not in React
+       * 18's prop types — it landed in React 19.)
+       */
+      tabIndex={isVisible ? 0 : -1}
+      aria-hidden={!isVisible || undefined}
+      disabled={!isVisible}
       className={cn(
-        'fixed bottom-8 right-8 z-50 h-12 w-12 rounded-full shadow-lg',
-        'bg-primary hover:bg-primary/90 text-primary-foreground',
-        'transition-all duration-300 ease-in-out',
-        'hover:scale-110 hover:shadow-xl',
+        // Desktop only: on phones the MobileActionBar owns this corner.
+        'fixed bottom-8 right-8 z-sticky hidden h-12 w-12 rounded-full shadow-e3 lg:flex',
+        'bg-terracotta text-primary-foreground hover:bg-terracotta-hover',
+        'transition-[opacity,transform,background-color] duration-base ease-out-quart',
+        'hover:shadow-e4',
         'group',
-        isVisible
-          ? 'translate-y-0 opacity-100'
-          : 'translate-y-16 opacity-0 pointer-events-none'
+        isVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0',
       )}
       aria-label={label}
       title={label}
     >
-      <ArrowUp className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5" />
+      <ArrowUp
+        className="h-5 w-5 transition-transform duration-base group-hover:-translate-y-0.5"
+        aria-hidden="true"
+      />
     </Button>
   );
 }

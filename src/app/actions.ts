@@ -11,13 +11,13 @@ const createContactFormSchema = (lang: Language) => {
   return z.object({
     name: z.string()
       .min(2, { message: zodMsgs.nameMin })
-      .max(100, { message: 'El nombre es demasiado largo' })
+      .max(100, { message: zodMsgs.nameMax })
       .refine(value => !/[\x00-\x1F\x7F]/.test(value), {
-        message: 'El nombre contiene caracteres no válidos'
+        message: zodMsgs.invalidCharacters
       }),
     email: z.string()
       .email({ message: zodMsgs.emailInvalid })
-      .max(255, { message: 'El email es demasiado largo' })
+      .max(255, { message: zodMsgs.emailMax })
       .toLowerCase()
       .trim(),
     phone: z.string().optional().refine(value => {
@@ -30,9 +30,9 @@ const createContactFormSchema = (lang: Language) => {
     }),
     message: z.string()
       .min(10, { message: zodMsgs.messageMin })
-      .max(2000, { message: 'El mensaje es demasiado largo' })
+      .max(2000, { message: zodMsgs.messageMax })
       .refine(value => !/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value), {
-        message: 'El mensaje contiene caracteres no válidos'
+        message: zodMsgs.invalidCharacters
       }),
   });
 };
@@ -114,13 +114,13 @@ const createAppointmentFormSchema = (lang: Language) => {
   return z.object({
     name: z.string()
       .min(2, { message: zodMsgs.nameMin })
-      .max(100, { message: 'El nombre es demasiado largo' })
+      .max(100, { message: zodMsgs.nameMax })
       .refine(value => !/[\x00-\x1F\x7F]/.test(value), {
-        message: 'El nombre contiene caracteres no válidos'
+        message: zodMsgs.invalidCharacters
       }),
     email: z.string()
       .email({ message: zodMsgs.emailInvalid })
-      .max(255, { message: 'El email es demasiado largo' })
+      .max(255, { message: zodMsgs.emailMax })
       .toLowerCase()
       .trim(),
     phone: z.string().optional().refine(value => {
@@ -132,12 +132,12 @@ const createAppointmentFormSchema = (lang: Language) => {
     }),
     service_type: z.string()
       .min(1, { message: zodMsgs.serviceTypeRequired })
-      .max(100, { message: 'El tipo de servicio es demasiado largo' }),
+      .max(100, { message: zodMsgs.serviceTypeMax }),
     reason: z.string()
       .min(10, { message: zodMsgs.reasonMin })
       .max(500, { message: zodMsgs.reasonMax })
       .refine(value => !/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value), {
-        message: 'La razón contiene caracteres no válidos'
+        message: zodMsgs.invalidCharacters
       }),
     is_urgent: z.boolean().default(false),
   });
@@ -155,9 +155,19 @@ interface AppointmentSupabaseInsertData {
 export async function submitAppointmentForm(formData: Omit<AppointmentFormData, 'id' | 'submitted_at' | 'status' | 'serviceType'> & { serviceType: string }, lang: Language) {
   const appointmentFormSchema = createAppointmentFormSchema(lang);
   
+  // The form is camelCase, the table is snake_case. Every renamed field must be
+  // mapped here.
+  //
+  // `is_urgent` was missing from this map. The client sends `isUrgent`, the
+  // schema declares `is_urgent: z.boolean().default(false)`, and Zod's default
+  // silently filled the absent key — so EVERY appointment was stored with
+  // is_urgent = false. The patient saw the toggle turn red and got a success
+  // toast; the clinic's admin table never showed a single urgent request. For
+  // a dental practice that is the entire triage signal, lost without an error.
   const dataToValidate = {
     ...formData,
     service_type: formData.serviceType,
+    is_urgent: formData.isUrgent,
   };
 
   const validatedFields = appointmentFormSchema.safeParse(dataToValidate);
@@ -166,15 +176,17 @@ export async function submitAppointmentForm(formData: Omit<AppointmentFormData, 
   if (!validatedFields.success) {
     const errorFields = validatedFields.error.flatten().fieldErrors;
     const fieldErrors: Record<string, string[]> = {};
-    
-    if (errorFields.service_type) {
-      fieldErrors.serviceType = errorFields.service_type;
-    }
-    
+
+    // Map snake_case validation keys back to the form's field names, or
+    // react-hook-form's setError silently targets a field that doesn't exist.
+    const TO_FORM_FIELD: Record<string, string> = {
+      service_type: 'serviceType',
+      is_urgent: 'isUrgent',
+    };
+
     Object.entries(errorFields).forEach(([key, value]) => {
-      if (key !== 'service_type') {
-        fieldErrors[key] = value;
-      }
+      if (!value) return;
+      fieldErrors[TO_FORM_FIELD[key] ?? key] = value;
     });
 
     return {
@@ -237,18 +249,18 @@ const createTestimonialFormSchema = (lang: Language) => {
   return z.object({
     name: z.string()
       .min(2, { message: zodMsgs.nameMin })
-      .max(100, { message: 'El nombre es demasiado largo' })
+      .max(100, { message: zodMsgs.nameMax })
       .refine(value => !/[\x00-\x1F\x7F]/.test(value), {
-        message: 'El nombre contiene caracteres no válidos'
+        message: zodMsgs.invalidCharacters
       }),
     quote: z.string()
       .min(15, { message: zodMsgs.quoteMin })
       .max(500, { message: zodMsgs.quoteMax })
       .refine(value => !/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value), {
-        message: 'El testimonio contiene caracteres no válidos'
+        message: zodMsgs.invalidCharacters
       }),
     location: z.string()
-      .max(100, { message: 'La ubicación es demasiado larga' })
+      .max(100, { message: zodMsgs.locationMax })
       .optional(),
   });
 };

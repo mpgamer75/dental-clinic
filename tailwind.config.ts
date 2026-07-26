@@ -1,170 +1,169 @@
 import type { Config } from "tailwindcss";
-import defaultTheme from "tailwindcss/defaultTheme";
+
+/**
+ * Warm Consulta.
+ *
+ * Colours resolve to `oklch(var(--token) / <alpha-value>)`, so every opacity
+ * utility (`bg-primary/10`, `border-line/60`, …) keeps working while the
+ * underlying ramp stays perceptually even across the warm hue band.
+ *
+ * The custom properties themselves live in src/app/globals.css and hold bare
+ * `L C H` triples — not full colour functions — which is what makes the
+ * `<alpha-value>` substitution legal here.
+ */
+const ok = (name: string) => `oklch(var(--${name}) / <alpha-value>)`;
 
 export default {
-    darkMode: ["class"],
-    content: [
+  darkMode: ["class"],
+  content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-  	extend: {
-  		colors: {
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
-  			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
-  			},
-  			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
-  			},
-  			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
-  			},
-  			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
-  			},
-  			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
-  			},
-  			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
-  			},
-  			highlight: {
-  				DEFAULT: 'hsl(var(--highlight))',
-  				foreground: 'hsl(var(--highlight-foreground))'
-  			},
-  			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
-  			},
-  			success: {
-  				DEFAULT: 'hsl(var(--success))',
-  				foreground: 'hsl(var(--success-foreground))'
-  			},
-  			warning: {
-  				DEFAULT: 'hsl(var(--warning))',
-  				foreground: 'hsl(var(--warning-foreground))'
-  			},
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
-  			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
-  			},
-  			sidebar: {
-  				DEFAULT: 'hsl(var(--sidebar-background))',
-  				foreground: 'hsl(var(--sidebar-foreground))',
-  				primary: 'hsl(var(--sidebar-primary))',
-  				'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-  				accent: 'hsl(var(--sidebar-accent))',
-  				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-  				border: 'hsl(var(--sidebar-border))',
-  				ring: 'hsl(var(--sidebar-ring))'
-  			},
-  			// Couleurs spécifiques pour la clinique dentaire
-  			dental: {
-  				blue: '#3B82F6',
-  				'blue-light': '#EFF6FF',
-  				'blue-dark': '#1E40AF',
-  				mint: '#A7F3D0',
-  				'mint-light': '#F0FDF4',
-  				'mint-dark': '#6EE7B7',
-  				cream: '#FFFBEB',
-  				'cream-dark': '#FEF3C7',
-  			}
-  		},
-  		fontFamily: {
-  			sans: ['var(--font-body)', ...defaultTheme.fontFamily.sans],
-  			body: ['var(--font-body)', ...defaultTheme.fontFamily.sans],
-  			heading: ['var(--font-heading)', ...defaultTheme.fontFamily.sans],
-  		},
-  		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
-  		},
-  		keyframes: {
-  			'accordion-down': {
-  				from: {
-  					height: '0'
-  				},
-  				to: {
-  					height: 'var(--radix-accordion-content-height)'
-  				}
-  			},
-  			'accordion-up': {
-  				from: {
-  					height: 'var(--radix-accordion-content-height)'
-  				},
-  				to: {
-  					height: '0'
-  				}
-  			},
-  			'fade-in': {
-  				from: { opacity: '0', transform: 'translateY(20px)' },
-  				to: { opacity: '1', transform: 'translateY(0)' }
-  			},
-  			'slide-in-left': {
-  				from: { opacity: '0', transform: 'translateX(-20px)' },
-  				to: { opacity: '1', transform: 'translateX(0)' }
-  			},
-  			'slide-in-right': {
-  				from: { opacity: '0', transform: 'translateX(20px)' },
-  				to: { opacity: '1', transform: 'translateX(0)' }
-  			},
-  			'scale-in': {
-  				from: { opacity: '0', transform: 'scale(0.9)' },
-  				to: { opacity: '1', transform: 'scale(1)' }
-  			},
-  			'bounce-gentle': {
-  				'0%, 100%': { transform: 'translateY(0)' },
-  				'50%': { transform: 'translateY(-10px)' }
-  			},
-  			'pulse-glow': {
-  				'0%, 100%': { boxShadow: '0 0 0 0 rgba(59, 130, 246, 0.4)' },
-  				'50%': { boxShadow: '0 0 0 10px rgba(59, 130, 246, 0)' }
-  			},
-  			'shimmer': {
-  				'0%': { transform: 'translateX(-100%)' },
-  				'100%': { transform: 'translateX(100%)' }
-  			}
-  		},
-  		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out',
-  			'fade-in': 'fade-in 0.6s ease-out',
-  			'slide-in-left': 'slide-in-left 0.6s ease-out',
-  			'slide-in-right': 'slide-in-right 0.6s ease-out',
-  			'scale-in': 'scale-in 0.4s ease-out',
-  			'bounce-gentle': 'bounce-gentle 2s infinite',
-  			'pulse-glow': 'pulse-glow 2s infinite',
-  			'shimmer': 'shimmer 2s infinite'
-  		},
-  		backgroundImage: {
-  			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-  			'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-  			'dental-gradient': 'linear-gradient(135deg, #3B82F6 0%, #A7F3D0 100%)',
-  			'dental-gradient-dark': 'linear-gradient(135deg, #1E40AF 0%, #6EE7B7 100%)'
-  		},
-  		boxShadow: {
-  			'dental': '0 10px 25px -5px rgba(59, 130, 246, 0.1), 0 10px 10px -5px rgba(59, 130, 246, 0.04)',
-  			'dental-lg': '0 25px 50px -12px rgba(59, 130, 246, 0.25)',
-  			'glow': '0 0 20px rgba(59, 130, 246, 0.3)',
-  			'glow-mint': '0 0 20px rgba(16, 185, 129, 0.3)'
-  		}
-  	}
+    extend: {
+      colors: {
+        /* ---- semantic (shadcn/ui contract) ---- */
+        background: ok("background"),
+        foreground: ok("foreground"),
+        card: { DEFAULT: ok("card"), foreground: ok("card-foreground") },
+        popover: { DEFAULT: ok("popover"), foreground: ok("popover-foreground") },
+        primary: { DEFAULT: ok("primary"), foreground: ok("primary-foreground") },
+        secondary: { DEFAULT: ok("secondary"), foreground: ok("secondary-foreground") },
+        muted: { DEFAULT: ok("muted"), foreground: ok("muted-foreground") },
+        accent: { DEFAULT: ok("accent"), foreground: ok("accent-foreground") },
+        highlight: { DEFAULT: ok("highlight"), foreground: ok("highlight-foreground") },
+        destructive: { DEFAULT: ok("destructive"), foreground: ok("destructive-foreground") },
+        success: { DEFAULT: ok("success"), foreground: ok("success-foreground") },
+        warning: { DEFAULT: ok("warning"), foreground: ok("warning-foreground") },
+        border: ok("border"),
+        input: ok("input"),
+        ring: ok("ring"),
+
+        /* ---- brand palette (use these for new work) ---- */
+        canvas: { DEFAULT: ok("canvas"), sunk: ok("canvas-sunk") },
+        surface: { DEFAULT: ok("surface"), raised: ok("surface-raised") },
+        ink: { DEFAULT: ok("ink"), soft: ok("ink-soft"), faint: ok("ink-faint") },
+        terracotta: {
+          DEFAULT: ok("primary-base"),
+          hover: ok("primary-hover"),
+          soft: ok("primary-soft"),
+          border: ok("primary-border"),
+        },
+        drench: { DEFAULT: ok("drench"), deep: ok("drench-deep"), on: ok("on-drench") },
+        petrol: { DEFAULT: ok("petrol"), soft: ok("petrol-soft") },
+        brass: { DEFAULT: ok("brass"), ink: ok("brass-ink"), soft: ok("brass-soft"), on: ok("on-brass") },
+        line: { DEFAULT: ok("line"), strong: ok("line-strong") },
+
+        chart: {
+          "1": ok("chart-1"),
+          "2": ok("chart-2"),
+          "3": ok("chart-3"),
+          "4": ok("chart-4"),
+          "5": ok("chart-5"),
+        },
+        sidebar: {
+          DEFAULT: ok("sidebar-background"),
+          foreground: ok("sidebar-foreground"),
+          primary: ok("sidebar-primary"),
+          "primary-foreground": ok("sidebar-primary-foreground"),
+          accent: ok("sidebar-accent"),
+          "accent-foreground": ok("sidebar-accent-foreground"),
+          border: ok("sidebar-border"),
+          ring: ok("sidebar-ring"),
+        },
+      },
+
+      fontFamily: {
+        sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
+        body: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
+        heading: ["var(--font-heading)", "ui-serif", "Georgia", "serif"],
+      },
+
+      borderRadius: {
+        sm: "calc(var(--radius) - 3px)",
+        md: "calc(var(--radius) - 1px)",
+        lg: "var(--radius)",
+        xl: "var(--radius-lg)",
+        "2xl": "var(--radius-xl)",
+      },
+
+      boxShadow: {
+        e1: "var(--e1)",
+        e2: "var(--e2)",
+        e3: "var(--e3)",
+        e4: "var(--e4)",
+        e5: "var(--e5)",
+      },
+
+      transitionTimingFunction: {
+        "out-quart": "var(--ease-out-quart)",
+        "out-quint": "var(--ease-out-quint)",
+        "out-expo": "var(--ease-out-expo)",
+        "in-out-quart": "var(--ease-in-out-quart)",
+      },
+
+      transitionDuration: {
+        fast: "var(--dur-fast)",
+        base: "var(--dur-base)",
+        slow: "var(--dur-slow)",
+        slower: "var(--dur-slower)",
+      },
+
+      zIndex: {
+        raised: "10",
+        sticky: "20",
+        header: "30",
+        overlay: "40",
+        modal: "50",
+        toast: "60",
+        tooltip: "70",
+      },
+
+      /* Fluid section rhythm. Varies deliberately — not one uniform gap. */
+      spacing: {
+        section: "clamp(4rem, 9vw, 8.5rem)",
+        "section-tight": "clamp(2.75rem, 6vw, 5.5rem)",
+      },
+
+      maxWidth: {
+        measure: "68ch",
+        "measure-tight": "52ch",
+      },
+
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0", opacity: "0" },
+          to: { height: "var(--radix-accordion-content-height)", opacity: "1" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)", opacity: "1" },
+          to: { height: "0", opacity: "0" },
+        },
+        "fade-up": {
+          from: { opacity: "0", transform: "translate3d(0,14px,0)" },
+          to: { opacity: "1", transform: "translate3d(0,0,0)" },
+        },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        /* Ambient drift for the hero light-wash. Long and low-amplitude so it
+           reads as light moving through a room, not as an animation. */
+        drift: {
+          "0%, 100%": { transform: "translate3d(0,0,0) scale(1)" },
+          "50%": { transform: "translate3d(2%, -3%, 0) scale(1.06)" },
+        },
+      },
+
+      animation: {
+        "accordion-down": "accordion-down var(--dur-base) var(--ease-out-quart)",
+        "accordion-up": "accordion-up var(--dur-fast) var(--ease-out-quart)",
+        "fade-up": "fade-up var(--dur-slow) var(--ease-out-quint) both",
+        "fade-in": "fade-in var(--dur-base) var(--ease-out-quart) both",
+        drift: "drift 26s var(--ease-in-out-quart) infinite",
+      },
+    },
   },
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;

@@ -102,6 +102,9 @@ export default function AdminPage() {
   const [session, setSession] = useState<{ user: { id: string; email?: string } } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  /** Set when one or more dashboard queries failed, so the UI can say the
+      numbers are incomplete instead of presenting zeros as fact. */
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [recentAppointments, setRecentAppointments] = useState<Appointment[]>([]);
   const [recentMessages, setRecentMessages] = useState<ContactMessage[]>([]);
@@ -122,14 +125,27 @@ export default function AdminPage() {
       setSession(session);
 
       if (session) {
-        const { data: adminData } = await supabase
+        // The error must be inspected, not discarded. Previously any failure
+        // here — RLS misconfiguration, a dropped connection, a timeout — left
+        // `adminData` null and was treated as "you are not an admin", which
+        // force-signed-out a legitimate admin and showed an accusatory
+        // "access denied". A failed check is not a denied check.
+        const { data: adminData, error: adminLookupError } = await supabase
           .from('admin_users')
           .select('id')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle();
 
-        if (adminData) {
+        if (adminLookupError) {
+          console.error('[admin] admin check failed:', adminLookupError.message);
+          setIsAdmin(false);
+          setError(
+            'No se pudo verificar su acceso porque la base de datos no respondió. ' +
+              'Su sesión sigue activa: vuelva a intentarlo en unos momentos.',
+          );
+        } else if (adminData) {
           setIsAdmin(true);
+          setError(null);
           await fetchDashboardData();
         } else {
           setIsAdmin(false);
@@ -164,68 +180,97 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
+  /**
+   * Loads the dashboard.
+   *
+   * Two things were wrong with the previous version:
+   *
+   *  1. It destructured only `{ count }` / `{ data }` and dropped every
+   *     `error`. supabase-js RESOLVES on a query failure rather than throwing,
+   *     so the surrounding try/catch never fired — a denied or unreachable
+   *     database rendered a perfectly healthy-looking dashboard of zeros. For
+   *     a clinic that means "no pending appointments" when the truth is
+   *     "we cannot see your appointments".
+   *  2. Nine queries ran sequentially, so the panel waited on nine round
+   *     trips it could have made concurrently.
+   */
   const fetchDashboardData = async () => {
+    const countOf = (
+      table: 'appointments' | 'contact_messages' | 'testimonials',
+      column?: string,
+      value?: string,
+    ) => {
+      const q = supabase.from(table).select('*', { count: 'exact', head: true });
+      return column && value ? q.eq(column, value) : q;
+    };
+
+    const recentOf = (table: 'appointments' | 'contact_messages' | 'testimonials') =>
+      supabase.from(table).select('*').order('submitted_at', { ascending: false }).limit(10);
+
     try {
-      const { count: appointmentsPendingCount } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
+      const [
+        apptPending,
+        apptTotal,
+        msgUnread,
+        msgTotal,
+        testPending,
+        testApproved,
+        recentAppts,
+        recentMsgs,
+        recentTests,
+      ] = await Promise.all([
+        countOf('appointments', 'status', 'pending'),
+        countOf('appointments'),
+        countOf('contact_messages', 'status', 'unread'),
+        countOf('contact_messages'),
+        countOf('testimonials', 'status', 'pending_approval'),
+        countOf('testimonials', 'status', 'approved'),
+        recentOf('appointments'),
+        recentOf('contact_messages'),
+        recentOf('testimonials'),
+      ]);
 
-      const { count: appointmentsTotalCount } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true });
+      const failures = [
+        apptPending.error,
+        apptTotal.error,
+        msgUnread.error,
+        msgTotal.error,
+        testPending.error,
+        testApproved.error,
+        recentAppts.error,
+        recentMsgs.error,
+        recentTests.error,
+      ].filter(Boolean);
 
-      const { count: messagesUnreadCount } = await supabase
-        .from('contact_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'unread');
-
-      const { count: messagesTotalCount } = await supabase
-        .from('contact_messages')
-        .select('*', { count: 'exact', head: true });
-
-      const { count: testimonialsPendingCount } = await supabase
-        .from('testimonials')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending_approval');
-
-      const { count: testimonialsApprovedCount } = await supabase
-        .from('testimonials')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'approved');
-
-      const { data: appointments } = await supabase
-        .from('appointments')
-        .select('*')
-        .order('submitted_at', { ascending: false })
-        .limit(10);
-
-      const { data: messages } = await supabase
-        .from('contact_messages')
-        .select('*')
-        .order('submitted_at', { ascending: false })
-        .limit(10);
-
-      const { data: testimonials } = await supabase
-        .from('testimonials')
-        .select('*')
-        .order('submitted_at', { ascending: false })
-        .limit(10);
+      if (failures.length > 0) {
+        failures.forEach((e) => console.error('[admin] dashboard query failed:', e?.message));
+        setDashboardError(
+          'Algunos datos no se pudieron cargar. Las cifras mostradas están incompletas.',
+        );
+        toast({
+          title: 'Error al cargar datos',
+          description: failures[0]?.message ?? 'La base de datos no respondió.',
+          variant: 'destructive',
+        });
+      } else {
+        setDashboardError(null);
+      }
 
       setDashboardData({
-        appointmentsPendingCount: appointmentsPendingCount || 0,
-        appointmentsTotalCount: appointmentsTotalCount || 0,
-        messagesUnreadCount: messagesUnreadCount || 0,
-        messagesTotalCount: messagesTotalCount || 0,
-        testimonialsPendingCount: testimonialsPendingCount || 0,
-        testimonialsApprovedCount: testimonialsApprovedCount || 0,
+        appointmentsPendingCount: apptPending.count || 0,
+        appointmentsTotalCount: apptTotal.count || 0,
+        messagesUnreadCount: msgUnread.count || 0,
+        messagesTotalCount: msgTotal.count || 0,
+        testimonialsPendingCount: testPending.count || 0,
+        testimonialsApprovedCount: testApproved.count || 0,
       });
 
-      setRecentAppointments(appointments || []);
-      setRecentMessages(messages || []);
-      setRecentTestimonials(testimonials || []);
+      setRecentAppointments(recentAppts.data || []);
+      setRecentMessages(recentMsgs.data || []);
+      setRecentTestimonials(recentTests.data || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setDashboardError('No se pudieron cargar los datos del panel.');
       toast({
         title: "Error al cargar datos",
         description: "No se pudieron cargar los datos del dashboard",
@@ -655,6 +700,28 @@ export default function AdminPage() {
       </header>
 
       <main id="admin-content" className="container mx-auto px-4 py-8">
+        {/* A failed query must never be presented as a quiet day. Without this
+            the panel showed a confident grid of zeros whenever the database
+            was unreachable or RLS denied the read. */}
+        {dashboardError && (
+          <div
+            role="alert"
+            className="mb-6 flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4"
+          >
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+            <div>
+              <p className="font-medium text-foreground">{dashboardError}</p>
+              <button
+                type="button"
+                onClick={() => fetchDashboardData()}
+                className="mt-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid gap-6 mb-8 md:grid-cols-3 animate-fade-in">
           <Card className="border border-border/60 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent shadow-sm transition-shadow duration-300 hover:shadow-md">

@@ -39,26 +39,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   });
 
-  // Key on-page sections (anchored on the homepage).
-  const sections = [
-    { path: 'servicios', priority: 0.8 },
-    { path: 'implantes', priority: 0.7 },
-    { path: 'testimonios', priority: 0.7 },
-    { path: 'preguntas-frecuentes', priority: 0.7 },
-    { path: 'contacto', priority: 0.8 },
-    { path: 'diplomas', priority: 0.6 },
-  ];
-
+  // Privacy policy, which exists as a real route and was missing.
   languages.forEach((lang) => {
-    sections.forEach((section) => {
-      routes.push({
-        url: `${baseUrl}/${lang}#${section.path}`,
-        lastModified: currentDate,
-        changeFrequency: 'monthly',
-        priority: section.priority,
-      });
+    routes.push({
+      url: `${baseUrl}/${lang}/privacidad`,
+      lastModified: currentDate,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+      alternates: {
+        languages: {
+          'es-DO': `${baseUrl}/es/privacidad`,
+          'en-US': `${baseUrl}/en/privacidad`,
+          'x-default': `${baseUrl}/es/privacidad`,
+        },
+      },
     });
   });
+
+  // NOTE: homepage section anchors (#servicios, #implantes, …) are deliberately
+  // NOT listed.
+  //
+  // A fragment is not a distinct URL. Search engines strip the fragment, so the
+  // twelve `/{lang}#section` entries that used to be emitted here collapsed to
+  // two URLs already present above — the sitemap declared 16 URLs describing 6
+  // documents, with conflicting priorities and changeFrequency for the same
+  // page. That is a duplicate-URL signal, not extra coverage.
 
   return routes;
 }

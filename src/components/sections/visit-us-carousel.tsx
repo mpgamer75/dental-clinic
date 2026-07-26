@@ -2,156 +2,191 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useLanguage } from '@/contexts/language-context';
+import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { Reveal } from '@/components/reveal';
+import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/contexts/language-context';
+import { cn } from '@/lib/utils';
 
 interface CarouselImage {
   src: string;
   alt: string;
-  hint: string;
+  hint?: string;
 }
 
 interface VisitUsCarouselProps {
+  id?: string;
   images: CarouselImage[];
   visitUsContent: { title: string; description: string; ctaButton: string };
   contactHref: string;
 }
 
-export function VisitUsCarousel({ images, visitUsContent, contactHref }: VisitUsCarouselProps) {
+const INTERVAL = 7000;
+
+/**
+ * The practice, photographed.
+ *
+ * Autoplay stops permanently once the visitor takes manual control, and never
+ * starts under `prefers-reduced-motion`. The previous version only paused on
+ * hover, so it kept moving under a reader's eye on touch devices where there
+ * is no hover to detect.
+ *
+ * The slide indicators are real 44px targets: the visible bar is slim, but the
+ * button's padded box meets the touch minimum.
+ */
+export function VisitUsCarousel({
+  id = 'la-consulta',
+  images,
+  visitUsContent,
+  contactHref,
+}: VisitUsCarouselProps) {
   const { lang } = useLanguage();
-  const reduceMotion = useReducedMotion();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const reduce = useReducedMotion();
+  const [active, setActive] = useState(0);
+  const [autoplay, setAutoplay] = useState(true);
+  const dotsRef = useRef<(HTMLButtonElement | null)[]>([]);
 
   const count = images.length;
 
-  const labels =
+  const t =
     lang === 'es'
       ? {
           prev: 'Imagen anterior',
           next: 'Imagen siguiente',
-          goTo: (n: number) => `Ir a la imagen ${n}`,
-          region: 'Galería de imágenes de la clínica',
+          region: 'Galería de la consulta',
+          slide: (n: number) => `Ir a la imagen ${n} de ${count}`,
         }
       : {
           prev: 'Previous image',
           next: 'Next image',
-          goTo: (n: number) => `Go to image ${n}`,
-          region: 'Clinic image gallery',
+          region: 'Practice gallery',
+          slide: (n: number) => `Go to image ${n} of ${count}`,
         };
 
-  const goNext = useCallback(() => setCurrentIndex((p) => (p + 1) % count), [count]);
-  const goPrev = useCallback(() => setCurrentIndex((p) => (p - 1 + count) % count), [count]);
+  const select = useCallback((i: number) => {
+    setActive(i);
+    setAutoplay(false);
+  }, []);
 
-  // Autoplay — only with multiple images, when not paused, and when the user
-  // has not requested reduced motion.
+  const step = useCallback(
+    (dir: 1 | -1) => select((active + dir + count) % count),
+    [active, count, select],
+  );
+
   useEffect(() => {
-    if (count <= 1 || isPaused || reduceMotion) return;
-    intervalRef.current = setInterval(() => setCurrentIndex((p) => (p + 1) % count), 7000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [count, isPaused, reduceMotion]);
+    if (!autoplay || reduce || count < 2) return;
+    const timer = window.setInterval(() => setActive((i) => (i + 1) % count), INTERVAL);
+    return () => window.clearInterval(timer);
+  }, [autoplay, reduce, count]);
 
-  if (!images || images.length === 0) {
-    return null;
-  }
-
+  if (count === 0) return null;
   const multiple = count > 1;
 
   return (
-    <section className="bg-background">
-      <div className="container mx-auto px-4 text-center md:px-6">
-        <SectionHeading title={visitUsContent.title} description={visitUsContent.description} />
+    <Section id={id} tone="canvas" space="tight">
+      <div className="grid items-center gap-x-14 gap-y-10 lg:grid-cols-12">
+        <div className="lg:col-span-4">
+          <SectionHeading
+            title={visitUsContent.title}
+            description={visitUsContent.description}
+            align="left"
+            className="mb-6"
+          />
+          <Reveal>
+            <Button asChild variant="outline" size="lg">
+              <Link href={contactHref}>{visitUsContent.ctaButton}</Link>
+            </Button>
+          </Reveal>
+        </div>
 
-        <Reveal
-          className="group relative mx-auto w-full max-w-4xl"
-          aria-roledescription="carousel"
-          aria-label={labels.region}
-        >
+        <Reveal className="lg:col-span-8">
           <div
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            onFocusCapture={() => setIsPaused(true)}
-            onBlurCapture={() => setIsPaused(false)}
+            className="group relative aspect-[16/10] w-full overflow-hidden rounded-2xl shadow-e3"
+            aria-roledescription="carousel"
+            aria-label={t.region}
           >
-            <div className="carousel-single-image-wrapper">
-              {images.map((image, index) => (
-                <div
-                  key={`${image.src}-${index}`}
-                  className={cn('carousel-single-image-item', index === currentIndex && 'active')}
-                  role="group"
-                  aria-roledescription="slide"
-                  aria-label={`${index + 1} / ${count}`}
-                  aria-hidden={index !== currentIndex}
-                >
-                  <Image
-                    src={image.src}
-                    alt={image.alt}
-                    fill
-                    sizes="(max-width: 896px) 100vw, 896px"
-                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                    priority={index === 0}
-                  />
-                </div>
-              ))}
-
-              {multiple && (
-                <>
-                  <button
-                    type="button"
-                    onClick={goPrev}
-                    aria-label={labels.prev}
-                    className="absolute left-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground shadow-md backdrop-blur transition-colors hover:bg-background hover:text-primary"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    aria-label={labels.next}
-                    className="absolute right-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground shadow-md backdrop-blur transition-colors hover:bg-background hover:text-primary"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </>
-              )}
-            </div>
+            {images.map((img, i) => (
+              <div
+                key={img.src}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`${i + 1} / ${count}`}
+                aria-hidden={i !== active}
+                className={cn(
+                  'absolute inset-0 transition-opacity duration-slower ease-out-quart',
+                  i === active ? 'opacity-100' : 'opacity-0',
+                )}
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 62vw"
+                  className="object-cover"
+                  quality={78}
+                  /* No `priority` here. This band sits well below the fold, so
+                     preloading it competes with the hero photograph for the
+                     LCP and fetches an image most visitors never scroll to. */
+                  loading="lazy"
+                />
+              </div>
+            ))}
 
             {multiple && (
-              <div className="carousel-bullets-container">
-                {images.map((_, index) => (
-                  <button
-                    key={`bullet-${index}`}
-                    type="button"
-                    className={cn('carousel-bullet', index === currentIndex && 'active')}
-                    aria-label={labels.goTo(index + 1)}
-                    aria-current={index === currentIndex}
-                    onClick={() => setCurrentIndex(index)}
-                  />
-                ))}
-              </div>
+              <>
+                <button
+                  type="button"
+                  onClick={() => step(-1)}
+                  aria-label={t.prev}
+                  className="absolute left-3 top-1/2 z-raised flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface/85 text-ink shadow-e2 backdrop-blur transition-colors duration-fast hover:bg-surface hover:text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => step(1)}
+                  aria-label={t.next}
+                  className="absolute right-3 top-1/2 z-raised flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface/85 text-ink shadow-e2 backdrop-blur transition-colors duration-fast hover:bg-surface hover:text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </>
             )}
           </div>
-        </Reveal>
 
-        <Reveal>
-          <Button
-            asChild
-            size="lg"
-            className="btn-shine mt-12 shadow-md transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
-          >
-            <Link href={contactHref}>{visitUsContent.ctaButton}</Link>
-          </Button>
+          {multiple && (
+            <div className="mt-5 flex items-center gap-2">
+              {images.map((img, i) => (
+                <button
+                  key={img.src}
+                  ref={(el) => {
+                    dotsRef.current[i] = el;
+                  }}
+                  type="button"
+                  aria-label={t.slide(i + 1)}
+                  aria-current={i === active}
+                  onClick={() => select(i)}
+                  className="group/dot -my-5 flex h-11 items-center py-5 focus-visible:outline-none"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'block h-1 rounded-full transition-all duration-base ease-out-quart group-focus-visible/dot:ring-2 group-focus-visible/dot:ring-ring group-focus-visible/dot:ring-offset-4 group-focus-visible/dot:ring-offset-background',
+                      i === active
+                        ? 'w-10 bg-terracotta'
+                        : 'w-5 bg-line-strong group-hover/dot:bg-brass-ink',
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </Reveal>
       </div>
-    </section>
+    </Section>
   );
 }

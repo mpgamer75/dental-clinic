@@ -116,28 +116,44 @@ export function DashboardCharts({ appointments, messages, testimonials }: Dashbo
     }));
   }, [appointments]);
 
-  // Appointments over time (last 7 days)
+  // Appointments over time (last 7 days).
+  //
+  // Everything here is computed in LOCAL time. The previous version bucketed by
+  // `toISOString().split('T')[0]` (a UTC calendar date) and then labelled that
+  // string via `new Date('YYYY-MM-DD')` — which JS parses as UTC midnight —
+  // formatted back into the viewer's local zone. In Santiago (UTC-4) UTC
+  // midnight is 8pm the previous day, so every weekday label was off by one and
+  // appointments submitted after 8pm local were counted on the following day.
   const appointmentsOverTime = useMemo(() => {
-    const now = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(now);
-      date.setDate(date.getDate() - (6 - i));
-      return date.toISOString().split('T')[0];
+    /** Local YYYY-MM-DD, never round-tripped through UTC. */
+    const localKey = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+        d.getDate(),
+      ).padStart(2, '0')}`;
+
+    const today = new Date();
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      d.setDate(d.getDate() - (6 - i));
+      return d;
     });
 
-    const counts = last7Days.map((date) => {
-      const count = appointments.filter((apt) => {
-        const aptDate = new Date(apt.submitted_at).toISOString().split('T')[0];
-        return aptDate === date;
-      }).length;
-      const dayName = new Date(date).toLocaleDateString('es-ES', { weekday: 'short' });
+    // Bucket once, so this is O(n) rather than a filter pass per day.
+    const buckets = new Map<string, number>(days.map((d) => [localKey(d), 0]));
+    for (const apt of appointments) {
+      const submitted = new Date(apt.submitted_at);
+      if (Number.isNaN(submitted.getTime())) continue;
+      const key = localKey(submitted);
+      if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
+    }
+
+    return days.map((d) => {
+      const dayName = d.toLocaleDateString('es-DO', { weekday: 'short' });
       return {
         date: dayName.charAt(0).toUpperCase() + dayName.slice(1),
-        citas: count,
+        citas: buckets.get(localKey(d)) ?? 0,
       };
     });
-
-    return counts;
   }, [appointments]);
 
   // Messages by status
@@ -282,8 +298,8 @@ export function DashboardCharts({ appointments, messages, testimonials }: Dashbo
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
+                    backgroundColor: 'oklch(var(--background))',
+                    border: '1px solid oklch(var(--border))',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
@@ -337,8 +353,8 @@ export function DashboardCharts({ appointments, messages, testimonials }: Dashbo
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
+                    backgroundColor: 'oklch(var(--background))',
+                    border: '1px solid oklch(var(--border))',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
@@ -421,7 +437,13 @@ export function DashboardCharts({ appointments, messages, testimonials }: Dashbo
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={serviceTypeDistribution} layout="horizontal">
+              {/* `layout="vertical"` is what recharts calls horizontal BARS.
+                  This was `layout="horizontal"` (the default) while supplying a
+                  numeric XAxis and a category YAxis — a contradiction recharts
+                  resolves by rendering no bars at all. The card has been
+                  showing an empty axis frame with correct labels and zero data
+                  since it was written. */}
+              <BarChart data={serviceTypeDistribution} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                 <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                 <YAxis
@@ -434,8 +456,8 @@ export function DashboardCharts({ appointments, messages, testimonials }: Dashbo
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
+                    backgroundColor: 'oklch(var(--background))',
+                    border: '1px solid oklch(var(--border))',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}

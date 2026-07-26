@@ -27,18 +27,29 @@ const nextConfig = {
     ],
   },
 
-  // Headers pour cache navigateur
+  // Browser cache headers.
+  //
+  // NOTE: there is deliberately NO blanket `source: '/:path*'` rule here.
+  //
+  // A previous `public, max-age=3600, stale-while-revalidate=86400` on every
+  // path did three harmful things, because config headers take precedence over
+  // Next's own cache policy (send-payload.js only sets Cache-Control when the
+  // response does not already carry one):
+  //
+  //   1. It overrode the `private, no-store` that Next emits for /admin and
+  //      /admin-dashboard. Those documents embed patient names, emails, phone
+  //      numbers and appointment reasons in the RSC payload, so signing out on
+  //      a shared clinic machine still left the full patient list served from
+  //      disk cache for an hour, with no auth check.
+  //   2. `stale-while-revalidate` made those same responses eligible for CDN
+  //      caching at the edge.
+  //   3. It served stale HTML for an hour after every deploy, referencing
+  //      build assets that no longer exist.
+  //
+  // Only genuinely immutable, non-personal assets are cached below. Let Next
+  // decide the policy for everything that renders.
   async headers() {
     return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=3600, stale-while-revalidate=86400',
-          },
-        ],
-      },
       {
         source: '/images/:path*',
         headers: [

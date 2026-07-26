@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   LogOut, Calendar, MessageCircle, Quote, LayoutDashboard,
-  Clock, ArrowRight, Sparkles
+  Clock, ArrowRight, Sparkles, AlertTriangle
 } from 'lucide-react';
 import { AppointmentsTable } from './appointments-table';
 import { MessagesTable } from './messages-table';
@@ -50,6 +50,9 @@ interface Props {
   appointments: Appointment[];
   messages: Message[];
   testimonials: Testimonial[];
+  /** Names of datasets that failed to load, so an empty table isn't mistaken
+      for a quiet day at the clinic. */
+  loadErrors?: string[];
   signOutAction: () => Promise<void>;
 }
 
@@ -58,6 +61,7 @@ export function AdminDashboardClient({
   appointments,
   messages,
   testimonials,
+  loadErrors = [],
   signOutAction
 }: Props) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -93,8 +97,12 @@ export function AdminDashboardClient({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent flex items-center gap-2">
-                <Sparkles className="h-7 w-7 text-primary" />
+              {/* Solid colour, not background-clip gradient text. Gradient
+                  text renders invisible wherever the clip is unsupported or
+                  the -webkit- prefix is missing, which for a page heading is
+                  a total loss for no gain. */}
+              <h1 className="flex items-center gap-2 font-heading text-3xl font-medium text-ink">
+                <Sparkles className="h-7 w-7 text-brass-ink" aria-hidden="true" />
                 Panel de Administración
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
@@ -127,6 +135,27 @@ export function AdminDashboardClient({
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* A failed query must never look like an empty inbox. Without this,
+            an unreachable database rendered a calm dashboard of zeros and the
+            clinic would assume nobody had written in. */}
+        {loadErrors.length > 0 && (
+          <div
+            role="alert"
+            className="mb-6 flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4"
+          >
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+            <div>
+              <p className="font-medium text-ink">
+                No se pudieron cargar algunos datos: {loadErrors.join(', ')}.
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">
+                Las cifras mostradas están incompletas. Recargue la página; si el problema
+                persiste, hay un fallo de conexión con la base de datos.
+              </p>
+            </div>
+          </div>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           {/* Tabs Navigation */}
           <motion.div
