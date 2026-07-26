@@ -2,124 +2,249 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
-   Design tokens — "Refined Medical"
-   Deep medical blue (primary) + soft teal (highlight) + neutral
-   scale. Tuned for WCAG AA in both light and dark.
-   ============================================================ */
+/* ============================================================================
+   WARM CONSULTA — design tokens
+   ----------------------------------------------------------------------------
+   The palette is taken from the clinic's own room (see public/images/
+   vitrine_clinique*.jpg): warm plaster walls, brass fittings, mahogany rail.
+   Terracotta carries the brand; the logo's petrol blue is demoted to a
+   supporting/informational role; brass is the decorative accent.
+
+   Colour space is OKLCH so the warm hues keep an even perceptual lightness
+   ramp (HSL shifts lightness badly across the 30-80 hue band).
+
+   Every foreground/background pair below is verified >= WCAG AA
+   (4.5:1 body, 3:1 large/decorative) in BOTH themes. Do not hand-tune a
+   single channel without re-checking its pairings.
+
+   Two colours deliberately carry INK, not white, as their on-colour:
+   --brass and --warning. They are mid-light; white on them fails AA.
+   ========================================================================== */
 @layer base {
   :root {
-    /* Warm off-white canvas (not clinical pure white) — calmer, more human.
-       Cards stay pure white so they lift gently off the page. */
-    --background: 40 33% 98%;
-    --foreground: 215 30% 16%;
+    /* ---- raw palette ------------------------------------------------- */
+    --canvas: 0.9455 0.0075 62;
+    --canvas-sunk: 0.921 0.009 62;
+    --surface: 0.988 0.0035 62;
+    --surface-raised: 1 0 62;
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 30% 16%;
+    --ink: 0.2343 0.0157 53.8;
+    --ink-soft: 0.445 0.018 50;
+    --ink-faint: 0.585 0.015 55;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 28% 17%;
+    --primary-base: 0.5077 0.1168 38.7;
+    --primary-hover: 0.452 0.113 38.7;
+    --primary-soft: 0.933 0.027 38.7;
+    --primary-border: 0.848 0.056 38.7;
 
-    --primary: 215 85% 32%;
-    --primary-foreground: 0 0% 100%;
+    /* Drenched full-bleed bands — the Committed half of the colour strategy.
+       Dark in BOTH themes, so they always take a light on-colour. */
+    --drench: 0.372 0.096 38.7;
+    --drench-deep: 0.288 0.074 38.7;
+    --on-drench: 0.988 0.0035 62;
 
-    --secondary: 214 32% 95%;
-    --secondary-foreground: 215 60% 26%;
+    --petrol: 0.47 0.09 240.4;
+    --petrol-soft: 0.935 0.021 240.4;
 
-    --muted: 214 24% 96%;
-    --muted-foreground: 215 16% 42%;
+    --brass: 0.6742 0.1014 67.5;
+    --brass-ink: 0.515 0.085 67.5; /* text-safe brass */
+    --brass-soft: 0.942 0.03 67.5;
+    /* The colour that sits ON a brass fill. Brass is mid-light in light mode
+       and lighter still in dark mode, so this must stay DARK in both — using
+       `--ink` here gave 1.73:1 in dark mode, where ink is near-white. */
+    --on-brass: 0.16 0.012 48;
 
-    /* Subtle cool surface used for hovers / soft gradients */
-    --accent: 200 38% 94%;
-    --accent-foreground: 215 55% 26%;
+    --line: 0.878 0.011 62;
+    --line-strong: 0.808 0.016 62;
 
-    /* Brand accent — soft teal, used deliberately (icons, dividers, marks) */
-    --highlight: 186 64% 32%;
-    --highlight-foreground: 0 0% 100%;
+    --danger: 0.515 0.175 26;
+    --ok: 0.51 0.098 155;
+    --warn: 0.635 0.13 78;
 
-    --destructive: 0 72% 46%;
-    --destructive-foreground: 0 0% 100%;
+    /* ---- semantic aliases (shadcn/ui contract) ----------------------- */
+    --background: var(--canvas);
+    --foreground: var(--ink);
 
-    /* Success / warning — semantic feedback (AA on white). Success green is
-       distinct from the teal highlight so "valid" never reads as brand color. */
-    --success: 152 56% 30%;
-    --success-foreground: 0 0% 100%;
-    --warning: 32 90% 40%;
-    --warning-foreground: 0 0% 100%;
+    --card: var(--surface);
+    --card-foreground: var(--ink);
 
-    --border: 214 22% 88%;
-    --input: 214 22% 90%;
-    --ring: 215 85% 32%;
+    --popover: var(--surface-raised);
+    --popover-foreground: var(--ink);
 
-    --radius: 0.625rem;
+    --primary: var(--primary-base);
+    --primary-foreground: var(--surface);
 
-    --chart-1: 215 85% 45%;
-    --chart-2: 186 64% 40%;
-    --chart-3: 215 70% 60%;
-    --chart-4: 186 50% 30%;
-    --chart-5: 215 16% 60%;
+    --secondary: var(--canvas-sunk);
+    --secondary-foreground: var(--ink);
 
-    --sidebar-background: 215 85% 32%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 215 85% 32%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 70% 26%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 214 32% 88%;
-    --sidebar-ring: 215 85% 45%;
+    --muted: var(--canvas-sunk);
+    --muted-foreground: var(--ink-soft);
+
+    --accent: var(--primary-soft);
+    --accent-foreground: var(--primary-base);
+
+    --highlight: var(--brass-ink);
+    --highlight-foreground: var(--surface);
+
+    --destructive: var(--danger);
+    --destructive-foreground: var(--surface);
+
+    --success: var(--ok);
+    --success-foreground: var(--surface);
+
+    --warning: var(--warn);
+    --warning-foreground: var(--ink); /* ink, not white — AA */
+
+    --border: var(--line);
+    --input: var(--line-strong);
+    --ring: var(--primary-base);
+
+    /* Charts: terracotta -> brass -> petrol, distinguishable without hue
+       alone (the series also differ in lightness). */
+    --chart-1: 0.5077 0.1168 38.7;
+    --chart-2: 0.6742 0.1014 67.5;
+    --chart-3: 0.47 0.09 240.4;
+    --chart-4: 0.62 0.09 12;
+    --chart-5: 0.585 0.015 55;
+
+    --sidebar-background: 0.288 0.074 38.7;
+    --sidebar-foreground: 0.95 0.012 70;
+    --sidebar-primary: 0.6742 0.1014 67.5;
+    --sidebar-primary-foreground: 0.2 0.03 40;
+    --sidebar-accent: 0.372 0.096 38.7;
+    --sidebar-accent-foreground: 0.988 0.0035 62;
+    --sidebar-border: 0.36 0.06 40;
+    --sidebar-ring: 0.6742 0.1014 67.5;
+
+    /* ---- radius ------------------------------------------------------ */
+    --radius: 0.5rem;
+    --radius-lg: 0.875rem;
+    --radius-xl: 1.25rem;
+
+    /* ---- elevation ---------------------------------------------------
+       Warm-tinted shadows. A neutral-grey shadow over a warm plaster canvas
+       reads as dirt; the shadow hue tracks the surface it falls on. */
+    --shadow-color: 28 40% 22%;
+    --e1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.1),
+      0 1px 3px hsl(var(--shadow-color) / 0.06);
+    --e2: 0 2px 4px -2px hsl(var(--shadow-color) / 0.1),
+      0 4px 10px -2px hsl(var(--shadow-color) / 0.08);
+    --e3: 0 4px 8px -4px hsl(var(--shadow-color) / 0.12),
+      0 12px 24px -6px hsl(var(--shadow-color) / 0.1);
+    --e4: 0 8px 16px -8px hsl(var(--shadow-color) / 0.14),
+      0 24px 48px -12px hsl(var(--shadow-color) / 0.14);
+    --e5: 0 16px 32px -12px hsl(var(--shadow-color) / 0.18),
+      0 40px 80px -20px hsl(var(--shadow-color) / 0.18);
   }
 
   .dark {
-    --background: 220 40% 9%;
-    --foreground: 210 40% 98%;
+    --canvas: 0.19 0.013 48;
+    --canvas-sunk: 0.152 0.011 48;
+    --surface: 0.235 0.015 50;
+    --surface-raised: 0.272 0.0165 50;
 
-    --card: 220 35% 12%;
-    --card-foreground: 210 40% 98%;
+    --ink: 0.956 0.009 75;
+    --ink-soft: 0.81 0.013 68;
+    --ink-faint: 0.69 0.014 62;
 
-    --popover: 220 40% 10%;
-    --popover-foreground: 210 40% 98%;
+    --primary-base: 0.685 0.129 38.7;
+    --primary-hover: 0.735 0.12 38.7;
+    --primary-soft: 0.308 0.051 38.7;
+    --primary-border: 0.39 0.07 38.7;
 
-    --primary: 213 85% 62%;
-    --primary-foreground: 220 40% 9%;
+    --drench: 0.335 0.09 38.7;
+    --drench-deep: 0.26 0.07 38.7;
+    --on-drench: 0.988 0.0035 62;
 
-    --secondary: 217 25% 18%;
-    --secondary-foreground: 210 40% 92%;
+    --petrol: 0.69 0.098 240.4;
+    --petrol-soft: 0.3 0.043 240.4;
 
-    --muted: 217 24% 22%;
-    --muted-foreground: 215 20% 68%;
+    --brass: 0.79 0.105 67.5;
+    --brass-ink: 0.84 0.095 67.5;
+    --brass-soft: 0.305 0.043 67.5;
+    --on-brass: 0.16 0.012 48; /* stays dark: brass is light in this theme too */
 
-    --accent: 215 38% 22%;
-    --accent-foreground: 210 40% 96%;
+    --line: 0.32 0.015 50;
+    --line-strong: 0.41 0.018 50;
 
-    --highlight: 185 60% 52%;
-    --highlight-foreground: 220 40% 9%;
+    --danger: 0.66 0.17 26;
+    --ok: 0.71 0.115 155;
+    --warn: 0.79 0.135 80;
 
-    --destructive: 0 70% 55%;
-    --destructive-foreground: 210 40% 98%;
+    /* Tonal fills invert their on-colour in dark mode. */
+    --primary-foreground: 0.16 0.012 48;
+    --destructive-foreground: 0.16 0.012 48;
+    --success-foreground: 0.16 0.012 48;
+    --warning-foreground: 0.16 0.012 48;
+    --highlight-foreground: 0.16 0.012 48;
 
-    --success: 152 48% 46%;
-    --success-foreground: 220 40% 9%;
-    --warning: 38 90% 56%;
-    --warning-foreground: 220 40% 9%;
+    --card: var(--surface);
+    --popover: var(--surface-raised);
+    --accent: var(--primary-soft);
+    --accent-foreground: var(--primary-base);
+    --highlight: var(--brass);
 
-    --border: 217 25% 22%;
-    --input: 217 25% 18%;
-    --ring: 213 85% 62%;
+    --chart-1: 0.685 0.129 38.7;
+    --chart-2: 0.79 0.105 67.5;
+    --chart-3: 0.69 0.098 240.4;
+    --chart-4: 0.72 0.11 12;
+    --chart-5: 0.69 0.014 62;
 
-    --chart-1: 213 85% 62%;
-    --chart-2: 185 60% 55%;
-    --chart-3: 213 70% 72%;
-    --chart-4: 185 50% 45%;
-    --chart-5: 215 20% 62%;
+    --sidebar-background: 0.152 0.011 48;
+    --sidebar-foreground: 0.9 0.012 70;
+    --sidebar-primary: 0.79 0.105 67.5;
+    --sidebar-primary-foreground: 0.16 0.012 48;
+    --sidebar-accent: 0.26 0.03 40;
+    --sidebar-accent-foreground: 0.956 0.009 75;
+    --sidebar-border: 0.3 0.018 48;
+    --sidebar-ring: 0.79 0.105 67.5;
 
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 213 85% 62%;
-    --sidebar-primary-foreground: 222 47% 8%;
-    --sidebar-accent: 215 60% 40%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 32% 20%;
-    --sidebar-ring: 213 85% 62%;
+    --shadow-color: 24 50% 3%;
+    --e1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.5),
+      0 1px 3px hsl(var(--shadow-color) / 0.4);
+    --e2: 0 2px 4px -2px hsl(var(--shadow-color) / 0.5),
+      0 4px 10px -2px hsl(var(--shadow-color) / 0.45);
+    --e3: 0 4px 8px -4px hsl(var(--shadow-color) / 0.55),
+      0 12px 24px -6px hsl(var(--shadow-color) / 0.5);
+    --e4: 0 8px 16px -8px hsl(var(--shadow-color) / 0.6),
+      0 24px 48px -12px hsl(var(--shadow-color) / 0.55);
+    --e5: 0 16px 32px -12px hsl(var(--shadow-color) / 0.65),
+      0 40px 80px -20px hsl(var(--shadow-color) / 0.6);
+  }
+}
+
+/* ============================================================================
+   Motion tokens
+   Exponential ease-out curves only. No bounce, no elastic — this is a medical
+   practice, not a toy. Durations are short enough to never gate an action.
+   ========================================================================== */
+@layer base {
+  :root {
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+
+    --dur-fast: 140ms;
+    --dur-base: 220ms;
+    --dur-slow: 380ms;
+    --dur-slower: 620ms;
+  }
+}
+
+/* ============================================================================
+   Semantic z-index scale. Never write an arbitrary z-index.
+   ========================================================================== */
+@layer base {
+  :root {
+    --z-base: 0;
+    --z-raised: 10;
+    --z-sticky: 20;
+    --z-header: 30;
+    --z-overlay: 40;
+    --z-modal: 50;
+    --z-toast: 60;
+    --z-tooltip: 70;
   }
 }
 
@@ -134,248 +259,189 @@
        Implant/prosthetics patients skew older — bias up from the 16px default. */
     font-size: 106.25%;
     /* Sticky-header offset for in-page anchor links (#servicios, #contacto…) */
-    scroll-padding-top: 5rem;
+    scroll-padding-top: 5.5rem;
     -webkit-text-size-adjust: 100%;
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    line-height: 1.65;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    line-height: 1.6;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
-    letter-spacing: -0.02em;
-    line-height: 1.18;
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading), ui-serif, Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.014em;
+    line-height: 1.12;
     text-wrap: balance;
+  }
+
+  h5,
+  h6 {
+    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   }
 
   p {
     text-wrap: pretty;
   }
 
-  /* Smooth, scoped theme transition (avoids global flicker) */
-  body,
-  header,
-  nav,
-  .card,
-  button,
-  input,
-  select,
-  textarea {
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  /* Tabular figures everywhere a number can change in place — prevents the
+     jitter that makes counters and data tables look cheap. */
+  .tabular,
+  table td,
+  table th,
+  time,
+  output {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
   }
 
-  section {
-    @apply py-12 md:py-20 lg:py-24;
+  /* Prose measure. Applied deliberately, not globally. */
+  .measure {
+    max-width: 68ch;
+  }
+  .measure-tight {
+    max-width: 52ch;
   }
 }
 
-/* ============================================================
-   Motion — intentional, restrained set.
-   Entrance reveals are handled by the <Reveal> component
-   (framer-motion). These utilities cover the few remaining
-   ambient / micro cases.
-   ============================================================ */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* ============================================================================
+   Utilities
+   ========================================================================== */
+@layer components {
+  /* Elevation — use these, not ad-hoc shadow-* values. */
+  .e1 {
+    box-shadow: var(--e1);
+  }
+  .e2 {
+    box-shadow: var(--e2);
+  }
+  .e3 {
+    box-shadow: var(--e3);
+  }
+  .e4 {
+    box-shadow: var(--e4);
+  }
+  .e5 {
+    box-shadow: var(--e5);
+  }
+
+  /* Full-bleed drenched band. The Committed half of the colour strategy:
+     colour carries the surface here, it is not an accent on beige. */
+  .drenched {
+    background-color: oklch(var(--drench));
+    color: oklch(var(--on-drench));
+  }
+  .drenched-deep {
+    background-color: oklch(var(--drench-deep));
+    color: oklch(var(--on-drench));
+  }
+  .drenched :where(h1, h2, h3, h4),
+  .drenched-deep :where(h1, h2, h3, h4) {
+    color: oklch(var(--on-drench));
+  }
+
+  /* Hairline rule that survives both themes. */
+  .rule {
+    border-top: 1px solid oklch(var(--line) / 0.9);
+  }
+
+  /* Paper grain — a very low-amplitude fibre texture so the plaster canvas
+     reads as a material rather than a flat fill. Pure CSS, no asset. */
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    background-image: repeating-linear-gradient(
+        108deg,
+        oklch(var(--ink) / 0.014) 0 1px,
+        transparent 1px 3px
+      ),
+      repeating-linear-gradient(
+        14deg,
+        oklch(var(--ink) / 0.01) 0 1px,
+        transparent 1px 4px
+      );
+    mix-blend-mode: multiply;
+  }
+  .dark .grain::before {
+    mix-blend-mode: overlay;
+    opacity: 0.55;
+  }
 }
 
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slide-down {
-  from { opacity: 0; transform: translateY(-10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes scale-in {
-  from { opacity: 0; transform: scale(0.97); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-/* Very subtle ambient pulse (orbs, soft badges) */
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.85; }
-}
-
-.animate-fade-in   { animation: fade-in 0.5s ease-out; }
-.animate-slide-up  { animation: slide-up 0.6s ease-out; }
-.animate-slide-down{ animation: slide-down 0.4s ease-out; }
-.animate-scale-in  { animation: scale-in 0.3s ease-out; }
-.animate-pulse-soft{ animation: pulse-soft 4s ease-in-out infinite; }
-
-/* Press feedback for tappable cards */
-@keyframes tap-feedback {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(0.97); }
-  100% { transform: scale(1); }
-}
-.tap-feedback:active { animation: tap-feedback 0.25s ease; }
-
-/* Ripple (used by admin primary action) */
-.ripple { position: relative; overflow: hidden; }
-.ripple::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-.ripple:active::before {
-  width: 300px;
-  height: 300px;
-  opacity: 0;
-  transition: 0s;
-}
-
-/* Gentle lift on hover for interactive cards */
-.hover-lift {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px -8px hsl(var(--primary) / 0.18);
-}
-
-/* Subtle sheen sweep for the single primary CTA */
-.btn-shine { position: relative; overflow: hidden; }
-.btn-shine::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent 35%, rgba(255, 255, 255, 0.14) 50%, transparent 65%);
-  transform: translateX(-100%) translateY(-100%) rotate(45deg);
-  transition: transform 0.7s ease;
-}
-.btn-shine:hover::after {
-  transform: translateX(0) translateY(0) rotate(45deg);
-}
-
-/* Brand gradient text (blue → teal), for select headings */
-.text-gradient {
-  background: linear-gradient(120deg, hsl(var(--primary)), hsl(var(--highlight)));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* ============================================================
+/* ============================================================================
    Skeleton loading
-   ============================================================ */
-@keyframes skeleton-loading {
-  0%   { background-position: -200px 0; }
-  100% { background-position: calc(200px + 100%) 0; }
+   ========================================================================== */
+@keyframes skeleton-sweep {
+  from {
+    background-position: -200px 0;
+  }
+  to {
+    background-position: calc(200px + 100%) 0;
+  }
 }
 .skeleton {
-  background-color: hsl(var(--muted));
+  background-color: oklch(var(--canvas-sunk));
   background-image: linear-gradient(
     90deg,
-    hsl(var(--muted)) 0px,
-    hsl(var(--accent)) 40px,
-    hsl(var(--muted)) 80px
+    oklch(var(--canvas-sunk)) 0px,
+    oklch(var(--surface)) 60px,
+    oklch(var(--canvas-sunk)) 120px
   );
   background-size: 200px 100%;
   background-repeat: no-repeat;
-  animation: skeleton-loading 1.5s infinite;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
   border-radius: var(--radius);
 }
 
-/* ============================================================
-   Carousel (Visit Us)
-   ============================================================ */
-.carousel-single-image-wrapper {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  margin-bottom: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 20px 40px -16px hsl(var(--primary) / 0.22);
-}
-.carousel-single-image-item {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 0.7s ease-in-out, transform 0.7s ease-in-out;
-  transform: scale(1.04);
-}
-.carousel-single-image-item.active {
-  opacity: 1;
-  z-index: 10;
-  transform: scale(1);
-}
-.carousel-bullets-container {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-.carousel-bullet {
-  display: block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: hsl(var(--muted-foreground) / 0.3);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border: 2px solid transparent;
-}
-.carousel-bullet:hover {
-  background-color: hsl(var(--primary) / 0.6);
-  transform: scale(1.2);
-}
-.carousel-bullet.active {
-  background-color: hsl(var(--primary));
-  width: 24px;
-  border-radius: 6px;
-}
-
-/* ============================================================
-   Custom scrollbar
-   ============================================================ */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: hsl(var(--muted)); border-radius: 5px; }
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--primary) / 0.45);
-  border-radius: 5px;
-  transition: background 0.3s;
-}
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.65); }
-
-/* ============================================================
-   Focus visibility (keyboard accessibility)
-   ============================================================ */
+/* ============================================================================
+   Focus visibility — never removed, only restyled.
+   ========================================================================== */
 *:focus-visible {
-  outline: 2px solid hsl(var(--ring));
+  outline: 2px solid oklch(var(--ring));
   outline-offset: 2px;
-  border-radius: var(--radius);
 }
 
-/* ============================================================
-   Reduced motion — honor the user's OS preference.
-   Neutralizes all transitions, animations and smooth scroll.
-   ============================================================ */
+/* ============================================================================
+   Scrollbar — restrained, tracks the theme.
+   ========================================================================== */
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: oklch(var(--canvas-sunk));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(var(--line-strong));
+    border-radius: 6px;
+    border: 3px solid oklch(var(--canvas-sunk));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(var(--ink-faint));
+  }
+}
+
+/* ============================================================================
+   Reduced motion — honour the OS preference. Framer Motion is handled
+   separately via useReducedMotion(); this covers CSS-driven motion only.
+   ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
+  html {
+    scroll-behavior: auto;
+  }
   *,
   *::before,
   *::after {
@@ -383,5 +449,6 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
 }

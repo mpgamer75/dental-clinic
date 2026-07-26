@@ -1,20 +1,29 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { Figtree, Noto_Sans } from 'next/font/google';
+import { Piazzolla, Archivo } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 
-const fontHeading = Figtree({
+/**
+ * Piazzolla (Huerta Tipográfica, Buenos Aires) — bookish humanist serif with a
+ * real optical-size axis. Carries headings and pull-quotes. Its Spanish
+ * diacritics and ¿ ¡ are drawn, not bolted on, which matters when the primary
+ * language is Spanish.
+ *
+ * Archivo (Omnibus-Type, Buenos Aires) — sturdy grotesk for UI, body, forms and
+ * data. Paired with Piazzolla on the serif↔grotesk contrast axis rather than
+ * two near-identical sans faces.
+ */
+const fontHeading = Piazzolla({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
   variable: '--font-heading',
   display: 'swap',
+  axes: ['opsz'],
 });
 
-const fontBody = Noto_Sans({
+const fontBody = Archivo({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '700'],
   variable: '--font-body',
   display: 'swap',
 });

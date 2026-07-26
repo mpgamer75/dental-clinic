@@ -6,8 +6,9 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   const { lang: raw } = await params;
   const lang: Language = raw === 'en' ? 'en' : 'es';
   const content = privacyPolicy[lang];
+  const title = `${content.title} — Orthoprotesis Dental Clinic`;
   return {
-    title: `${content.title} — Orthoprotesis Dental Clinic`,
+    title,
     description: content.intro,
     alternates: {
       canonical: `/${lang}/privacidad`,
@@ -16,6 +17,15 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
         'en-US': '/en/privacidad',
         'x-default': '/es/privacidad',
       },
+    },
+    // Without this the page inherits the layout's homepage openGraph block.
+    openGraph: {
+      title,
+      description: content.intro,
+      url: `/${lang}/privacidad`,
+      type: 'article',
+      locale: lang === 'es' ? 'es_DO' : 'en_US',
+      siteName: 'Orthoprotesis Dental Clinic',
     },
   };
 }

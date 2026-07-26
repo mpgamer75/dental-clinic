@@ -2,49 +2,66 @@ import { Reveal } from '@/components/reveal';
 import { cn } from '@/lib/utils';
 
 interface SectionHeadingProps {
-  /** Small uppercase label above the title. */
-  eyebrow?: string;
   title: string;
   description?: string;
   align?: 'center' | 'left';
   className?: string;
   titleClassName?: string;
+  /** Renders as <h1> on the one section that owns the page's top-level heading. */
+  as?: 'h1' | 'h2';
+  /**
+   * Optional short lead-in, rendered inline as a sentence rather than as a
+   * tracked uppercase chip. Use it when the section genuinely needs framing —
+   * not on every band.
+   */
+  lead?: string;
 }
 
 /**
- * Shared section header — one consistent type rhythm + scroll-reveal across
- * every section. Headings inherit the heading font via the global base layer.
+ * Section header.
+ *
+ * Deliberately has no "eyebrow" prop. A tiny uppercase tracked label above
+ * every section is the single most recognisable AI-template tell; the previous
+ * version applied one to all six homepage sections. Framing, where a section
+ * actually needs it, is carried by `lead` as real prose.
  */
 export function SectionHeading({
-  eyebrow,
   title,
   description,
-  align = 'center',
+  align = 'left',
   className,
   titleClassName,
+  as: Tag = 'h2',
+  lead,
 }: SectionHeadingProps) {
   const centered = align === 'center';
 
   return (
-    <Reveal className={cn('mb-12 md:mb-16', centered && 'text-center', className)}>
-      {eyebrow && (
-        <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-highlight/30 bg-highlight/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-highlight">
-          {eyebrow}
-        </span>
+    <Reveal className={cn('mb-10 md:mb-14', centered && 'text-center', className)}>
+      {lead && (
+        <p
+          className={cn(
+            'mb-3 font-body text-sm font-medium text-brass-ink',
+            centered && 'mx-auto',
+          )}
+        >
+          {lead}
+        </p>
       )}
-      <h2
+      <Tag
         className={cn(
-          'text-3xl font-bold text-primary md:text-4xl lg:text-[2.6rem] lg:leading-[1.1]',
+          'font-heading text-[clamp(1.9rem,4.4vw,3.1rem)] font-medium text-ink',
+          centered ? 'mx-auto max-w-3xl' : 'max-w-3xl',
           titleClassName,
         )}
       >
         {title}
-      </h2>
+      </Tag>
       {description && (
         <p
           className={cn(
-            'mt-4 text-lg leading-relaxed text-muted-foreground',
-            centered && 'mx-auto max-w-2xl',
+            'mt-4 text-lg leading-relaxed text-ink-soft',
+            centered ? 'mx-auto max-w-measure' : 'max-w-measure',
           )}
         >
           {description}

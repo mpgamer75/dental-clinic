@@ -80,15 +80,34 @@ async function setupAdmin(email?: string) {
 
           ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
 
-          CREATE POLICY "Admins can view admin_users"
+          -- Non-recursive.
+          --
+          -- This previously read:
+          --   USING (EXISTS (SELECT 1 FROM public.admin_users
+          --                  WHERE admin_users.id = auth.uid()))
+          -- i.e. a policy ON admin_users that queries admin_users, which
+          -- re-triggers itself. Postgres aborts with 42P17 "infinite recursion
+          -- detected in policy for relation admin_users", and because every
+          -- other admin policy does the same membership subquery, the whole
+          -- admin surface becomes unreachable. Comparing the row's own id to
+          -- auth.uid() needs no subquery at all.
+          CREATE POLICY "Users can read own admin row"
           ON public.admin_users FOR SELECT
           TO authenticated
-          USING (
-            EXISTS (
-              SELECT 1 FROM public.admin_users
-              WHERE admin_users.id = auth.uid()
-            )
-          );
+          USING (id = auth.uid());
+
+          -- Helper other tables' policies use, so they never have to query
+          -- admin_users from inside their own USING clause.
+          CREATE OR REPLACE FUNCTION public.is_admin()
+          RETURNS boolean
+          LANGUAGE sql SECURITY DEFINER STABLE
+          SET search_path = public
+          AS $fn$
+            SELECT EXISTS (SELECT 1 FROM public.admin_users WHERE id = auth.uid());
+          $fn$;
+
+          REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
+          GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
         `
       });
 

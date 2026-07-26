@@ -1,14 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Mail, MapPin, Phone, ArrowRight } from 'lucide-react';
+import { Mail, MapPin, Phone, Lock } from 'lucide-react';
 import { contactDetails, generalUiStrings, formCommon } from '@/lib/data';
 import { useLanguage } from '@/contexts/language-context';
 import { Button } from '@/components/ui/button';
 
 export function Footer() {
   const { lang } = useLanguage();
-  const currentYear = new Date().getFullYear();
   const ui = generalUiStrings[lang];
   const footer = contactDetails.footer[lang];
 
@@ -22,54 +21,48 @@ export function Footer() {
 
   const homeHref = `/${lang}`;
   const appointmentsHref = `/${lang}/agendar-cita`;
+  const telHref = `tel:${phone.replace(/[^\d+]/g, '')}`;
+  const year = new Date().getFullYear();
 
   const quickLinks = [
-    { href: homeHref, label: ui.home },
+    { href: `/${lang}#implantes`, label: lang === 'es' ? 'Implantes' : 'Implants' },
     { href: `/${lang}#servicios`, label: ui.services },
+    { href: `/${lang}#el-doctor`, label: lang === 'es' ? 'El doctor' : 'The doctor' },
     { href: `/${lang}#preguntas-frecuentes`, label: ui.faq },
-    { href: `/${lang}#testimonios`, label: ui.testimonials },
     { href: `/${lang}#contacto`, label: ui.contact },
   ];
 
   const navLabel = lang === 'es' ? 'Navegación' : 'Navigation';
-  const headingClass =
-    'mb-4 font-heading text-xs font-semibold uppercase tracking-[0.14em] text-foreground/60';
+  const headingClass = 'mb-4 font-heading text-base font-medium text-drench-on';
+  const linkClass =
+    'text-drench-on/70 underline-offset-4 transition-colors duration-fast hover:text-brass hover:underline';
 
   return (
-    <footer className="relative bg-secondary text-secondary-foreground print:hidden">
-      {/* Brand accent rule */}
-      <div className="h-1 w-full bg-gradient-to-r from-primary via-highlight to-primary" aria-hidden="true" />
-
-      <div className="container mx-auto grid grid-cols-1 gap-10 px-4 py-14 sm:grid-cols-2 md:px-6 lg:grid-cols-12">
-        {/* Brand + CTA */}
+    <footer className="drenched-deep print:hidden">
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-x-10 gap-y-11 px-5 py-16 sm:grid-cols-2 sm:px-8 lg:grid-cols-12">
+        {/* Brand */}
         <div className="lg:col-span-4">
-          <Link href={homeHref} className="mb-4 inline-flex items-center gap-2">
-            <span className="font-heading text-2xl font-bold text-primary">{clinicName}</span>
+          <Link
+            href={homeHref}
+            className="font-heading text-2xl font-medium text-drench-on underline-offset-4 hover:underline"
+          >
+            {clinicName}
           </Link>
-          <p className="max-w-sm text-sm leading-relaxed text-secondary-foreground/80">
+          <p className="mt-4 max-w-sm leading-relaxed text-drench-on/70">
             {footer.tagline.replace('{{doctorName}}', doctorName)}
           </p>
-          <Link href={appointmentsHref} className="mt-5 inline-block">
-            <Button
-              size="sm"
-              className="btn-shine bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              {ui.appointments}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+          <Button asChild variant="brass" size="lg" className="mt-6">
+            <Link href={appointmentsHref}>{ui.appointments}</Link>
+          </Button>
         </div>
 
-        {/* Quick links */}
-        <nav aria-label={navLabel} className="lg:col-span-2">
-          <h3 className={headingClass}>{navLabel}</h3>
-          <ul className="space-y-2.5 text-sm">
+        {/* Navigation */}
+        <nav aria-label={navLabel} className="lg:col-span-3">
+          <h2 className={headingClass}>{navLabel}</h2>
+          <ul className="space-y-2.5">
             {quickLinks.map((link) => (
               <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="text-secondary-foreground/80 underline-offset-4 transition-colors hover:text-primary hover:underline"
-                >
+                <Link href={link.href} className={linkClass}>
                   {link.label}
                 </Link>
               </li>
@@ -79,66 +72,58 @@ export function Footer() {
 
         {/* Contact */}
         <div className="lg:col-span-3">
-          <h3 className={headingClass}>{footer.quickContact}</h3>
-          <ul className="space-y-3 text-sm">
+          <h2 className={headingClass}>{footer.quickContact}</h2>
+          <ul className="space-y-3.5">
             <li className="flex items-start gap-3">
-              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-highlight" />
-              <a
-                href={mapLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-secondary-foreground/80 underline-offset-4 transition-colors hover:text-primary hover:underline"
-              >
+              <MapPin className="mt-1 h-4 w-4 shrink-0 text-brass" aria-hidden="true" />
+              <a href={mapLink} target="_blank" rel="noopener noreferrer" className={linkClass}>
                 {address}
               </a>
             </li>
-            <li className="flex items-center gap-3">
-              <Phone className="h-5 w-5 shrink-0 text-highlight" />
-              <a
-                href={`tel:${phone}`}
-                className="text-secondary-foreground/80 underline-offset-4 transition-colors hover:text-primary hover:underline"
-              >
+            <li className="flex items-start gap-3">
+              <Phone className="mt-1 h-4 w-4 shrink-0 text-brass" aria-hidden="true" />
+              <a href={telHref} className={`${linkClass} tabular`}>
                 {phone}
               </a>
             </li>
-            <li className="flex items-center gap-3">
-              <Mail className="h-5 w-5 shrink-0 text-highlight" />
-              <a
-                href={`mailto:${email}`}
-                className="break-all text-secondary-foreground/80 underline-offset-4 transition-colors hover:text-primary hover:underline"
-              >
+            <li className="flex items-start gap-3">
+              <Mail className="mt-1 h-4 w-4 shrink-0 text-brass" aria-hidden="true" />
+              <a href={`mailto:${email}`} className={`${linkClass} break-all`}>
                 {email}
               </a>
             </li>
           </ul>
         </div>
 
-        {/* Schedule */}
-        <div className="lg:col-span-3">
-          <h3 className={headingClass}>{footer.scheduleTitle}</h3>
-          <p className="whitespace-pre-line text-sm leading-relaxed text-secondary-foreground/80">
-            {schedule}
-          </p>
+        {/* Hours */}
+        <div className="lg:col-span-2">
+          <h2 className={headingClass}>{footer.scheduleTitle}</h2>
+          <p className="whitespace-pre-line leading-relaxed text-drench-on/70">{schedule}</p>
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div className="border-t border-border/60">
-        <div className="container mx-auto flex flex-col items-center gap-1 px-4 py-6 text-center text-xs text-secondary-foreground/70 md:px-6">
+      <div className="border-t border-drench-on/15">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-5 py-6 text-sm text-drench-on/60 sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <p>
             {footer.copyright
-              .replace('{{year}}', currentYear.toString())
+              .replace('{{year}}', String(year))
               .replace('{{clinicName}}', clinicName)}
           </p>
-          <p>{footer.doctorAttribution.replace('{{doctorName}}', doctorName)}</p>
-          <p>
-            <Link
-              href={`/${lang}/privacidad`}
-              className="underline-offset-4 transition-colors hover:text-primary hover:underline"
-            >
+
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <Link href={`/${lang}/privacidad`} className={linkClass}>
               {formCommon[lang].privacyLinkLabel}
             </Link>
-          </p>
+            {/* Staff entry point. Kept here rather than in the public header:
+                the panel is for the clinic, not for visitors. */}
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1.5 text-drench-on/70 transition-colors duration-fast hover:text-brass"
+            >
+              <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+              {lang === 'es' ? 'Acceso personal' : 'Staff access'}
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

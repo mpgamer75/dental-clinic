@@ -163,12 +163,21 @@ interface ZodMessages {
   nameMin: string;
   emailInvalid: string;
   phoneInvalid: string;
-  messageMin?: string; 
-  serviceTypeRequired?: string; 
-  reasonMin?: string;
-  reasonMax?: string;
-  quoteMin?: string;
-  quoteMax?: string;
+  messageMin: string;
+  /** Server caps the contact message at 2000 chars; the client mirrors it. */
+  messageMax: string;
+  serviceTypeRequired: string;
+  reasonMin: string;
+  reasonMax: string;
+  quoteMin: string;
+  quoteMax: string;
+  /* Previously hardcoded Spanish inside actions.ts, so English-speaking
+     visitors were shown Spanish validation errors. */
+  serviceTypeMax: string;
+  invalidCharacters: string;
+  nameMax: string;
+  emailMax: string;
+  locationMax: string;
 }
 
 export interface ActionMessages {

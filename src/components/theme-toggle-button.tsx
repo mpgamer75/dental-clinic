@@ -3,104 +3,72 @@
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/language-context";
 
+/**
+ * Light/dark toggle.
+ *
+ * The accessible name is localised. It was hardcoded to "Toggle theme", which
+ * is the wrong language on the site's own default locale — a Spanish-speaking
+ * screen-reader user heard an English label on every page.
+ *
+ * The crossfade is CSS rather than four nested Framer Motion elements: the
+ * previous implementation animated a spring rotation on two wrapper divs each
+ * containing another animated div, which is a lot of machinery for swapping
+ * two 17px glyphs, and it ignored `prefers-reduced-motion`. The global
+ * reduced-motion rule neutralises the transitions below automatically.
+ */
 export function ThemeToggleButton() {
   const { theme, setTheme } = useTheme();
+  const { lang } = useLanguage();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
+  const isDark = mounted && theme === "dark";
 
-  if (!mounted) {
-    return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 relative"
-        aria-label="Toggle theme"
-      >
-        <Sun className="h-[1.1rem] w-[1.1rem]" />
-      </Button>
-    );
-  }
-
-  const isDark = theme === "dark";
+  const label = mounted
+    ? lang === "es"
+      ? isDark
+        ? "Cambiar a modo claro"
+        : "Cambiar a modo oscuro"
+      : isDark
+        ? "Switch to light mode"
+        : "Switch to dark mode"
+    : lang === "es"
+      ? "Cambiar el tema"
+      : "Toggle theme";
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      className="h-9 w-9 relative overflow-hidden rounded-full hover:bg-accent/50 transition-colors duration-200"
-      onClick={toggleTheme}
-      aria-label="Toggle theme"
+      className="relative"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={label}
+      title={label}
+      // Until mounted we cannot know the resolved theme, so the control is
+      // rendered but inert rather than lying about the current state.
+      disabled={!mounted}
     >
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center"
-        initial={false}
-        animate={{
-          rotate: isDark ? 180 : 0,
-          scale: 1,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 200,
-          damping: 20,
-        }}
-      >
-        <motion.div
-          initial={false}
-          animate={{
-            scale: isDark ? 0 : 1,
-            opacity: isDark ? 0 : 1,
-            rotate: isDark ? -90 : 0,
-          }}
-          transition={{
-            duration: 0.3,
-            ease: "easeInOut",
-          }}
-        >
-          <Sun className="h-[1.1rem] w-[1.1rem] text-amber-500" />
-        </motion.div>
-      </motion.div>
-
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center"
-        initial={false}
-        animate={{
-          rotate: isDark ? 0 : -180,
-          scale: 1,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 200,
-          damping: 20,
-        }}
-      >
-        <motion.div
-          initial={false}
-          animate={{
-            scale: isDark ? 1 : 0,
-            opacity: isDark ? 1 : 0,
-            rotate: isDark ? 0 : 90,
-          }}
-          transition={{
-            duration: 0.3,
-            ease: "easeInOut",
-          }}
-        >
-          <Moon className="h-[1.1rem] w-[1.1rem] text-indigo-400" />
-        </motion.div>
-      </motion.div>
-
-      <span className="sr-only">Toggle theme</span>
+      <Sun
+        aria-hidden="true"
+        className={
+          "absolute h-[1.15rem] w-[1.15rem] text-brass-ink transition-all duration-base ease-out-quart " +
+          (isDark ? "scale-50 opacity-0" : "scale-100 opacity-100")
+        }
+      />
+      <Moon
+        aria-hidden="true"
+        className={
+          "absolute h-[1.15rem] w-[1.15rem] text-brass transition-all duration-base ease-out-quart " +
+          (isDark ? "scale-100 opacity-100" : "scale-50 opacity-0")
+        }
+      />
     </Button>
   );
 }

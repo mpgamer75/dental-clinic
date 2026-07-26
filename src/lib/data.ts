@@ -491,11 +491,17 @@ export const actionMessages: ActionMessages = {
       emailInvalid: "Por favor, ingrese un correo electrónico válido.",
       phoneInvalid: "Número de teléfono inválido.",
       messageMin: "El mensaje debe tener al menos 10 caracteres.",
+      messageMax: "El mensaje no debe exceder los 2000 caracteres.",
       serviceTypeRequired: "Por favor, seleccione un tipo de servicio.",
       reasonMin: "El motivo debe tener al menos 10 caracteres.",
       reasonMax: "El motivo no debe exceder los 500 caracteres.",
       quoteMin: "El testimonio debe tener al menos 15 caracteres.",
       quoteMax: "El testimonio no debe exceder los 500 caracteres.",
+      serviceTypeMax: "El tipo de servicio es demasiado largo.",
+      invalidCharacters: "El texto contiene caracteres no válidos.",
+      nameMax: "El nombre es demasiado largo.",
+      emailMax: "El correo electrónico es demasiado largo.",
+      locationMax: "La ubicación es demasiado larga.",
     }
   },
   en: {
@@ -514,11 +520,17 @@ export const actionMessages: ActionMessages = {
       emailInvalid: "Please enter a valid email address.",
       phoneInvalid: "Invalid phone number.",
       messageMin: "Message must be at least 10 characters long.",
+      messageMax: "Message must not exceed 2000 characters.",
       serviceTypeRequired: "Please select a service type.",
       reasonMin: "The reason must be at least 10 characters long.",
       reasonMax: "The reason must not exceed 500 characters.",
       quoteMin: "Testimonial must be at least 15 characters long.",
       quoteMax: "Testimonial must not exceed 500 characters.",
+      serviceTypeMax: "The service type is too long.",
+      invalidCharacters: "The text contains invalid characters.",
+      nameMax: "The name is too long.",
+      emailMax: "The email address is too long.",
+      locationMax: "The location is too long.",
     }
   }
 };
@@ -845,6 +857,204 @@ export const generalUiStrings: GeneralUIData = {
   },
 };
 
+/**
+ * Homepage narrative copy.
+ *
+ * The homepage is structured as an argument rather than a feature list:
+ * claim → proof → problem → mechanism → options → evidence → who → book.
+ * These strings back the sections that didn't exist in the old layout.
+ *
+ * Clinical statements here are limited to well-established, non-promissory
+ * facts about tooth loss and osseointegration. Nothing claims an outcome,
+ * a success rate, or a timeline for an individual patient.
+ */
+export const homeContent: Record<
+  Language,
+  {
+    hero: {
+      title: string;
+      standfirst: string;
+      ctaPrimary: string;
+      ctaSecondary: string;
+      imageAlt: string;
+      locationNote: string;
+    };
+    trust: { value: string; label: string }[];
+    problem: {
+      title: string;
+      description: string;
+      points: { title: string; desc: string }[];
+    };
+    doctor: {
+      title: string;
+      lead: string;
+      body: string[];
+      credentialsTitle: string;
+      viewDiplomas: string;
+    };
+    booking: {
+      title: string;
+      description: string;
+      steps: { title: string; desc: string }[];
+      ctaPrimary: string;
+      ctaCall: string;
+      reassurance: string;
+    };
+    proof: { title: string; description: string };
+    servicesLead: string;
+  }
+> = {
+  es: {
+    hero: {
+      title: 'Volver a masticar sin pensarlo.',
+      standfirst:
+        'El Dr. Francis Valerio lleva más de treinta años reconstruyendo dentaduras con prótesis, implantes y ortodoncia en Plaza Las Ramblas, Santiago de los Caballeros.',
+      ctaPrimary: 'Agendar una cita',
+      ctaSecondary: 'Cómo funciona un implante',
+      imageAlt:
+        'Recepción de la clínica Orthoprotesis en Plaza Las Ramblas, Santiago de los Caballeros',
+      locationNote: 'Plaza Las Ramblas, Módulo 101 · Santiago de los Caballeros',
+    },
+    trust: [
+      { value: '30+', label: 'años ejerciendo' },
+      { value: '3', label: 'especialidades: prótesis, implantes, ortodoncia' },
+      { value: 'AOD', label: 'miembro de la Asociación Odontológica Dominicana' },
+    ],
+    problem: {
+      title: 'Cuando falta una pieza, cambia todo lo demás.',
+      description:
+        'Masticar siempre del mismo lado. Dejar de pedir ciertos platos. Taparse la boca al reír. Un espacio vacío o una prótesis que ya no ajusta no es solo un asunto estético: el hueso y los dientes vecinos también responden.',
+      points: [
+        {
+          title: 'El hueso pierde volumen',
+          desc: 'La raíz de un diente estimula el hueso maxilar cada vez que usted muerde. Sin ella, ese hueso se reabsorbe progresivamente.',
+        },
+        {
+          title: 'Los dientes vecinos se inclinan',
+          desc: 'Las piezas contiguas tienden a desplazarse hacia el espacio libre, y la mordida deja de encajar como antes.',
+        },
+        {
+          title: 'La prótesis deja de ajustar',
+          desc: 'Como el hueso cambia de forma, una dentadura que encajaba bien hace años empieza a moverse al hablar o comer.',
+        },
+      ],
+    },
+    doctor: {
+      title: 'Treinta años en la misma consulta.',
+      lead: 'Quién le va a atender',
+      body: [
+        'El Dr. Francis Valerio ejerce en Santiago de los Caballeros desde hace más de tres décadas, con la consulta dedicada a prótesis, implantes y ortodoncia.',
+        'Es miembro de la Asociación Odontológica Dominicana y ha seguido formándose de forma continuada a lo largo de toda su carrera: cada diploma de abajo corresponde a un curso o certificación concreta.',
+        'En la práctica esto significa que el mismo profesional le evalúa, le planifica el tratamiento y se lo realiza, de principio a fin.',
+      ],
+      credentialsTitle: 'Formación acreditada',
+      viewDiplomas: 'Ver diplomas y certificaciones',
+    },
+    booking: {
+      title: 'Agende su consulta',
+      description:
+        'La primera visita es una evaluación: revisamos su situación, le explicamos las opciones que existen en su caso y le damos un presupuesto antes de empezar nada.',
+      steps: [
+        {
+          title: 'Usted envía la solicitud',
+          desc: 'Rellene el formulario con su nombre, un teléfono y el motivo. No hace falta nada más.',
+        },
+        {
+          title: 'Le llamamos para confirmar',
+          desc: 'Nos ponemos en contacto para acordar día y hora según su disponibilidad y la de la consulta.',
+        },
+        {
+          title: 'Evaluación en consulta',
+          desc: 'El Dr. Valerio le examina, le explica las alternativas y le entrega el presupuesto por escrito.',
+        },
+      ],
+      ctaPrimary: 'Rellenar el formulario',
+      ctaCall: 'Llamar ahora',
+      reassurance: 'Solicitar una cita no compromete a nada.',
+    },
+    proof: {
+      title: 'Lo que dicen los pacientes',
+      description:
+        'Testimonios enviados por pacientes de la consulta. Se publican tras revisarse.',
+    },
+    servicesLead: 'Además de implantes y prótesis',
+  },
+  en: {
+    hero: {
+      title: 'Chew without thinking about it again.',
+      standfirst:
+        'Dr. Francis Valerio has spent over thirty years rebuilding teeth with prosthetics, implants and orthodontics at Plaza Las Ramblas, Santiago de los Caballeros.',
+      ctaPrimary: 'Book an appointment',
+      ctaSecondary: 'How an implant works',
+      imageAlt:
+        'Reception of the Orthoprotesis clinic at Plaza Las Ramblas, Santiago de los Caballeros',
+      locationNote: 'Plaza Las Ramblas, Module 101 · Santiago de los Caballeros',
+    },
+    trust: [
+      { value: '30+', label: 'years in practice' },
+      { value: '3', label: 'specialities: prosthetics, implants, orthodontics' },
+      { value: 'ADA', label: 'member of the Dominican Dental Association' },
+    ],
+    problem: {
+      title: 'When one tooth goes, everything else shifts.',
+      description:
+        'Always chewing on the same side. Quietly avoiding certain dishes. Covering your mouth when you laugh. A gap — or a denture that no longer fits — is not only a cosmetic matter: the bone and the neighbouring teeth respond too.',
+      points: [
+        {
+          title: 'The bone loses volume',
+          desc: 'A tooth root stimulates the jawbone every time you bite. Without it, that bone gradually resorbs.',
+        },
+        {
+          title: 'Neighbouring teeth tilt',
+          desc: 'Adjacent teeth tend to drift into the empty space, and the bite stops meeting the way it used to.',
+        },
+        {
+          title: 'The denture stops fitting',
+          desc: 'Because the bone changes shape, a denture that fitted well years ago starts to move when you talk or eat.',
+        },
+      ],
+    },
+    doctor: {
+      title: 'Thirty years in the same practice.',
+      lead: 'Who will see you',
+      body: [
+        'Dr. Francis Valerio has practised in Santiago de los Caballeros for more than three decades, with the practice dedicated to prosthetics, implants and orthodontics.',
+        'He is a member of the Dominican Dental Association and has kept training throughout his career: each diploma below corresponds to a specific course or certification.',
+        'In practice this means the same clinician assesses you, plans your treatment and carries it out, from start to finish.',
+      ],
+      credentialsTitle: 'Accredited training',
+      viewDiplomas: 'View diplomas and certifications',
+    },
+    booking: {
+      title: 'Book your consultation',
+      description:
+        'The first visit is an assessment: we review your situation, explain the options that exist in your case, and give you a quote before anything begins.',
+      steps: [
+        {
+          title: 'You send the request',
+          desc: 'Fill in the form with your name, a phone number and the reason. Nothing else is needed.',
+        },
+        {
+          title: 'We call to confirm',
+          desc: 'We get in touch to agree a day and time that works for you and for the practice.',
+        },
+        {
+          title: 'Assessment at the practice',
+          desc: 'Dr. Valerio examines you, explains the alternatives and hands you a written quote.',
+        },
+      ],
+      ctaPrimary: 'Fill in the form',
+      ctaCall: 'Call now',
+      reassurance: 'Requesting an appointment commits you to nothing.',
+    },
+    proof: {
+      title: 'What patients say',
+      description: 'Testimonials submitted by patients of the practice. Published after review.',
+    },
+    servicesLead: 'Beyond implants and prosthetics',
+  },
+};
+
 export const visitUsCarouselImages: CarouselImageItem[] = [
   { src: "/images/vitrine_clinique1.jpg", altEs: "Vitrine de la clínica dental Orthoprotesis en Plaza Las Ramblas, Santiago de los Caballeros", altEn: "Dental clinic Orthoprotesis storefront in Plaza Las Ramblas, Santiago de los Caballeros", hint: "clinic storefront" },
   { src: "/images/vitrine_clinique2.jpg", altEs: "Interior de la clínica dental Orthoprotesis, Santiago de los Caballeros", altEn: "Interior of Orthoprotesis dental clinic, Santiago de los Caballeros", hint: "clinic interior" },
@@ -907,15 +1117,15 @@ export const diplomas: DiplomaData = {
       institution: 'Sao Paulo',
       year: '2010',
       image: '/images/diploma7.jpg',
-      description: 'Certificat de participation au 17e Congrès brésilien d\'orthodontie.'
+      description: 'Certificado de participación en el 17º Congreso Brasileño de Ortodoncia.'
     },
     {
       id: 'diploma8',
-      title: '3rd International Dental Implantology Conference',
+      title: '3ª Conferencia Internacional de Implantología Dental',
       institution: 'Cartagena, Colombia',
       year: '2017',
       image: '/images/diploma8.jpg',
-      description: 'Certificat de participation à la 3e Conférence internationale d\'implantologie dentaire.'
+      description: 'Certificado de participación en la 3ª Conferencia Internacional de Implantología Dental.'
     },
     {
       id: 'diploma9',
@@ -923,7 +1133,7 @@ export const diplomas: DiplomaData = {
       institution: 'Instituto Mexicano de Carga Inmediata',
       year: '2017',
       image: '/images/diploma9.jpg',
-      description: 'Certificat de formation de l\'Institut mexicain de charge immédiate.'
+      description: 'Certificado de formación del Instituto Mexicano de Carga Inmediata.'
     }
   ],
   en: [
