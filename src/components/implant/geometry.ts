@@ -62,12 +62,24 @@ function gridGeometry(
   radial: number,
   axial: number,
   point: (u: number, v: number, out: THREE.Vector3) => void,
+  /**
+   * Optional per-vertex tint, MULTIPLIED against the material colour.
+   *
+   * This is how the crown gets its cervical→occlusal layering and the gingiva
+   * its vascular depth without a texture, a second material or a custom shader.
+   * A zirconia crown that is one flat colour top to bottom is the difference
+   * between "tooth" and "white plastic blob", and baking it into the vertices
+   * costs literally nothing at render time — no sampler, no fetch, no branch.
+   */
+  tint?: (u: number, v: number, pos: THREE.Vector3, out: THREE.Color) => void,
 ): THREE.BufferGeometry {
   const cols = radial + 1;
   const rows = axial + 1;
   const positions = new Float32Array(cols * rows * 3);
   const uvs = new Float32Array(cols * rows * 2);
+  const colors = tint ? new Float32Array(cols * rows * 3) : null;
   const v3 = new THREE.Vector3();
+  const col = new THREE.Color();
 
   for (let j = 0; j < rows; j++) {
     const v = j / axial;
@@ -81,6 +93,13 @@ function gridGeometry(
       const k2 = (j * cols + i) * 2;
       uvs[k2] = u;
       uvs[k2 + 1] = v;
+      if (colors && tint) {
+        col.setRGB(1, 1, 1);
+        tint(u, v, v3, col);
+        colors[k] = col.r;
+        colors[k + 1] = col.g;
+        colors[k + 2] = col.b;
+      }
     }
   }
 
@@ -98,6 +117,7 @@ function gridGeometry(
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  if (colors) g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   g.setIndex(index);
   g.computeVertexNormals();
   return g;
@@ -147,10 +167,20 @@ export function buildFixture(): THREE.BufferGeometry {
   const APEX_FLAT_R = 0.95;
   const APEX_DOME = 0.45;
 
-  // ~12.5 turns at 0.8 mm pitch over 10 mm. ~24 samples per pitch resolves the
-  // crest without faceting; 160 radial segments keeps the section circular.
-  const RADIAL = 160;
-  const AXIAL = 300;
+  // ~12.5 turns at 0.8 mm pitch over 10 mm.
+  //
+  // Sized against the SCREEN, not against the maths. This object renders about
+  // 300–500 px tall; at the previous 160 × 300 it was ~96,000 triangles, i.e.
+  // one triangle per pixel of height. GPUs rasterise in 2×2 quads, so triangles
+  // that small waste most of their fragment shading, and past roughly 2 px per
+  // edge extra tessellation stops improving the silhouette at all.
+  //
+  // 168 axial rows is still 13.4 samples per pitch, which resolves the thread
+  // crest (18% of a pitch, so ~2.4 samples across it) without rounding it into
+  // a wave. 112 radial keeps a Ø4 mm section visually circular. Result: ~37,600
+  // triangles, a 61% cut for no visible change.
+  const RADIAL = 112;
+  const AXIAL = 168;
 
   // Where the thread runs out, and where the core flares into the platform.
   // These must NOT overlap: if the core is already flaring while the thread is
@@ -293,22 +323,41 @@ export const ABUTMENT_HEIGHT = 7.0;
  * gingiva, then a tapered preparation for the crown to seat onto.
  */
 export function buildAbutment(): THREE.BufferGeometry {
+  /* Emergence profile, rebuilt.
+     The old profile peaked at r = 2.20 (Ø4.4) barely 1 mm off the platform and
+     then TAPERED for the rest of its height — a narrow post. The crown, whose
+     cervix is Ø9, therefore perched on it with a ~3 mm overhang all the way
+     round: a full-circumference ridge lap, and the single most obviously wrong
+     thing in the assembly to anyone who fits these for a living.
+
+     The governing relation is D(z) = 4.1 + 2·z·tan(EA). Reaching a Ø7.5 finish
+     line 3 mm above the platform is a ~29° emergence angle, which is inside the
+     ≤30° the peri-implantitis literature associates with healthy tissue.
+
+     Two details that are deliberate, not incidental: the first 0.4 mm is
+     CYLINDRICAL (a component at or below the crest should clear the marginal
+     bone before it starts to flare), and the flare is CONCAVE rather than
+     convex — measured recession is 46.7% for convex profiles against 13.3% for
+     concave. Above the finish line at y = 3.0 the profile steps in to form the
+     preparation the crown seats over. */
   const profile: [number, number][] = [
     [0, -2.55],
     [0.8, -2.55],
     [0.84, -2.3],
     [1.12, -0.3],
     [1.16, -0.05],
-    [2.02, 0], // seats flush on the Ø4.1 platform
-    [2.16, 0.35], // emergence flare
-    [2.2, 0.9],
-    [2.06, 1.9],
-    [1.86, 3.1],
-    [1.62, 4.4],
-    [1.4, 5.6],
-    [1.24, 6.5],
-    [1.05, 6.95],
-    [0.62, 7.0],
+    [2.05, 0], // seats flush on the Ø4.1 platform
+    [2.08, 0.4], // cylindrical through the crestal zone
+    [2.3, 1.0],
+    [2.62, 1.8],
+    [2.95, 2.5],
+    [3.05, 3.0], // finish line — the crown margin lands here
+    [2.55, 3.5], // step in: preparation for the crown
+    [2.25, 4.4],
+    [1.95, 5.4],
+    [1.62, 6.3],
+    [1.25, 6.85],
+    [0.7, 7.0],
     [0, 7.0],
   ];
 
@@ -363,11 +412,29 @@ export function buildCrown(): THREE.BufferGeometry {
   // half again as tall as any real one.
   const BASE_H = 6.5;
   const RELIEF = 1.05;
-  const MD = 5.5; // mesiodistal semi-axis (~11 mm total)
-  const BL = 5.25; // buccolingual semi-axis (~10.5 mm total)
 
-  const RADIAL = 176;
-  const AXIAL = 190;
+  /* Semi-axes are ASYMMETRIC. Wheeler: "the mesial and distal sides converge
+     lingually" and the crown "converges toward the distal". A symmetric
+     superellipse cannot express either, and the occlusal outline of a lower
+     first molar is a pentagon, not a rounded rectangle.
+     θ = 0 mesial (+x), π/2 buccal (+z), π distal, 3π/2 lingual. */
+  const A_MESIAL = 5.8;
+  const A_DISTAL = 5.2; // 11.0 mm total MD — Wheeler Table 12-1
+  const B_BUCCAL = 5.5;
+  const B_LINGUAL = 5.0; // 10.5 mm total BL
+
+  /* Cervical constriction is anisotropic too: Wheeler's cervix is 9.0 mm in
+     BOTH directions, so the ratio differs by axis — 9.0/11.0 mesiodistally
+     against 9.0/10.5 buccolingually. The previous single 0.82 made the crown
+     0.39 mm too narrow across the cheek-to-tongue axis. */
+  const K_CERV_MD = 9.0 / 11.0; // 0.818
+  const K_CERV_BL = 9.0 / 10.5; // 0.857
+
+  // See the note on the fixture's tessellation: sized against the pixels this
+  // renders into, not against the parametric detail available. 128 × 132 is
+  // ~33,800 triangles for a crown ~120 px tall.
+  const RADIAL = 128;
+  const AXIAL = 132;
 
   // Cusp centres, in radians about the crown's vertical axis, with relative
   // height and angular spread. Mesiobuccal is the tallest on a lower molar.
@@ -379,12 +446,27 @@ export function buildCrown(): THREE.BufferGeometry {
   // cusps are pointed (ridges meeting at ~100°), buccal cusps are flatter and
   // lower. A perfectly symmetric occlusal table looks manufactured, which is
   // the opposite of what a crown is trying to be.
+  /* SIZE and HEIGHT are different properties, and conflating them was an
+     outright error here. Wheeler is explicit on both:
+       width  (mesiodistal on the table):  MB ≥ DB > ML > DL > D
+       height (occlusal elevation):        ML > DL > MB > DB > D
+     — "the lingual cusps are pointed, and the cusp ridges are high enough to
+     hide the two buccal cusps from view", and the mesiolingual tip is "somewhat
+     higher" than the distolingual.
+
+     So the MESIOLINGUAL cusp is the tallest on a mandibular first molar, not
+     the mesiobuccal. `h` drives relief height and `sigma` drives angular width,
+     so the old table had the tallest cusp on the wrong side of the tooth.
+
+     Angles are derived from the pentagonal occlusal outline (three buccal
+     cusps, two lingual) and cross-checked against the groove rays below — no
+     published angular dataset for molar cusps exists. */
   const CUSPS: { th: number; h: number; sigma: number }[] = [
-    { th: Math.PI * 0.25, h: 1.0, sigma: 0.55 }, // mesiobuccal  — largest, flat
-    { th: Math.PI * 0.78, h: 0.86, sigma: 0.55 }, // distobuccal  — flat
-    { th: Math.PI * 1.02, h: 0.5, sigma: 0.3 }, // distal (5th) — smallest
-    { th: Math.PI * 1.26, h: 0.8, sigma: 0.44 }, // distolingual — pointed
-    { th: Math.PI * 1.75, h: 0.94, sigma: 0.44 }, // mesiolingual — pointed
+    { th: Math.PI * 0.306, h: 0.78, sigma: 0.56 }, // mesiobuccal  — widest
+    { th: Math.PI * 0.667, h: 0.72, sigma: 0.52 }, // distobuccal
+    { th: Math.PI * 0.917, h: 0.45, sigma: 0.3 }, // distal (hypoconulid)
+    { th: Math.PI * 1.278, h: 0.92, sigma: 0.42 }, // distolingual — pointed
+    { th: Math.PI * 1.694, h: 1.0, sigma: 0.46 }, // mesiolingual — TALLEST
   ];
 
   /** Occlusal relief at azimuth `th`, normalised roughly to [0,1]. */
@@ -402,17 +484,43 @@ export function buildCrown(): THREE.BufferGeometry {
    * and lingual grooves branch off it. Subtracting narrow troughs is what makes
    * the occlusal table read as chewing surface rather than a lumpy dome.
    */
-  const grooveCut = (th: number): number => {
+  /**
+   * Developmental grooves — FIVE rays, not four, in the Y5 (Dryopithecus)
+   * pattern that 65–82% of mandibular first molars have.
+   *
+   * Two things were wrong before. First, the distobuccal groove was simply
+   * missing, and the groove that stood at 0.9π sat almost exactly where the
+   * distal cusp tip belongs (0.917π) — so the fifth cusp was being planed flat
+   * by its own neighbouring groove, which is most of why the occlusal table
+   * read as lumpy rather than cusped.
+   *
+   * Second, depth was a function of azimuth ALONE and was applied at full
+   * strength right out to the rim, so the deepest ray sawed straight through
+   * the mesial marginal ridge — a continuous raised ridge on any real molar,
+   * and one of the strongest "this is a tooth" cues there is. The two arms of
+   * the central groove now die out in the triangular fossae, while only the
+   * mesiobuccal, distobuccal and lingual grooves are allowed to cross the
+   * margin onto the axial surface, which is what they do in life.
+   */
+  const grooveCut = (th: number, v: number): number => {
     const groove = (at: number, width: number, depth: number) => {
       const d = Math.abs(angDelta(th, at));
       return depth * (1 - smoothstep(0, width, d));
     };
-    return (
-      groove(0, 0.3, 0.72) + // mesial extent of the central groove
-      groove(Math.PI * 0.9, 0.22, 0.6) + // distal extent
-      groove(Math.PI * 0.5, 0.22, 0.5) + // buccal groove
-      groove(Math.PI * 1.5, 0.22, 0.46) // lingual groove
-    );
+    // Confined to the central table: dies before it reaches the marginal ridge.
+    const inner = smoothstep(0.86, 0.965, v);
+    // Runs over the rim and down the axial surface.
+    const crossing = smoothstep(0.7, 0.9, v);
+
+    const central =
+      groove(0, 0.26, 0.62) + // central groove, mesial arm
+      groove(Math.PI * 1.094, 0.22, 0.55); // central groove, distal arm
+    const radial =
+      groove(Math.PI * 0.489, 0.22, 0.58) + // mesiobuccal
+      groove(Math.PI * 0.789, 0.2, 0.52) + // distobuccal — was missing
+      groove(Math.PI * 1.483, 0.18, 0.42); // lingual, and it is short
+
+    return central * inner + radial * crossing;
   };
 
   return gridGeometry(RADIAL, AXIAL, (u, v, out) => {
@@ -425,27 +533,60 @@ export function buildCrown(): THREE.BufferGeometry {
     const yBase = BASE_H * (1 - Math.pow(1 - v, 2.1));
 
     // --- horizontal scale -------------------------------------------------
-    // Cervical constriction → crest of contour at v ≈ 0.34 → converge to the
-    // occlusal table. The final term closes the surface at both poles.
-    let k: number;
-    if (v < 0.34) {
-      // Rise from the cervical margin to the widest point.
-      k = lerp(0.82, 1.0, smoothstep(0, 0.34, v));
-    } else {
-      // Converge toward the occlusal table, which is ~72% of the max width.
-      k = lerp(1.0, 0.72, smoothstep(0.34, 0.92, v));
-    }
-    // Close the poles.
-    const capBottom = smoothstep(0, 0.035, v);
-    const capTop = 1 - smoothstep(0.955, 1, v);
-    k *= capBottom * capTop;
+    const cosT = Math.cos(th);
+    const sinT = Math.sin(th);
 
-    const rad = superellipse(th, MD, BL, 2.7) * k;
+    /* Crest of contour, per azimuth.
+       Every tooth in the mouth carries its facial height of contour in the
+       cervical third EXCEPT the mandibular molars, which carry it at the
+       junction of the cervical and middle thirds — v ≈ 0.33. Posterior teeth
+       carry the LINGUAL height of contour in the middle third, v ≈ 0.52. A
+       single crest for all azimuths put the lingual bulge 0.18 too low. */
+    const lingual = Math.max(0, -sinT);
+    const crestV = lerp(0.33, 0.52, lingual);
+
+    /* Cervical constriction and occlusal convergence, both per azimuth. */
+    const kCerv = lerp(K_CERV_MD, K_CERV_BL, sinT * sinT);
+    /* The occlusal table is strongly anisotropic: the marginal ridges sit near
+       the full mesiodistal width while both axial walls converge hard
+       buccolingually, giving ~9.0 mm MD against ~6.3 mm BL. The previous
+       isotropic 0.72 made a table that was far too wide across the cheek axis,
+       which flattens the cusps into a plateau. */
+    const kTable = lerp(0.82, 0.6, sinT * sinT);
+
+    let k: number;
+    if (v < crestV) {
+      k = lerp(kCerv, 1.0, smoothstep(0, crestV, v));
+    } else {
+      k = lerp(1.0, kTable, smoothstep(crestV, 0.92, v));
+    }
+
+    /* Emergence profile.
+       The crown used to open to nearly full cervical width within 0.035 of the
+       pole, so it sat on the abutment as a ~3 mm shelf all the way round — a
+       full-circumference ridge lap, and the single most obviously wrong thing
+       about the assembly to anyone who fits these for a living. It now runs
+       down to a narrow collar that meets the abutment, with a CONCAVE profile
+       (exponent > 1, so it leaves the collar slowly and flares late), which is
+       both what the contemporary literature recommends and what removes the
+       shelf. */
+    // 0.64 is not arbitrary: the crown's widest cervical radius is ~4.74 mm, so
+    // 0.64 puts its margin at ~3.05 mm — exactly the abutment's finish line, so
+    // the two meet edge to edge instead of the crown overhanging it.
+    const emergence = lerp(0.64, 1, Math.pow(smoothstep(0, 0.3, v), 1.3));
+    const capBottom = smoothstep(0, 0.012, v);
+    const capTop = 1 - smoothstep(0.955, 1, v);
+    k *= emergence * capBottom * capTop;
+
+    // Asymmetric semi-axes: converges distally and lingually.
+    const a = cosT >= 0 ? A_MESIAL : A_DISTAL;
+    const b = sinT >= 0 ? B_BUCCAL : B_LINGUAL;
+    const rad = superellipse(th, a, b, 2.7) * k;
 
     // --- occlusal relief --------------------------------------------------
     // Only applies near the top; peaks just inside the marginal ridge.
     const occl = smoothstep(0.6, 0.93, v) * (1 - smoothstep(0.93, 1, v) * 0.35);
-    const relief = (cuspField(th) - grooveCut(th)) * occl;
+    const relief = cuspField(th) * occl - grooveCut(th, v);
 
     // The pole itself sits BELOW the cusp tips — that dip is the central fossa.
     const fossa = -0.55 * smoothstep(0.9, 1, v);
@@ -453,6 +594,39 @@ export function buildCrown(): THREE.BufferGeometry {
     const y = yBase + relief * RELIEF + fossa;
 
     out.set(Math.cos(th) * rad, y, Math.sin(th) * rad);
+  },
+  /**
+   * Multilayer shade gradient, baked per vertex.
+   *
+   * A real crown is not one colour. The cervical third is warmer, more
+   * saturated and more opaque — it sits against the gingiva and has to carry
+   * the root shade; the occlusal third is greyer, cooler and more translucent,
+   * because that is where enamel would be. Ceramists build this deliberately,
+   * and its absence is most of why a rendered crown reads as a plastic blob.
+   *
+   * These multiply the material colour, so they stay close to 1 — this is a
+   * shade modulation, not a paint job.
+   */
+  (u, v, _pos, out) => {
+    const th = u * TAU;
+    // Cervical warmth fades out by the crest of contour; occlusal cool comes
+    // in over the top third.
+    const cervical = 1 - smoothstep(0.02, 0.42, v);
+    const occlusal = smoothstep(0.58, 0.96, v);
+
+    let r = 1 + cervical * 0.035 - occlusal * 0.045;
+    let g = 1 - cervical * 0.012 - occlusal * 0.03;
+    let b = 1 - cervical * 0.075 - occlusal * 0.004;
+
+    // Fissures pick up a little extrinsic stain — the faint brown line every
+    // real molar has in its grooves. Only on the occlusal table, only where a
+    // groove actually is.
+    const stain = Math.min(1, grooveCut(th, v) / 0.62) * smoothstep(0.72, 0.95, v);
+    r -= stain * 0.06;
+    g -= stain * 0.085;
+    b -= stain * 0.105;
+
+    out.setRGB(r, g, b);
   });
 }
 
@@ -469,9 +643,22 @@ export const RIDGE_CREST_Y = 5.9;
  * near the cut ends. 15 mm long by 11.2 mm wide is both anatomically right for
  * a posterior mandible and short enough that the ridge profile stays readable.
  */
-export const RIDGE_LENGTH = 15;
-const RIDGE_BASE_Y = -8;
+export const RIDGE_LENGTH = 20;
+/**
+ * The section runs off the bottom of frame on purpose.
+ *
+ * At −8 the block had a visible floor, and a slab with a floor and a peaked top
+ * reads as a house — which is exactly what it looked like. Real mandibular body
+ * height at the molar is 26–28 mm; taking the base well below the framing says
+ * "this is a section of something larger" instead of "this is a small object",
+ * for no extra triangles that are ever on screen.
+ */
+const RIDGE_BASE_Y = -13;
 const RIDGE_HALF_BL = 5.6;
+/** Basal bone is wider than the crest: ~12.6 mm vs ~11.3 mm at M1 (Zhang 2021,
+ *  Alqutaibi 2024). The plates were previously parallel, which is most of why
+ *  the silhouette read as extruded rather than anatomical. */
+const RIDGE_BASE_FLARE = 1.14;
 
 /**
  * Buccolingual cross-section of the alveolar ridge, as (z, y).
@@ -493,20 +680,60 @@ function ridgeSection(t: number): [number, number] {
   let z: number;
   let y: number;
 
+  const SHOULDER_Y = 1.2;
+
   if (s < 0.45) {
-    // Cortical plate: near-vertical, with a slight outward belly.
+    // Cortical plate, tapering inward as it rises: basal bone measures ~12.6 mm
+    // against ~11.3 mm at the crest. The plates used to be parallel, which is
+    // what made the silhouette read as extruded rather than anatomical.
     const k = s / 0.45;
-    z = RIDGE_HALF_BL * (1 - 0.06 * Math.sin(k * Math.PI));
-    y = lerp(RIDGE_BASE_Y, 1.2, k);
+    z = RIDGE_HALF_BL * lerp(RIDGE_BASE_FLARE, 1, smoothstep(0, 1, k));
+    y = lerp(RIDGE_BASE_Y, SHOULDER_Y, k);
   } else {
-    // Crest arch: converges to roughly 46% of the base width.
+    // Crest arch as a SUPERELLIPSE (n = 2.6) — a rounded plateau, not a peak.
+    // The previous quarter-sine drove the width linearly to zero, producing a
+    // knife-edge ridge; combined with straight plates and a flat floor, the
+    // whole block read as a house with a pitched roof. A real posterior crest
+    // is a flat-topped arch a good 6–8 mm across.
     const k = (s - 0.45) / 0.55;
-    const e = Math.sin((k * Math.PI) / 2); // quarter-sine, flat at the top
-    z = RIDGE_HALF_BL * lerp(1, 0.0, e);
-    y = lerp(1.2, RIDGE_CREST_Y, Math.sin((k * Math.PI) / 2) ** 0.72);
+    const th = (k * Math.PI) / 2;
+    // n = 2.2, only slightly flattened from a true ellipse. At 2.6 the top went
+    // so flat that the block came back as a rectangular slab — the opposite
+    // failure from the knife edge it replaced. A posterior crest is a dome with
+    // a softened top, not a table.
+    const e = 2 / 2.2;
+    z = RIDGE_HALF_BL * Math.pow(Math.cos(th), e);
+    y = SHOULDER_Y + (RIDGE_CREST_Y - SHOULDER_Y) * Math.pow(Math.sin(th), e);
   }
 
   return [z * sign, y];
+}
+
+/**
+ * Outward unit normal of the ridge section at parameter `t`, as (nz, ny).
+ *
+ * Finite-differenced rather than derived analytically: `ridgeSection` is
+ * piecewise, so a closed-form derivative would need a second definition to be
+ * kept in sync with it — and the two silently disagreeing at the piece boundary
+ * is exactly the sort of bug that shows up as a crease and takes an hour to
+ * find. The sign is resolved by pushing away from the section's interior.
+ */
+function ridgeNormal(t: number): [number, number] {
+  const h = 0.002;
+  const [z0, y0] = ridgeSection(Math.max(0, t - h));
+  const [z1, y1] = ridgeSection(Math.min(1, t + h));
+  const dz = z1 - z0;
+  const dy = y1 - y0;
+  const len = Math.hypot(dz, dy) || 1;
+  // Rotate the tangent a quarter turn, then orient it outward.
+  let nz = dy / len;
+  let ny = -dz / len;
+  const [pz, py] = ridgeSection(t);
+  if (nz * pz + ny * (py - 1.2) < 0) {
+    nz = -nz;
+    ny = -ny;
+  }
+  return [nz, ny];
 }
 
 /**
@@ -577,9 +804,16 @@ export function buildBoneRidge(): THREE.BufferGeometry {
  * scalloped — papillae rise between adjacent teeth and dip over each root.
  */
 export function buildGingiva(): THREE.BufferGeometry {
-  const ALONG = 130;
-  const AROUND = 150;
+  const ALONG = 104;
+  const AROUND = 112;
   const THICK = 1.45;
+
+  /** Radius of the peri-implant cuff, and how far the tissue funnels down into
+   *  it. The abutment is Ø4.4 at its widest, so the cuff has to start outside
+   *  that or the tissue simply intersects the metal. */
+  const CUFF_R = 2.45;
+  const CUFF_FALLOFF = 2.1;
+  const SULCUS_DEPTH = 1.9;
 
   // u traces a CLOSED cross-section: the outer mucosal surface on the way out,
   // then back along the bone on the way in. A single open sheet has no
@@ -607,37 +841,150 @@ export function buildGingiva(): THREE.BufferGeometry {
 
     // Papillae: mean interproximal soft tissue sits ~3.85 mm above the crest,
     // so the scallop is a real anatomical feature, not decoration.
+    //
+    // The `+ PI` phase shift is load-bearing and was missing. Without it the
+    // cosine peaks at x = 0 — which is exactly where the implant emerges — so
+    // the tissue reared up into a mound at the one place it has to dip, and the
+    // abutment came through the top of a hillock. Papillae belong BETWEEN
+    // teeth; the margin dips over each emergence. Shifted, the peaks land at
+    // x = ±5 mm (the adjacent contact points) and x = 0 is a trough.
     const crestness = Math.pow(Math.sin(k * Math.PI), 2);
+    // Amplitude raised from 1.15. Measured papilla height above the
+    // interproximal crest is 3.85 ± 1.04 mm implant-to-tooth and 5.1 ± 0.6
+    // tooth-to-tooth, so 1.15 was three to four times too short and the
+    // scallop barely registered. Held at 2.4 rather than the full measured
+    // figure because every published dataset is ANTERIOR — the osseous scallop
+    // flattens progressively toward the back of the mouth, and no
+    // molar-specific measurement exists.
     const papilla = outbound
-      ? 1.15 *
-        Math.pow(Math.max(0, Math.cos((x / RIDGE_LENGTH) * TAU * 1.5)), 3) *
+      ? 2.4 *
+        // Two cycles over 20 mm — a 10 mm period, which is one molar-to-molar
+        // contact spacing, so the papillae land where adjacent teeth would be.
+        Math.pow(Math.max(0, Math.cos((x / RIDGE_LENGTH) * TAU * 2 + Math.PI)), 3) *
         crestness *
         endCap
       : 0;
 
-    const outward = 1 + t / RIDGE_HALF_BL;
+    /* Thickness is applied along the SECTION NORMAL, not split into y and z.
+       The previous version displaced by `t * 0.5` vertically and scaled z by
+       `1 + t / halfWidth` — but at the crest z0 is ~0, so the horizontal term
+       vanished and the tissue ended up 0.72 mm thick exactly where it should be
+       thickest. Mucosa over a crest measures 1.4–1.6 mm; it was rendering at
+       half that, which is why it read as a torn ribbon rather than as tissue. */
+    const [nz, ny] = ridgeNormal(0.26 + k * 0.48);
+    const z = z0 + nz * t;
 
-    out.set(x, y0 + t * 0.5 + papilla, z0 * outward);
+    /* Supracrestal height.
+       The free gingival margin does not sit ON the bone crest — it sits about
+       3 mm above it (Gargiulo 1961: 3.05 mm buccal, 2.65 lingual, and
+       peri-implant mucosa runs roughly 1 mm taller again because its
+       junctional epithelium is twice as deep). Modelled here rather than as a
+       mesh offset so only the OUTER surface rises and the inner surface stays
+       on the bone — which is what gives the tissue real thickness instead of
+       making it a rigid shell held above the ridge. */
+    const supracrestal = outbound ? 2.0 * crestness * endCap : 0;
+
+    // Peri-implant cuff. Soft tissue does not butt flat against an abutment —
+    // it funnels down into a sulcus around it. Without this the abutment simply
+    // intersected the gingival surface along a hard line, which is the single
+    // most artificial-looking junction in the whole assembly.
+    const axial = Math.hypot(x, z);
+    const cuff = 1 - smoothstep(CUFF_R, CUFF_R + CUFF_FALLOFF, axial);
+    const sulcus = SULCUS_DEPTH * cuff * cuff * crestness * endCap;
+
+    out.set(x, y0 + ny * t + supracrestal + papilla - sulcus, z);
+  },
+  /**
+   * Vascular depth, baked per vertex — a free stand-in for subsurface
+   * scattering.
+   *
+   * Gingiva is thin and richly perfused, so it goes DARKER and more saturated
+   * where it is thick or shadowed (deep in the sulcus, down the plates) and
+   * paler where it thins to an edge (the free margin, the papilla tips), which
+   * is where light actually passes through it. A single flat pink is why most
+   * dental illustration tissue reads as plasticine.
+   */
+  (u, v, pos, out) => {
+    const loop = u * 2;
+    const outbound = loop <= 1;
+    const k = outbound ? loop : 2 - loop;
+    const thinness = Math.pow(Math.sin(k * Math.PI), 0.6);
+
+    // Deep in the cuff the tissue is in its own shadow and reads arterial.
+    const axial = Math.hypot(pos.x, pos.z);
+    const cuff = 1 - smoothstep(CUFF_R, CUFF_R + CUFF_FALLOFF, axial);
+
+    const pale = Math.pow(thinness, 2.2) * 0.16;
+    const deep = (1 - thinness) * 0.22 + cuff * 0.2;
+
+    out.setRGB(
+      1 + pale * 0.55 - deep * 0.24,
+      1 + pale * 0.3 - deep * 0.5,
+      1 + pale * 0.26 - deep * 0.52,
+    );
   });
 }
 
 /**
- * Cheap, convincing contact shadow: a radial-gradient sprite on the floor.
- * Cheaper than a shadow map and, at this scale, indistinguishable.
+ * Circumferential tool-mark roughness for turned and blasted parts.
+ *
+ * A single scalar roughness is the most reliable "this is CG" tell there is:
+ * real surfaces vary, and that variation is what breaks up a reflection into
+ * something the eye reads as material rather than as shading. Every part here
+ * was previously one flat number.
+ *
+ * The texture is one pixel wide. Both the lathe and the parametric grid run `u`
+ * AROUND the axis and `v` ALONG it, so a map that varies only in v produces
+ * bands that circle the part — which is exactly what a lathe tool leaves, and
+ * what acid-etching leaves on a blasted fixture. Sampling it across u would
+ * give vertical streaks, which is the wrong machining process entirely.
+ *
+ * Generated on a canvas, so there is no network request for the CSP to block.
+ *
+ * @param min   roughness multiplier in the smoothest bands
+ * @param tiles how many times to repeat along the axis — higher is finer marks
  */
-export function buildShadowTexture(): THREE.CanvasTexture {
-  const size = 512;
+export function buildTurnedRoughness(min: number, tiles: number): THREE.CanvasTexture {
+  const H = 512;
   const c = document.createElement('canvas');
-  c.width = c.height = size;
+  c.width = 1;
+  c.height = H;
   const ctx = c.getContext('2d')!;
-  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  g.addColorStop(0, 'rgba(48,24,10,0.5)');
-  g.addColorStop(0.42, 'rgba(48,24,10,0.24)');
-  g.addColorStop(0.75, 'rgba(48,24,10,0.06)');
-  g.addColorStop(1, 'rgba(48,24,10,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, size, size);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
+  const img = ctx.createImageData(1, H);
+
+  // Three octaves of value noise. Deterministic — a hash of the row index, not
+  // Math.random(), so the same build always produces the same surface.
+  const hash = (n: number) => {
+    const s = Math.sin(n * 127.1) * 43758.5453;
+    return s - Math.floor(s);
+  };
+  const noise = (x: number) => {
+    const i = Math.floor(x);
+    const f = x - i;
+    const s = f * f * (3 - 2 * f);
+    return lerp(hash(i), hash(i + 1), s);
+  };
+
+  for (let y = 0; y < H; y++) {
+    const t = (y / H) * 40;
+    const n = noise(t) * 0.55 + noise(t * 2.7 + 11) * 0.3 + noise(t * 6.3 + 29) * 0.15;
+    const value = lerp(min, 1, n);
+    const byte = Math.round(clamp01(value) * 255);
+    const k = y * 4;
+    img.data[k] = byte;
+    img.data[k + 1] = byte;
+    img.data[k + 2] = byte;
+    img.data[k + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1, tiles);
+  // A roughness map is DATA, not colour — tagging it sRGB would apply a
+  // transfer function to a physical quantity and quietly skew every highlight.
+  tex.colorSpace = THREE.NoColorSpace;
+  return tex;
 }
+

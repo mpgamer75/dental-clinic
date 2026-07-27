@@ -52,6 +52,12 @@ export function Hero({ content, trust, appointmentHref, implantHref, phone }: He
             {content.locationNote}
           </p>
 
+          {/* The cap is not what governs the line breaks here — at this
+              breakpoint the 6-of-12 grid column is ~630 px, narrower than 16ch
+              resolves to (~880 px), so the column wins and the headline sets in
+              three lines either way. Kept as a guard for very wide viewports,
+              where the column does get wider than a comfortable measure.
+              `text-wrap: balance` is applied to h1 globally and evens the rag. */}
           <h1 className="mt-5 max-w-[16ch] font-heading text-h1 font-medium text-drench-on">
             {content.title}
           </h1>

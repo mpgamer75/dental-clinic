@@ -10,7 +10,7 @@ import {
   buildCrown,
   buildBoneRidge,
   buildGingiva,
-  buildShadowTexture,
+  buildTurnedRoughness,
   FIXTURE_LENGTH,
 } from './geometry';
 
@@ -52,6 +52,56 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const damp = (cur: number, target: number, lambda: number, dt: number) =>
   lerp(cur, target, 1 - Math.exp(-lambda * dt));
 
+/**
+ * Resolves a CSS custom property to a THREE.Color.
+ *
+ * The design tokens hold bare `L C H` triples consumed as `oklch(var(--x))`,
+ * and THREE.Color.setStyle in r0.169 parses hex/rgb/hsl/named colours but NOT
+ * oklch. So the browser is asked to do the conversion.
+ *
+ * The obvious version of this — read `getComputedStyle(probe).color` and hand
+ * the string to `setStyle` — SILENTLY DOES NOTHING. Per CSS Color 4 §15 a
+ * non-legacy colour function serialises in its own colour space, so that
+ * getter returns the string `"oklch(0.9455 0.0075 62)"`, never `"rgb(…)"`.
+ * The guard fell through, the fallback was returned every time, and the fog
+ * sat on a hardcoded beige that was wrong in light mode and badly wrong in
+ * dark. It failed quietly and looked like it worked, which is the worst shape
+ * a bug can have.
+ *
+ * A 2D canvas context, unlike THREE.Color, DOES accept `oklch()` on
+ * `fillStyle`. So the conversion goes through a 1×1 rasterisation, which is
+ * exact and needs no colour-space maths here.
+ */
+function resolveToken(token: string, fallback: number): THREE.Color {
+  const color = new THREE.Color(fallback);
+  // `setProperty`, not `cssText`: cssText parses a whole declaration list, so
+  // a token that ever became dynamic could inject further declarations. The
+  // pattern guard makes that unrepresentable rather than merely unlikely.
+  if (!/^--[a-z0-9-]+$/.test(token)) return color;
+
+  const probe = document.createElement('span');
+  try {
+    probe.style.setProperty('position', 'absolute');
+    probe.style.setProperty('visibility', 'hidden');
+    probe.style.setProperty('color', `oklch(var(${token}))`);
+    document.body.appendChild(probe);
+    const resolved = getComputedStyle(probe).color;
+
+    const ctx = document.createElement('canvas').getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = resolved;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+      color.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
+    }
+  } catch {
+    /* keep the fallback */
+  } finally {
+    probe.remove();
+  }
+  return color;
+}
+
 /* ── environment ──────────────────────────────────────────────────────────── */
 
 /**
@@ -60,7 +110,7 @@ const damp = (cur: number, target: number, lambda: number, dt: number) =>
  * Large soft sources are what make product renders read as expensive; a bare
  * DirectionalLight gives a hard specular dot and nothing to reflect.
  */
-function buildEnvironment(renderer: THREE.WebGLRenderer): THREE.Texture {
+function buildEnvironment(renderer: THREE.WebGLRenderer): THREE.WebGLRenderTarget {
   const scene = new THREE.Scene();
   // Mid warm-grey, not near-black. A dark environment background gives polished
   // metal nothing to reflect except darkness, so the machined abutment came out
@@ -106,7 +156,17 @@ function buildEnvironment(renderer: THREE.WebGLRenderer): THREE.Texture {
       (o.material as THREE.Material).dispose();
     }
   });
-  return target.texture;
+
+  /* Returns the RENDER TARGET, not `target.texture`.
+     Handing back only the texture leaked the cubeUV framebuffer on every
+     unmount, and — worse — made the cleanup look correct while doing nothing:
+     `PMREMGenerator.dispose()` frees its blur materials and ping-pong target
+     but NOT the target it just returned, and calling `.dispose()` on that
+     target's texture is a no-op, because WebGLTextures.deallocateTexture
+     early-returns unless `__webglInit` is set, which only happens for textures
+     that went through initTexture — render-target textures never do. Only
+     `renderTarget.dispose()` reaches deallocateRenderTarget. */
+  return target;
 }
 
 /* ── component ────────────────────────────────────────────────────────────── */
@@ -126,13 +186,23 @@ export default function ImplantScene({
 
     let disposed = false;
     let raf = 0;
+    /* Set whenever something that affects the image changes. The loop renders
+       only when it is true — see the note in tick(). */
+    let dirty = true;
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
       powerPreference: 'high-performance',
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // The crown's `transmission` makes the renderer run a SECOND full pass of
+    // the opaque scene into a viewport-sized target every frame, so every
+    // fragment here is paid for twice. DPR 2 on a ~620×744 vitrine is ~1.85 M
+    // pixels, i.e. ~3.7 M shaded. Capping at 1.75 is invisible at arm's length
+    // and takes roughly a quarter off that. (three r172 adds
+    // `transmissionResolutionScale`, which would be the better lever; this
+    // project is pinned to r0.169.)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.setClearAlpha(0);
     // AgX, not ACESFilmic. ACES crushes saturation toward a milky grey, which
     // is exactly the "cheap render" look — it is a film-emulation curve doing
@@ -160,8 +230,30 @@ export default function ImplantScene({
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 400);
 
-    const envMap = buildEnvironment(renderer);
-    scene.environment = envMap;
+    // Atmosphere, so the object is IN the vitrine rather than pasted onto it.
+    // The canvas is transparent over a warm radial wash painted by
+    // <ImplantStage>; without depth cueing the assembly floated in front of
+    // that wash with no relationship to it. Fog matched to the panel colour
+    // lets the far end of the ridge fall away into the case — and it buys the
+    // depth that a DOF pass would, for one line instead of a depth prepass and
+    // a full-screen gather.
+    const fog = new THREE.Fog(resolveToken('--canvas', 0xe8ddcd), 62, 145);
+    scene.fog = fog;
+
+    // The theme toggle swaps a class on <html>, which changes what --canvas
+    // resolves to. Without this the fog would keep the colour of whichever
+    // theme happened to be active when the canvas mounted.
+    const themeObserver = new MutationObserver(() => {
+      fog.color.copy(resolveToken('--canvas', 0xe8ddcd));
+      dirty = true;
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    const envTarget = buildEnvironment(renderer);
+    scene.environment = envTarget.texture;
 
     scene.add(new THREE.AmbientLight(0xfff2e2, 0.28));
 
@@ -199,17 +291,29 @@ export default function ImplantScene({
        blasted/acid-etched (matte, Sa ~1.4–2.1µm) at 0.48, the abutment and
        screw are machined and polished at 0.13. Adjacent parts finished
        differently is a product-photography tell that costs nothing. */
+    /* Roughness MAPS, not scalars.
+       A single roughness number is the most reliable "this is CG" tell there
+       is — a real surface varies, and that variation is what breaks a
+       reflection into something the eye reads as metal. Both maps vary only
+       along the axis, so the bands circle the part: lathe tool marks on the
+       machined components, a coarser blasted/etched texture on the fixture.
+       Roughness is set to the TOP of each range because the map multiplies. */
+    const roughMachined = buildTurnedRoughness(0.42, 3.5);
+    const roughFixture = buildTurnedRoughness(0.74, 2.2);
+
     const matFixture = new THREE.MeshPhysicalMaterial({
       color: 0xc1baaf,
       metalness: 1,
-      roughness: 0.48,
+      roughness: 0.58,
+      roughnessMap: roughFixture,
       envMapIntensity: 1.05,
     });
 
     const matMachined = new THREE.MeshPhysicalMaterial({
       color: 0xc9c3ba,
       metalness: 1,
-      roughness: 0.2,
+      roughness: 0.3,
+      roughnessMap: roughMachined,
       envMapIntensity: 1.15,
     });
 
@@ -219,6 +323,11 @@ export default function ImplantScene({
     // and "white plastic blob".
     const matCrown = new THREE.MeshPhysicalMaterial({
       color: 0xf3ece0,
+      // The cervical→occlusal layering is baked into the geometry's vertex
+      // colours (see buildCrown). This comment used to describe a gradient the
+      // code never actually produced — the material was one flat colour top to
+      // bottom, which is the difference between "tooth" and "white blob".
+      vertexColors: true,
       metalness: 0,
       roughness: 0.18,
       clearcoat: 1,
@@ -246,32 +355,57 @@ export default function ImplantScene({
       sheenColor: new THREE.Color(0xc0a37c),
       side: THREE.DoubleSide, // the cut face must render, not show through
       clippingPlanes: [boneClip],
-      // `transparent` is set ONCE, here. Flipping it at runtime needs a shader
-      // recompile (material.needsUpdate = true); without that the bone silently
-      // stays opaque and the osseointegration reveal never happens.
-      transparent: true,
-      opacity: 1,
+      // OPAQUE, deliberately.
+      //
+      // This used to fade to 0.72 for the osseointegration phase. With
+      // DoubleSide that meant every interior backface showed through every
+      // exterior face and the ridge turned into a block of frosted glass —
+      // which is what made the whole graphic read as moulded plastic. The
+      // reveal is now carried by the cutaway staying OPEN at the end instead:
+      // an opaque cut face showing the fixture threaded into bone says
+      // "integrated" far more clearly than translucency ever did, and it drops
+      // both tissue meshes out of the transparent render pass.
     });
 
-    // Gingiva measures CIE L*52.9 a*23.3 b*14.9 ≈ #AC6E66 — a desaturated
-    // brick-rose, markedly less pink than the candy colour used in most dental
-    // illustration. Vascular tissue, so it wants strong subsurface warmth.
+    // Gingiva, measured by spectroradiometer (Ho et al., Sci Rep 2015;5:18498,
+    // n=238): healthy attached gingiva overall is CIE L*52.9 a*23.3 b*14.9 ≈
+    // #AC6E66 — a desaturated brick-rose, markedly less pink than the candy
+    // colour most dental illustration reaches for.
+    //
+    // This uses that paper's HISPANIC subgroup instead — L*53.8 a*24.1 b*15.1
+    // ≈ #B07068 — because ethnicity significantly affects both L* and a*
+    // (p<0.05) and this is a clinic in Santiago de los Caballeros. It is a
+    // small shift, and it is the better-justified default for who is actually
+    // looking at the page.
     const matGum = new THREE.MeshPhysicalMaterial({
-      color: 0xac6e66,
+      color: 0xb07068,
+      // Vascular depth is baked per vertex (see buildGingiva): darker and more
+      // saturated where the tissue is thick or shadowed, paler where it thins
+      // to an edge. That is a free stand-in for subsurface scattering, and it
+      // is what stops a flat pink reading as plasticine.
+      vertexColors: true,
       roughness: 0.55,
       metalness: 0,
       clearcoat: 0.55,
       clearcoatRoughness: 0.42,
-      sheen: 0.7,
+      // Sheen's retro-reflective lobe is what gives skin and tissue their
+      // velvety rim. It is doing the work `transmission: 0.04` pretended to:
+      // at 0.04 the refraction was invisible, but it still put this material
+      // into the transmissive queue and compiled the whole USE_TRANSMISSION
+      // path for it — a second full scene render per frame, for nothing.
+      sheen: 0.85,
       sheenColor: new THREE.Color(0xe09a8c),
-      transmission: 0.04,
-      thickness: 1.4,
-      attenuationColor: new THREE.Color(0x8e3b34),
-      attenuationDistance: 2.4,
+      sheenRoughness: 0.55,
       side: THREE.DoubleSide,
+      // Clipped on the SAME plane as the bone. Leaving the mucosa whole over a
+      // sectioned ridge made the collar overhang a block that had been cut away
+      // beneath it, so the tissue read as a hat hovering in mid air. The reason
+      // this looked like a torn flap on an earlier pass was not the clipping —
+      // it was that the tissue had no real thickness at the crest, so the cut
+      // exposed a zero-width edge. With thickness applied along the section
+      // normal the cut face is a proper band of tissue, which is exactly what a
+      // dental atlas shows.
       clippingPlanes: [boneClip],
-      transparent: true,
-      opacity: 1,
     });
 
     /* --- assembly ---
@@ -295,7 +429,12 @@ export default function ImplantScene({
 
     const gumGeo = buildGingiva();
     const gum = new THREE.Mesh(gumGeo, matGum);
-    gum.position.y = CREST;
+    // NOT `CREST`. The gingiva is traced from the same `ridgeSection` as the
+    // bone, so the two geometries are already in one coordinate system and the
+    // mesh needs no offset at all — lifting it by the crest height floated the
+    // tissue a clear 5.9 mm above the ridge, as a pink saddle hovering in mid
+    // air over a beige block. Supracrestal height is a property of the tissue,
+    // and it is modelled inside buildGingiva where it belongs.
     gum.receiveShadow = true;
     tissue.add(gum);
 
@@ -329,26 +468,23 @@ export default function ImplantScene({
     crown.add(crownMesh);
     root.add(crown);
 
-    // Contact shadow. Cheaper than a second shadow map and, at this scale,
-    // indistinguishable.
-    const shadowTex = buildShadowTexture();
-    const contact = new THREE.Mesh(
-      new THREE.PlaneGeometry(64, 64),
-      new THREE.MeshBasicMaterial({
-        map: shadowTex,
-        transparent: true,
-        depthWrite: false,
-        opacity: 0.85,
-      }),
-    );
-    contact.rotation.x = -Math.PI / 2;
-    contact.position.y = -9.4;
-    root.add(contact);
+    /* No fake floor shadow.
+       There used to be a radial-gradient sprite on a plane at y = −9.4 standing
+       in for contact shading. Two things killed it: the ridge now runs down to
+       −13 and off the bottom of frame, so the plane sat INSIDE the bone; and it
+       was static, pinned at a fixed height while three parts descended past it,
+       so it never actually indicated contact with anything. The key light
+       already casts a real shadow onto the bone, which is the cue that matters
+       — and this removes a transparent, depth-write-disabled draw from every
+       frame. */
 
     /* --- seated positions (progress = 1) --- */
     const SEAT_FIXTURE = -FIXTURE_LENGTH; // platform lands on y = 0 (the crest)
     const SEAT_ABUT = 0;
-    const SEAT_CROWN = 4.2;
+    // The abutment's finish line, not an arbitrary height up the prep. Lowered
+    // from 4.2: at that height the crown margin met a 1.62 mm-radius post with
+    // its own margin at 3 mm, which is what produced the overhang.
+    const SEAT_CROWN = 3.0;
 
     /* --- pointer --- */
     // Target orbit driven by the pointer, damped so the object feels weighted
@@ -364,11 +500,13 @@ export default function ImplantScene({
       pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
       pointer.y = ((e.clientY - r.top) / r.height) * 2 - 1;
       hovering = true;
+      dirty = true;
     };
     const onPointerLeave = () => {
       hovering = false;
       pointer.x = 0;
       pointer.y = 0;
+      dirty = true;
     };
     if (!reduced) {
       host.addEventListener('pointermove', onPointerMove, { passive: true });
@@ -382,6 +520,7 @@ export default function ImplantScene({
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      dirty = true;
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -391,12 +530,20 @@ export default function ImplantScene({
     let visible = true;
     const io = new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
+      // Coming back on screen after a resize or theme change must repaint even
+      // if nothing is moving.
+      if (visible) dirty = true;
     });
     io.observe(host);
 
     /* --- loop --- */
     const clock = new THREE.Clock();
     let shown = 0;
+    /* How long the scroll has been quiet, and how far the ambient drift has
+       faded back in as a result. */
+    let quiet = 0;
+    let driftGain = 0;
+    let lastProgress = progress.current;
 
     const tick = () => {
       if (disposed) return;
@@ -404,6 +551,25 @@ export default function ImplantScene({
 
       const dt = Math.min(clock.getDelta(), 1 / 30);
       if (!visible) return; // keep the delta consumed, skip the work
+
+      /* Ambient drift is suppressed WHILE SCROLLING and ramps back in once the
+         scroll has been quiet for a beat.
+
+         It used to be added to the yaw unconditionally: a ±5° wobble on a 39 s
+         period running the entire time the user was scrubbing, fighting the
+         scroll-driven yaw for control of the same axis. That is a large part of
+         why the sequence felt unsteady. Still while it is being driven, alive
+         once it is left alone — and, because the drift is the only thing moving
+         in the resting state, gating it is also what makes the frame skip below
+         possible at all. */
+      if (progress.current !== lastProgress) {
+        lastProgress = progress.current;
+        quiet = 0;
+      } else {
+        quiet += dt;
+      }
+      const driftTarget = reduced ? 0 : quiet > 0.8 ? 1 : 0;
+      driftGain = damp(driftGain, driftTarget, driftTarget > driftGain ? 2.4 : 9, dt);
 
       shown = damp(shown, progress.current, 5, dt);
       const p = shown;
@@ -426,19 +592,18 @@ export default function ImplantScene({
       crown.position.y = lerp(28, SEAT_CROWN, tCrown);
       crown.visible = tCrown > 0.001;
 
-      /* Phase 4 — bone turns translucent to show osseointegration.
-         `transparent` is already true on the material, so only opacity moves. */
-      const tBone = seg(p, 0.84, 1);
-      // Only a partial fade. Dropping the bone to 0.4 made the whole frame
-      // read as washed-out ghosting rather than as a material becoming
-      // translucent, and it took the gingiva's solidity with it.
-      matBone.opacity = lerp(1, 0.72, tBone);
-      matGum.opacity = lerp(1, 0.94, tBone);
-
-      /* The cutaway opens as the fixture goes in, then closes again once it is
-         seated, so the finished result is seen whole rather than sliced. */
-      const cut = easeInOut(seg(p, 0.1, 0.42)) * (1 - easeInOut(seg(p, 0.86, 1)));
-      boneClip.constant = lerp(12, 0.6, cut);
+      /* The cutaway opens as the fixture goes in and STAYS open.
+         It used to close again over the last 14% "so the finished result is
+         seen whole" — but closing it hides the fixture inside opaque bone at
+         exactly the moment the caption says "osseointegration", which is the
+         one thing the section exists to show. Phase 4 now widens the opening
+         slightly instead, so the finished, integrated assembly is what the
+         viewer is left looking at. */
+      // Stops just past the long axis, so the fixture is seen whole in section
+      // rather than halved. Taking it further (to −0.5) cut away the near side
+      // of everything and left the assembly looking like a fragment.
+      const cut = easeInOut(seg(p, 0.1, 0.42));
+      boneClip.constant = lerp(12, 0.9, cut);
 
       /* Framing: ease the camera in as the assembly completes. */
       // Wide at rest so the exploded stack is fully in frame from the first
@@ -450,6 +615,16 @@ export default function ImplantScene({
       const height = lerp(10, 3, tFrame);
       const focus = lerp(8, 0.5, tFrame);
 
+      /* Fog has to track the camera, not sit at fixed depths.
+         Static near/far were catastrophic here: at the opening distance of 104
+         the subject sat halfway between near 62 and far 145, so the ENTIRE
+         object rendered about 50% blended into the background colour and the
+         whole frame looked washed out. Anchoring the band to `dist` means it
+         only ever separates the near and far sides of a ~30 mm subject, which
+         is all it was ever meant to do. */
+      fog.near = dist - 14;
+      fog.far = dist + 88;
+
       /* Pointer parallax, damped. lambda 3 gives about a 300ms settle — slow
          enough to feel weighted, fast enough not to lag behind the cursor. */
       const targetX = hovering ? pointer.x * 0.32 : 0;
@@ -457,8 +632,8 @@ export default function ImplantScene({
       orbit.x = damp(orbit.x, targetX, 3, dt);
       orbit.y = damp(orbit.y, targetY, 3, dt);
 
-      /* Ambient presentation drift, held still under reduced motion. */
-      const idle = reduced ? 0 : Math.sin(clock.elapsedTime * 0.16) * 0.09;
+      /* Ambient presentation drift, faded in only once the scroll is quiet. */
+      const idle = Math.sin(clock.elapsedTime * 0.16) * 0.09 * driftGain;
       // Three-quarter view. The ridge runs along X, so a near-frontal yaw
       // shows only its length and it reads as a block; swinging round lets the
       // cut end — and therefore the arch — be seen.
@@ -472,6 +647,25 @@ export default function ImplantScene({
       );
       camera.lookAt(0, focus, 0);
 
+      /* Render only when the image would actually differ.
+
+         Scope, stated honestly: the ambient drift IS the resting state, so
+         `driftGain` sits at ~1 whenever the scene is idle and in view, and the
+         skip therefore does not fire for a typical visitor. What it does buy is
+         a genuinely static scene under reduced motion, and no redraw during the
+         first 0.8 s after mount. Mid-scroll it never fires either — `shown` is
+         chasing `progress.current`, so `moving` is true regardless of drift.
+         Kept because the reduced-motion case is the one that matters most, and
+         because it costs four comparisons. */
+      const moving =
+        Math.abs(shown - progress.current) > 1e-4 ||
+        Math.abs(orbit.x - targetX) > 1e-4 ||
+        Math.abs(orbit.y - targetY) > 1e-4 ||
+        driftGain > 1e-3;
+
+      if (!moving && !dirty) return;
+      dirty = false;
+
       renderer.render(scene, camera);
     };
     tick();
@@ -482,6 +676,7 @@ export default function ImplantScene({
       cancelAnimationFrame(raf);
       ro.disconnect();
       io.disconnect();
+      themeObserver.disconnect();
       host.removeEventListener('pointermove', onPointerMove);
       host.removeEventListener('pointerleave', onPointerLeave);
       scene.traverse((o) => {
@@ -492,9 +687,22 @@ export default function ImplantScene({
           else m.dispose();
         }
       });
-      shadowTex.dispose();
-      envMap.dispose();
+      roughMachined.dispose();
+      roughFixture.dispose();
+      envTarget.dispose();
+      // `scene.traverse` above only disposes meshes, so lights are skipped —
+      // and a 1024² shadow map is a real allocation. LightShadow.dispose()
+      // frees both `map` and `mapPass`.
+      key.shadow.dispose();
       renderer.dispose();
+      /* The crown's transmission makes the renderer allocate a viewport-sized
+         HalfFloat target with 4× MSAA and mipmaps, held in WebGLRenderStates.
+         `renderer.dispose()` does NOT free it — renderStates.dispose() merely
+         swaps the WeakMap — and it is unreachable from here, so there is no
+         handle to dispose. Dropping the context is the only lever that
+         actually returns that memory, and it is safe: this element is being
+         torn down. */
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
   }, [progress, reduced]);

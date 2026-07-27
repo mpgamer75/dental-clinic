@@ -9,6 +9,29 @@ import { buttonVariants } from "@/components/ui/button"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
+/**
+ * react-day-picker, dressed in the Warm Consulta tokens.
+ *
+ * Notes on the choices that are not cosmetic:
+ *
+ * - Cells are 2.5rem (≈42px at this project's 17px root), not the shadcn
+ *   default 2.25rem (≈38px). This is a pointer-device affordance (see
+ *   appointment-form.tsx — touch gets the native picker instead), so WCAG 2.2's
+ *   24px minimum is the binding one, but 38px squares in a 7-wide grid are
+ *   still an uncomfortable target for anyone with a tremor.
+ *
+ * - `day_disabled` carries a strike-through as well as a colour change. A
+ *   closed day is a piece of information, and colour must never be the only
+ *   channel carrying it.
+ *
+ * - `day_today` is a ring, not a fill. The default (`bg-accent`) is a filled
+ *   terracotta-tinted square, which is close enough to `day_selected` that
+ *   "today" reads as "already chosen".
+ *
+ * - Nav buttons are full-opacity 2.25rem targets. The shadcn default is
+ *   `h-7 w-7 opacity-50`, i.e. a 30px control at half contrast — the two
+ *   controls a keyboard or low-vision user needs most to reach another month.
+ */
 function Calendar({
   className,
   classNames,
@@ -18,44 +41,46 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-4", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+        months: "flex flex-col gap-4 sm:flex-row sm:gap-6",
         month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
-        nav: "space-x-1 flex items-center",
+        caption: "relative flex items-center justify-center pt-0.5",
+        caption_label:
+          "font-heading text-base font-medium capitalize text-ink",
+        nav: "flex items-center gap-1",
         nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          buttonVariants({ variant: "ghost" }),
+          "h-9 w-9 p-0 text-ink-soft hover:text-ink"
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
+        nav_button_previous: "absolute left-0",
+        nav_button_next: "absolute right-0",
+        table: "w-full border-collapse",
         head_row: "flex",
-        head_cell:
-          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+        /* `text-eyebrow` rather than an arbitrary size: the weekday row is
+           exactly what that step is for — an uppercase micro-label whose
+           tracking is already part of the token. */
+        head_cell: "w-10 pb-1 text-eyebrow font-medium uppercase text-ink-faint",
+        row: "mt-1 flex w-full",
+        cell: "relative h-10 w-10 p-0 text-center focus-within:relative focus-within:z-raised",
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
+          "h-10 w-10 rounded-md p-0 text-base font-normal tabular aria-selected:opacity-100"
         ),
         day_range_end: "day-range-end",
         day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
-        day_outside:
-          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-        day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
+          "bg-terracotta text-primary-foreground shadow-e1 hover:bg-terracotta-hover hover:text-primary-foreground focus:bg-terracotta focus:text-primary-foreground",
+        day_today: "font-medium text-terracotta ring-1 ring-inset ring-terracotta/50",
+        day_outside: "day-outside text-ink-faint opacity-60",
+        day_disabled:
+          "text-ink-faint line-through opacity-45 hover:bg-transparent hover:text-ink-faint",
+        day_range_middle: "aria-selected:bg-terracotta-soft aria-selected:text-ink",
         day_hidden: "invisible",
         ...classNames,
       }}
       components={{
-        IconLeft: () => <ChevronLeft className="h-4 w-4" />,
-        IconRight: () => <ChevronRight className="h-4 w-4" />,
+        IconLeft: () => <ChevronLeft className="h-5 w-5" />,
+        IconRight: () => <ChevronRight className="h-5 w-5" />,
       }}
       {...props}
     />

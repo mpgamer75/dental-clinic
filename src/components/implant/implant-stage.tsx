@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
-import { ImplantDiagram } from './implant-diagram';
+import { ImplantPlate, type PlateHandle } from './implant-plate';
 
 /**
  * WebGL chunk. Loaded only after {@link canRenderWebGL} says yes, so the
@@ -80,22 +80,41 @@ export function ImplantStage({ label, driverRef, scaleNote, phases }: ImplantSta
   const railRef = useRef<HTMLSpanElement>(null);
   const captionRef = useRef<HTMLSpanElement>(null);
   const progress = useRef(0);
+  /** Imperative handle onto the 2D plate. Null while the 3D scene is showing. */
+  const plateRef = useRef<PlateHandle | null>(null);
   const reduce = useReducedMotion();
 
   useEffect(() => {
     setUse3d(canRenderWebGL());
   }, []);
 
+  /* The window must fit INSIDE the pinned window, or the sequence keeps
+     advancing after the figure has already scrolled away — which is what it
+     used to do.
+
+     Pin lasts (columnHeight − figureHeight) px. With `start start → end end`
+     the progress ramp lasts (columnHeight − viewportHeight) px. So the ramp
+     finishes before the pin releases exactly when viewportHeight ≥
+     figureHeight + stickyTop, independent of how tall the column happens to
+     be. The square desktop frame below is what buys that margin: it keeps the
+     figure near 650 px, so this holds down to roughly a 750 px viewport. */
   const { scrollYProgress } = useScroll({
     target: driverRef,
-    offset: ['start center', 'end end'],
+    offset: ['start start', 'end end'],
   });
 
   // Scroll drives the assembly through a ref, and the readouts are written
   // straight to the DOM. React never re-renders during the scroll.
+  //
+  // The 3D scene reads `progress.current` from its own animation loop, so it
+  // gets damping for free. The 2D plate has no loop by design — costing nothing
+  // when the page is still is the entire point of it on a phone — so it is
+  // pushed here instead. Both consume the SAME value, which is what keeps the
+  // scrub rail and the phase caption honest on either visual.
   useMotionValueEvent(scrollYProgress, 'change', (v) => {
     const p = Math.min(1, Math.max(0, v));
     progress.current = p;
+    plateRef.current?.apply(p);
 
     if (railRef.current) railRef.current.style.transform = `scaleY(${p})`;
 
@@ -106,6 +125,21 @@ export function ImplantStage({ label, driverRef, scaleNote, phases }: ImplantSta
       }
     }
   });
+
+  /* Sync to the CURRENT scroll position once the visual has mounted.
+     `useMotionValueEvent` only fires on change, so on a reload or a deep link
+     into the middle of the section nothing would call `apply` until the user
+     scrolled — the figure and the scrub rail would both sit at zero while the
+     page was visibly halfway through the section. The plate's own effect
+     cannot do this either: it runs before this one (child effects fire first),
+     and it has no access to the scroll value. Depends on `use3d` so it re-runs
+     at the moment the plate actually mounts. */
+  useEffect(() => {
+    const p = Math.min(1, Math.max(0, scrollYProgress.get()));
+    progress.current = p;
+    plateRef.current?.apply(p);
+    if (railRef.current) railRef.current.style.transform = `scaleY(${p})`;
+  }, [use3d, scrollYProgress]);
 
   return (
     <figure className="m-0">
@@ -129,19 +163,23 @@ export function ImplantStage({ label, driverRef, scaleNote, phases }: ImplantSta
           className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-ink/[0.055] to-transparent"
         />
 
+        {/* The plate's own drawing is 336×456 (0.74), so the mobile box is
+            kept near that ratio — a 4/3 box would fit the height and strand
+            ~40% of the frame as empty margin either side.
+
+            Desktop is square, not the previous 5/6. At 5/6 the figure came out
+            812 px tall, taller than the room a 950 px viewport leaves once the
+            sticky offset is taken out, so the pin released mid-sequence. See
+            the note on the scroll offset above. */}
         <div
           ref={hostRef}
-          className="relative aspect-[4/5] w-full sm:aspect-[4/3] lg:aspect-[5/6]"
+          className="relative aspect-[4/5] w-full sm:aspect-[4/3] lg:aspect-square"
         >
           {use3d ? (
             <ImplantScene progress={progress} reduced={!!reduce} />
           ) : (
-            // The SVG is authored at max-w-[300px], which is right inline but
-            // leaves it stranded in the middle of a ~750px vitrine. Let it take
-            // the case's height instead so the fallback fills the same frame
-            // the 3D scene does.
-            <div className="flex h-full w-full items-center justify-center p-8 [&>svg]:h-full [&>svg]:w-auto [&>svg]:max-w-none">
-              <ImplantDiagram label={label} />
+            <div className="h-full w-full p-5 sm:p-7">
+              <ImplantPlate label={label} handleRef={plateRef} reduced={!!reduce} />
             </div>
           )}
         </div>
