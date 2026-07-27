@@ -483,6 +483,10 @@ export const formCommon: Record<Language, {
 export const appointmentBooking: Record<Language, {
   standfirst: string;
   requiredMark: string;
+  /** sr-only prefix on each fieldset legend: "Paso {{step}} de {{total}}". */
+  stepOf: string;
+  /** sr-only suffix on a fieldset legend once every field in it validates. */
+  stepComplete: string;
   groupWho: string;
   groupWhoHint: string;
   groupWhat: string;
@@ -492,15 +496,28 @@ export const appointmentBooking: Record<Language, {
   phoneHelp: string;
   emailHelp: string;
   reasonHelp: string;
+  /** sr-only. States the 500-character cap once, when the textarea is focused,
+   *  instead of forcing a live counter to announce on every keystroke. */
+  reasonLimitNote: string;
+  /** Visual counter, shown only in the last fifth of the allowance. */
+  reasonRemaining: string;
+  reasonLimitReached: string;
   preferredDateLabel: string;
   preferredDateHelp: string;
   preferredDatePicked: string;
   preferredDateFix: string;
+  /** Empty state of the calendar trigger (pointer devices only). */
+  preferredDatePlaceholder: string;
+  /** Explains the greyed-out cells inside the calendar popover. */
+  preferredDateWeekendNote: string;
   timePreferenceLabel: string;
   timePreferenceHelp: string;
   timeOptions: { value: 'morning' | 'afternoon' | 'any'; label: string; hint: string }[];
   liveSubmitting: string;
   errorSummary: string;
+  /** Shown directly above the submit button — the commitment moment. `key`
+   *  selects the icon in appointment-form.tsx, so the set is closed. */
+  submitReassurance: { key: 'call' | 'reply' | 'cost'; text: string }[];
   asideStepsTitle: string;
   asideHoursNote: string;
   asideCallTitle: string;
@@ -519,6 +536,8 @@ export const appointmentBooking: Record<Language, {
     standfirst:
       "Rellene el formulario y le llamamos para acordar el día y la hora definitivos. La primera visita es una evaluación: revisamos su caso, le explicamos las opciones y le damos el presupuesto antes de empezar nada.",
     requiredMark: "obligatorio",
+    stepOf: "Paso {{step}} de {{total}}",
+    stepComplete: "Completado",
     groupWho: "Quién es usted",
     groupWhoHint: "Lo justo para poder llamarle y confirmar la cita.",
     groupWhat: "Qué necesita",
@@ -528,10 +547,15 @@ export const appointmentBooking: Record<Language, {
     phoneHelp: "Es por donde le llamamos para confirmar.",
     emailHelp: "Le enviamos el resguardo de la solicitud.",
     reasonHelp: "Molestia, pieza afectada, desde cuándo…",
+    reasonLimitNote: "Puede escribir hasta 500 caracteres.",
+    reasonRemaining: "Quedan {{count}} caracteres",
+    reasonLimitReached: "Ha llegado al límite de 500 caracteres.",
     preferredDateLabel: "Día que prefiere",
     preferredDateHelp: "Atendemos de lunes a viernes, de 9:00 a 18:00.",
     preferredDatePicked: "Ha elegido:",
     preferredDateFix: "Elegir el {{date}}",
+    preferredDatePlaceholder: "Elija un día",
+    preferredDateWeekendNote: "Los sábados y domingos salen desactivados: la clínica no atiende esos días.",
     timePreferenceLabel: "Franja horaria",
     timePreferenceHelp: "Elija el momento del día que mejor le venga.",
     timeOptions: [
@@ -542,6 +566,11 @@ export const appointmentBooking: Record<Language, {
     liveSubmitting: "Enviando su solicitud…",
     errorSummary:
       "Faltan {{count}} campo(s) por corregir. Los hemos señalado más abajo y hemos llevado el cursor al primero.",
+    submitReassurance: [
+      { key: 'call', text: "Le confirmamos la cita por teléfono: al enviar no queda reservada todavía." },
+      { key: 'reply', text: "Le respondemos en menos de 24 horas laborables." },
+      { key: 'cost', text: "Enviar la solicitud no tiene ningún costo ni compromiso." },
+    ],
     asideStepsTitle: "Qué pasa después",
     asideHoursNote: "Fuera de ese horario puede enviar el formulario igualmente: le contestamos al día siguiente laborable.",
     asideCallTitle: "¿Prefiere llamar?",
@@ -565,6 +594,8 @@ export const appointmentBooking: Record<Language, {
     standfirst:
       "Fill in the form and we will call you to agree the final day and time. The first visit is an assessment: we review your case, explain the options, and give you a quote before anything begins.",
     requiredMark: "required",
+    stepOf: "Step {{step}} of {{total}}",
+    stepComplete: "Completed",
     groupWho: "Who you are",
     groupWhoHint: "Just enough for us to call you back and confirm.",
     groupWhat: "What you need",
@@ -574,10 +605,15 @@ export const appointmentBooking: Record<Language, {
     phoneHelp: "This is the number we call to confirm.",
     emailHelp: "We send you a copy of the request.",
     reasonHelp: "Discomfort, which tooth, how long it has been going on…",
+    reasonLimitNote: "You can write up to 500 characters.",
+    reasonRemaining: "{{count}} characters left",
+    reasonLimitReached: "You have reached the 500-character limit.",
     preferredDateLabel: "Preferred day",
     preferredDateHelp: "We are open Monday to Friday, 9:00 to 18:00.",
     preferredDatePicked: "You chose:",
     preferredDateFix: "Use {{date}} instead",
+    preferredDatePlaceholder: "Choose a day",
+    preferredDateWeekendNote: "Saturdays and Sundays are greyed out — the clinic is closed on those days.",
     timePreferenceLabel: "Time of day",
     timePreferenceHelp: "Pick whichever part of the day suits you best.",
     timeOptions: [
@@ -588,6 +624,11 @@ export const appointmentBooking: Record<Language, {
     liveSubmitting: "Sending your request…",
     errorSummary:
       "{{count}} field(s) still need fixing. They are marked below and we have moved the cursor to the first one.",
+    submitReassurance: [
+      { key: 'call', text: "We confirm the appointment by phone — sending this does not reserve a slot yet." },
+      { key: 'reply', text: "We reply within 24 working hours." },
+      { key: 'cost', text: "Sending the request costs nothing and commits you to nothing." },
+    ],
     asideStepsTitle: "What happens next",
     asideHoursNote: "Outside those hours you can still send the form — we reply on the next working day.",
     asideCallTitle: "Prefer to call?",
@@ -1152,9 +1193,24 @@ export const homeContent: Record<
 > = {
   es: {
     hero: {
-      title: 'Volver a masticar sin pensarlo.',
+      // Noun phrase, so no terminal period — the house rule elsewhere in this
+      // layer (`Cuando falta una pieza, cambia todo lo demás.` takes one;
+      // `Agende su consulta` does not). The claim is not new: it is
+      // `doctor.body[2]` — "el mismo profesional le evalúa, le planifica el
+      // tratamiento y se lo realiza, de principio a fin" — promoted to the
+      // position where it does the most work. Nothing here is promissory: it
+      // describes who staffs the appointment, not what happens to your bone.
+      title: 'El mismo dentista, de principio a fin',
+      // Sentence one restores the subject matter the headline gives up, and
+      // matches the trust strip. Sentence two unpacks the headline in plain
+      // terms instead of repeating it. `reconstruyendo dentaduras` was dropped
+      // deliberately: in Dominican usage *dentadura* reads first as the
+      // appliance, so the old line could be parsed as "rebuilding dentures",
+      // which is not what the practice does — and the English said something
+      // different again ("rebuilding teeth"). The place is not repeated here;
+      // `locationNote` already prints it directly above.
       standfirst:
-        'El Dr. Francis Valerio lleva más de treinta años reconstruyendo dentaduras con prótesis, implantes y ortodoncia en Plaza Las Ramblas, Santiago de los Caballeros.',
+        'Prótesis, implantes y ortodoncia con el Dr. Francis Valerio. Quien le atiende en la primera visita es quien le hace el tratamiento.',
       ctaPrimary: 'Agendar una cita',
       ctaSecondary: 'Cómo funciona un implante',
       imageAlt:
@@ -1227,9 +1283,12 @@ export const homeContent: Record<
   },
   en: {
     hero: {
-      title: 'Chew without thinking about it again.',
+      // Written, not translated. The old line was ungrammatical: "again"
+      // attached to *thinking about it* rather than to *chew*, so it parsed as
+      // "stop thinking about it a second time".
+      title: 'The same dentist, start to finish',
       standfirst:
-        'Dr. Francis Valerio has spent over thirty years rebuilding teeth with prosthetics, implants and orthodontics at Plaza Las Ramblas, Santiago de los Caballeros.',
+        'Prosthetics, implants and orthodontics with Dr. Francis Valerio. The person who sees you at the first visit is the one who does the work.',
       ctaPrimary: 'Book an appointment',
       ctaSecondary: 'How an implant works',
       imageAlt:
