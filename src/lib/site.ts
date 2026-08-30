@@ -46,3 +46,57 @@ export function absoluteUrl(path = ''): string {
   if (!path) return SITE_URL;
   return `${SITE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 }
+
+/**
+ * The locales the public site is published in.
+ *
+ * `es` first, and that order is load-bearing: it is the x-default, and Spanish
+ * is the language the practice actually sells in.
+ */
+export const LOCALES = ['es', 'en'] as const;
+export type Locale = (typeof LOCALES)[number];
+
+/** hreflang tag for each locale, as Google expects to see it. */
+const HREFLANG: Record<Locale, string> = {
+  es: 'es-DO',
+  en: 'en-US',
+};
+
+/**
+ * Prefixes a locale-agnostic path with its locale.
+ *
+ * `path` is the part AFTER the locale: `''` for the homepage,
+ * `'implantes-dentales/precio'` or `'/implantes-dentales/precio'` for a page.
+ * Both leading-slash forms are accepted because call sites disagree and a
+ * doubled slash in a canonical URL is a duplicate-content bug, not a typo.
+ */
+export function localePath(lang: Locale, path = ''): string {
+  const clean = path.replace(/^\/+/, '').replace(/\/+$/, '');
+  return clean ? `/${lang}/${clean}` : `/${lang}`;
+}
+
+/**
+ * The hreflang map for one page, for `Metadata.alternates.languages`.
+ *
+ * Every page in the site needs `es-DO`, `en-US` and `x-default` pointing at the
+ * SAME document in each language, and each page was previously writing that
+ * object out by hand — which is how `/agendar-cita` and `/privacidad` ended up
+ * correct while anything added later was one copy-paste away from pointing at
+ * the homepage. Built here once, from one path.
+ *
+ * Values are site-relative; Next resolves them against `metadataBase`.
+ */
+export function hreflangAlternates(path = ''): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const lang of LOCALES) map[HREFLANG[lang]] = localePath(lang, path);
+  map['x-default'] = localePath('es', path);
+  return map;
+}
+
+/** The same map with absolute URLs, which is what `sitemap.xml` requires. */
+export function hreflangAlternatesAbsolute(path = ''): Record<string, string> {
+  const relative = hreflangAlternates(path);
+  return Object.fromEntries(
+    Object.entries(relative).map(([tag, value]) => [tag, absoluteUrl(value)]),
+  );
+}

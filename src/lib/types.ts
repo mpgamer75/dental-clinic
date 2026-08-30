@@ -1,3 +1,20 @@
+/* ============================================================================
+   APPLICATION AND CONTENT TYPES
+   ----------------------------------------------------------------------------
+   What the components and `src/lib/data.ts` speak: languages, navigation,
+   sections, form payloads and the message contracts the forms and the server
+   actions share.
+
+   NOT database row shapes. This file used to declare a `Database` interface as
+   well, a third of the way out of date, alongside snake_case `*Supabase` row
+   mirrors — while `src/lib/types_db.ts` and the generated Supabase types
+   declared the same tables again, differently. Three descriptions of one
+   schema, none of them checked against it, is how a `status` column ended up
+   typed as a closed union that Postgres was not enforcing. Row shapes are now
+   inferred from `src/lib/schema.ts`, which is generated from the same table
+   definitions the migrations apply, and nothing here should restate one.
+   ========================================================================== */
+
 import type { LucideIcon } from 'lucide-react';
 
 export type Language = 'es' | 'en';
@@ -76,38 +93,6 @@ export interface ContactFormData {
   status?: 'unread' | 'read' | 'archived';
 }
 
-// Supabase appointment structure (matches DB columns)
-export interface AppointmentSupabase {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  service_type: string;
-  reason: string;
-  is_urgent: boolean;
-  submitted_at: string; 
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-}
-
-export interface ContactMessageSupabase {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  message: string;
-  submitted_at: string;
-  status: 'unread' | 'read' | 'archived';
-}
-
-export interface TestimonialSupabase {
-  id: string;
-  name: string;
-  quote: string;
-  location: string | null;
-  submitted_at: string;
-  status: 'pending_approval' | 'approved' | 'rejected';
-}
-
 /** Time-of-day the patient would prefer. `any` = no preference. */
 export type AppointmentTimePreference = 'morning' | 'afternoon' | 'any';
 
@@ -128,7 +113,7 @@ export type AppointmentTimePreference = 'morning' | 'afternoon' | 'any';
  *
  * Rule: this is the CAMEL-CASE form shape only. The snake_case mapping to the
  * database columns happens in one place — `submitAppointmentForm` — and nowhere
- * else. Row shapes live in `AppointmentSupabase` / `types_db.ts`.
+ * else. Row shapes live in `src/lib/schema.ts`.
  *
  * `phone` is required here because the clinic calls back to confirm; a request
  * with no callback number is not actionable. The server schema enforces it too,
@@ -472,79 +457,3 @@ export interface DiplomaData {
   es: Diploma[];
   en: Diploma[];
 }
-
-export interface Database {
-  public: {
-    Tables: {
-      appointments: {
-        Row: AppointmentSupabase;
-        Insert: {
-          id?: string; 
-          name: string;
-          email: string;
-          phone?: string | null;
-          service_type: string;
-          reason: string;
-          is_urgent?: boolean; 
-          submitted_at?: string; 
-          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'; 
-        };
-        Update: { 
-          id?: string;
-          name?: string;
-          email?: string;
-          phone?: string | null;
-          service_type?: string;
-          reason?: string;
-          is_urgent?: boolean;
-          submitted_at?: string;
-          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-        };
-      };
-      contact_messages: {
-        Row: ContactMessageSupabase;
-        Insert: {
-          id?: string;
-          name: string;
-          email: string;
-          phone?: string | null;
-          message: string;
-          submitted_at?: string;
-          status?: 'unread' | 'read' | 'archived';
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          email?: string;
-          phone?: string | null;
-          message?: string;
-          submitted_at?: string;
-          status?: 'unread' | 'read' | 'archived';
-        };
-      };
-      testimonials: {
-        Row: TestimonialSupabase;
-        Insert: {
-          id?: string;
-          name: string;
-          quote: string;
-          location?: string | null;
-          submitted_at?: string;
-          status?: 'pending_approval' | 'approved' | 'rejected'; 
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          quote?: string;
-          location?: string | null;
-          submitted_at?: string;
-          status?: 'pending_approval' | 'approved' | 'rejected';
-        };
-      };
-    };
-    Views: Record<string, unknown>;
-    Functions: Record<string, unknown>;
-  };
-}
-
-    

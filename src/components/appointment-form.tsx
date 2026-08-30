@@ -209,6 +209,11 @@ function createAppointmentSchema(m: ZodMessages) {
       .trim()
       .min(1, { message: m.phoneInvalid })
       .refine((value) => {
+        // 40 is the column's own CHECK. Seven digits padded with thirty spaces
+        // satisfies both the digit count and the character class, so without
+        // this the value reaches Postgres and comes back as a generic failure
+        // on a number that looked perfectly fine on screen.
+        if (value.length > 40) return false;
         const digits = value.replace(/[^0-9]/g, '');
         return digits.length >= 7 && digits.length <= 15 && /^[0-9+\s()-]*$/.test(value);
       }, { message: m.phoneInvalid }),
@@ -232,9 +237,8 @@ function createAppointmentSchema(m: ZodMessages) {
         const date = parseCalendarDate(value);
         return date === null || date.getTime() - today().getTime() <= MAX_LEAD_DAYS * DAY_MS;
       }, { message: m.preferredDateTooFar }),
-    timePreference: z.enum(TIME_PREFERENCES, {
-      required_error: m.timePreferenceRequired,
-      invalid_type_error: m.timePreferenceRequired,
+    timePreference: z.enum([...TIME_PREFERENCES], {
+      error: m.timePreferenceRequired,
     }),
     reason: z
       .string()
@@ -322,11 +326,11 @@ const REASSURANCE_ICON: Record<'call' | 'reply' | 'cost', LucideIcon> = {
 const invalidClass =
   'aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive';
 const fieldClass = cn(
-  'h-12 text-base transition-colors duration-fast ring-offset-card focus-visible:border-terracotta',
+  'h-12 text-base transition-colors duration-fast ring-offset-card focus-visible:border-primary',
   invalidClass,
 );
 const textareaClass = cn(
-  'min-h-[9rem] resize-y text-base leading-relaxed transition-colors duration-fast ring-offset-card focus-visible:border-terracotta',
+  'min-h-[9rem] resize-y text-base leading-relaxed transition-colors duration-fast ring-offset-card focus-visible:border-primary',
   invalidClass,
 );
 const labelClass = 'text-base font-medium text-ink';
@@ -338,7 +342,7 @@ function RequiredMark({ srLabel }: { srLabel: string }) {
   // group already made this choice — this makes the text fields agree.
   void srLabel;
   return (
-    <span aria-hidden="true" className="text-terracotta">
+    <span aria-hidden="true" className="text-primary">
       {' *'}
     </span>
   );
@@ -760,7 +764,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
               convention the patient has already had to work out for themselves
               across eight controls. */}
           <p className="text-small text-ink-soft">
-            <span aria-hidden="true" className="font-medium text-terracotta">
+            <span aria-hidden="true" className="font-medium text-primary">
               *
             </span>{' '}
             {c.requiredFields}
@@ -1065,8 +1069,8 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                                 ? [{ before: bounds.minDate }, { after: bounds.maxDate }]
                                 : []),
                             ]}
-                            fromDate={bounds?.minDate}
-                            toDate={bounds?.maxDate}
+                            startMonth={bounds?.minDate}
+                            endMonth={bounds?.maxDate}
                             locale={dayPickerLocale}
                             // Monday-first in both languages: the clinic's five
                             // open days then sit together and the two closed ones
@@ -1074,7 +1078,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                             // legible at a glance. en-US would otherwise start on
                             // Sunday and split the weekend across both edges.
                             weekStartsOn={1}
-                            initialFocus
+                            autoFocus
                           />
                           <p className="border-t border-line px-4 py-3 text-small leading-relaxed text-ink-soft">
                             {t.preferredDateWeekendNote}
@@ -1198,7 +1202,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                                 'peer-focus:ring-2 peer-focus:ring-ring peer-focus:ring-offset-2 peer-focus:ring-offset-card',
                                 'peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card',
                                 selected
-                                  ? 'border-terracotta bg-terracotta-soft shadow-e1'
+                                  ? 'border-primary bg-primary-soft shadow-e1'
                                   : 'border-input bg-background hover:border-line-strong',
                                 // Nothing is selected when the group is invalid,
                                 // so the marking has to land on all three.
@@ -1340,7 +1344,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                 // patient has — the "Enviando…" label — at under half contrast in
                 // both themes. Hold full opacity and shift to the hover shade so
                 // the state still reads as a change.
-                isSubmitting && 'disabled:bg-terracotta-hover disabled:opacity-100',
+                isSubmitting && 'disabled:bg-primary-hover disabled:opacity-100',
               )}
               disabled={isSubmitting}
               aria-busy={isSubmitting || undefined}

@@ -16,7 +16,7 @@ import type { NavEntry, NavLink } from '@/components/layout/nav-model';
 interface MobileNavOverlayProps {
   lang: Language;
   /** Owned by the navbar: Escape / outside-click / focus-return read it too. */
-  panelRef: RefObject<HTMLDivElement>;
+  panelRef: RefObject<HTMLDivElement | null>;
   primary: NavEntry[];
   secondary: NavLink[];
   activeKey: string | null;
@@ -114,7 +114,7 @@ export function MobileNavOverlay({
             type="button"
             onClick={onClose}
             aria-label={t.closeMenu}
-            className={`-mr-2.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors duration-fast hover:text-terracotta ${focusRing}`}
+            className={`-mr-2.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors duration-fast hover:text-primary ${focusRing}`}
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -141,11 +141,11 @@ export function MobileNavOverlay({
                   >
                     <span
                       aria-hidden="true"
-                      className="tabular text-eyebrow text-ink-soft transition-colors duration-fast group-hover:text-brass-ink group-data-[active=true]:text-terracotta"
+                      className="tabular text-eyebrow text-ink-soft transition-colors duration-fast group-hover:text-brass-ink group-data-[active=true]:text-primary"
                     >
                       {String(index + 1).padStart(2, '0')}
                     </span>
-                    <span className="font-heading text-[clamp(1.8rem,7.5vw,2.6rem)] font-medium leading-[1.18] tracking-[-0.015em] text-ink transition-colors duration-fast group-hover:text-terracotta group-data-[active=true]:text-terracotta">
+                    <span className="font-heading text-[clamp(1.8rem,7.5vw,2.6rem)] font-medium leading-[1.18] tracking-[-0.015em] text-ink transition-colors duration-fast group-hover:text-primary group-data-[active=true]:text-primary">
                       {item.label}
                     </span>
                   </Link>
@@ -160,7 +160,7 @@ export function MobileNavOverlay({
           <Link
             href={appointmentsHref}
             onClick={onClose}
-            className={`inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-terracotta text-small uppercase tracking-[0.085em] text-primary-foreground shadow-e1 transition-colors duration-fast ease-out-quart hover:bg-terracotta-hover ${focusRing}`}
+            className={`inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary text-small uppercase tracking-[0.085em] text-primary-foreground shadow-e1 transition-colors duration-fast ease-out-quart hover:bg-primary-hover ${focusRing}`}
           >
             {ui.appointments}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -181,7 +181,7 @@ export function MobileNavOverlay({
                 <Link
                   href={item.href}
                   onClick={onClose}
-                  className={`inline-flex h-11 items-center text-small text-ink-soft underline-offset-4 transition-colors duration-fast hover:text-terracotta hover:underline ${focusRing}`}
+                  className={`inline-flex h-11 items-center text-small text-ink-soft underline-offset-4 transition-colors duration-fast hover:text-primary hover:underline ${focusRing}`}
                 >
                   {item.label}
                 </Link>
@@ -200,7 +200,7 @@ export function MobileNavOverlay({
             <a
               href={telHref}
               aria-label={t.callAria.replace('{{phone}}', phone)}
-              className={`mt-1.5 inline-flex min-h-11 items-center gap-2.5 py-1 font-heading text-h4 leading-[1.18] text-ink transition-colors duration-fast hover:text-terracotta ${focusRing}`}
+              className={`mt-1.5 inline-flex min-h-11 items-center gap-2.5 py-1 font-heading text-h4 leading-[1.18] text-ink transition-colors duration-fast hover:text-primary ${focusRing}`}
             >
               <Phone className="h-4 w-4 shrink-0 text-brass-ink" aria-hidden="true" />
               <span className="tabular">{phone}</span>
@@ -213,7 +213,7 @@ export function MobileNavOverlay({
               href={mapLink}
               target="_blank"
               rel="noopener noreferrer"
-              className={`mt-1.5 flex min-h-11 items-start gap-2.5 py-1.5 text-small leading-relaxed text-ink-soft transition-colors duration-fast hover:text-terracotta ${focusRing}`}
+              className={`mt-1.5 flex min-h-11 items-start gap-2.5 py-1.5 text-small leading-relaxed text-ink-soft transition-colors duration-fast hover:text-primary ${focusRing}`}
             >
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brass-ink" aria-hidden="true" />
               <span>
@@ -241,7 +241,7 @@ export function MobileNavOverlay({
                   onClose();
                 }}
                 aria-label={t.switchTo}
-                className={`inline-flex h-11 items-center gap-2 rounded-lg border border-line-strong px-4 text-small text-ink-soft transition-colors duration-fast hover:border-terracotta/50 hover:text-terracotta ${focusRing}`}
+                className={`inline-flex h-11 items-center gap-2 rounded-lg border border-line-strong px-4 text-small text-ink-soft transition-colors duration-fast hover:border-primary/50 hover:text-primary ${focusRing}`}
               >
                 <Languages className="h-4 w-4" aria-hidden="true" />
                 {t.switchToShort}

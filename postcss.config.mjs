@@ -1,12 +1,10 @@
 /** @type {import('postcss-load-config').Config} */
 const config = {
   plugins: {
-    tailwindcss: {},
-    // Autoprefixer was absent, so anything needing a vendor prefix shipped
-    // unprefixed. Tailwind does NOT add prefixes itself — it assumes
-    // Autoprefixer is in the chain, which is why it is in the default
-    // `create-next-app` template.
-    autoprefixer: {},
+    // Tailwind 4 ships its PostCSS integration as a separate package, and does
+    // its own vendor prefixing through Lightning CSS — so Autoprefixer, which
+    // v3 required in the chain, is no longer part of it.
+    '@tailwindcss/postcss': {},
   },
 };
 

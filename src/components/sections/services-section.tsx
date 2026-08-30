@@ -93,7 +93,7 @@ export function ServicesSection({
                         // moving anything: the rendered control was 86×21,
                         // under the 24px WCAG 2.2 AA minimum, on a site whose
                         // patients skew older.
-                        className="-my-3 mt-3 inline-flex items-center gap-1.5 rounded py-3 text-small font-medium text-terracotta underline-offset-4 transition-colors duration-fast hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="-my-3 mt-3 inline-flex items-center gap-1.5 rounded py-3 text-small font-medium text-primary underline-offset-4 transition-colors duration-fast hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       >
                         {isOpen ? ui.readLess : ui.readMore}
                         <ChevronDown

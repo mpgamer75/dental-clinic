@@ -1,166 +1,309 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-// import { Button } from '@/components/ui/button';
-import { Quote, MapPin, User, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { Check, Loader2, MapPin, MoreVertical, Trash2, X } from 'lucide-react';
 
-interface Testimonial {
-  id: string;
-  name: string;
-  quote: string;
-  location: string | null;
-  submitted_at: string;
-  status: 'pending_approval' | 'approved' | 'rejected';
-}
+import { deleteTestimonial, reviewTestimonial } from '@/app/(admin)/admin/_actions/testimonials';
+import type { TestimonialRow } from '@/app/(admin)/admin/_lib/queries';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
-interface Props {
-  testimonials: Testimonial[];
-}
+import { ConfirmDialog } from './confirm-dialog';
+import { ModerationScore, StatusBadge, TESTIMONIAL_STATUS_META } from './status';
+import { useRowMutation } from './use-row-mutation';
 
-export function TestimonialsTable({ testimonials: initialTestimonials }: Props) {
-  const [testimonials] = useState(initialTestimonials);
+/* ============================================================================
+   THE MODERATION QUEUE
+   ----------------------------------------------------------------------------
+   Approving here is the only way a testimonial reaches the public homepage.
+   There is no automatic path and there must not be one: the rule this replaces
+   published anything a hardcoded blocklist scored 85 or better, under a
+   patient's name, on a medical practice's front page.
 
-  const getStatusBadge = (status: Testimonial['status']) => {
-    const colors = {
-      pending_approval: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
-      approved: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
-      rejected: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
-    };
+   So the two decisions are the row's primary controls rather than entries in a
+   menu — a queue whose main action is three taps deep is a queue that does not
+   get worked — and the quote is shown in full in the dialog before either is
+   pressed.
 
-    const labels = {
-      pending_approval: 'Pendiente',
-      approved: 'Aprobado',
-      rejected: 'Rechazado',
-    };
+   `moderation_score` is displayed because it is useful for triage and captioned
+   as what it is: an ordering hint. It grants nothing. A reviewer who sees 96
+   and a reviewer who sees 41 are both being asked the same question.
+   ========================================================================== */
 
-    const icons = {
-      pending_approval: AlertCircle,
-      approved: CheckCircle2,
-      rejected: XCircle,
-    };
+export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
+  const { pendingId, run } = useRowMutation();
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-    const Icon = icons[status];
+  const detail = rows.find((row) => row.id === detailId) ?? null;
+  const pendingDelete = rows.find((row) => row.id === deleteId) ?? null;
 
-    return (
-      <Badge className={`${colors[status]} flex items-center gap-1`}>
-        <Icon className="h-3 w-3" />
-        {labels[status]}
-      </Badge>
-    );
-  };
-
-  const stats = {
-    total: testimonials.length,
-    pending: testimonials.filter(t => t.status === 'pending_approval').length,
-    approved: testimonials.filter(t => t.status === 'approved').length,
-    rejected: testimonials.filter(t => t.status === 'rejected').length,
-  };
+  const decide = (id: string, decision: 'approved' | 'rejected') =>
+    run(id, reviewTestimonial, { decision });
 
   return (
-    <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total', value: stats.total, icon: Quote, color: 'text-blue-500' },
-          { label: 'Pendientes', value: stats.pending, icon: AlertCircle, color: 'text-yellow-500' },
-          { label: 'Aprobados', value: stats.approved, icon: CheckCircle2, color: 'text-green-500' },
-          { label: 'Rechazados', value: stats.rejected, icon: XCircle, color: 'text-red-500' },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card className="border-2 hover:shadow-lg transition-all duration-300 hover:scale-105">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                    <p className="text-3xl font-bold mt-2">{stat.value}</p>
-                  </div>
-                  <stat.icon className={`h-10 w-10 ${stat.color} opacity-50`} />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+    <>
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+        <table className="w-full border-collapse text-left">
+          <caption className="sr-only">
+            Testimonios enviados por pacientes. Los que peor puntuación de moderación han obtenido
+            aparecen primero.
+          </caption>
+          <thead>
+            <tr className="border-b border-line bg-canvas-sunk">
+              <th scope="col" className="px-4 py-3 text-small font-semibold text-ink-soft">
+                Autor
+              </th>
+              <th scope="col" className="hidden px-4 py-3 text-small font-semibold text-ink-soft md:table-cell">
+                Testimonio
+              </th>
+              <th scope="col" className="hidden px-4 py-3 text-small font-semibold text-ink-soft lg:table-cell">
+                Moderación
+              </th>
+              <th scope="col" className="px-4 py-3 text-small font-semibold text-ink-soft">
+                Estado
+              </th>
+              <th scope="col" className="px-4 py-3 text-right text-small font-semibold text-ink-soft">
+                <span className="sr-only">Acciones</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {rows.map((row) => {
+              const busy = pendingId === row.id;
+              const awaiting = row.status === 'pending_approval';
+
+              return (
+                <tr
+                  key={row.id}
+                  className={cn(
+                    'align-top transition-colors duration-fast ease-out-quart hover:bg-canvas-sunk/60',
+                    busy && 'opacity-60',
+                  )}
+                >
+                  <th scope="row" className="max-w-0 px-4 py-3 font-normal">
+                    <span className="block truncate font-medium text-ink">{row.name}</span>
+                    {row.location && (
+                      <span className="flex items-center gap-1 truncate text-small text-ink-soft">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        {row.location}
+                      </span>
+                    )}
+                    <time
+                      dateTime={row.submittedAtIso}
+                      title={row.submittedAtLabel}
+                      className="mt-1 block text-small text-ink-faint"
+                    >
+                      {row.waitedLabel}
+                    </time>
+                    <span className="mt-2 block line-clamp-2 text-small text-ink-soft md:hidden">
+                      {row.quote}
+                    </span>
+                    <span className="mt-2 block lg:hidden">
+                      <ModerationScore score={row.moderationScore} />
+                    </span>
+                  </th>
+
+                  <td className="hidden max-w-0 px-4 py-3 md:table-cell">
+                    <p className="line-clamp-3 text-small italic text-ink-soft">“{row.quote}”</p>
+                  </td>
+
+                  <td className="hidden px-4 py-3 lg:table-cell">
+                    <ModerationScore score={row.moderationScore} />
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <StatusBadge meta={TESTIMONIAL_STATUS_META[row.status]} />
+                    {row.reviewedAtLabel && (
+                      <span className="mt-1 block text-small text-ink-faint">
+                        {row.reviewedBy ?? 'Revisado'}
+                      </span>
+                    )}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="px-2.5"
+                        onClick={() => setDetailId(row.id)}
+                      >
+                        Leer
+                        <span className="sr-only"> el testimonio completo de {row.name}</span>
+                      </Button>
+
+                      {awaiting && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="hidden px-3 sm:inline-flex"
+                          disabled={busy}
+                          onClick={() => decide(row.id, 'approved')}
+                        >
+                          <Check className="h-4 w-4" aria-hidden="true" />
+                          Aprobar
+                          <span className="sr-only"> el testimonio de {row.name}</span>
+                        </Button>
+                      )}
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            disabled={busy}
+                            aria-label={`Acciones para el testimonio de ${row.name}`}
+                          >
+                            {busy ? (
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <MoreVertical className="h-4 w-4" aria-hidden="true" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-64">
+                          {row.status !== 'approved' && (
+                            <DropdownMenuItem onSelect={() => decide(row.id, 'approved')}>
+                              <Check className="mr-2 h-4 w-4" aria-hidden="true" />
+                              Aprobar y publicar en el sitio
+                            </DropdownMenuItem>
+                          )}
+                          {row.status !== 'rejected' && (
+                            <DropdownMenuItem onSelect={() => decide(row.id, 'rejected')}>
+                              <X className="mr-2 h-4 w-4" aria-hidden="true" />
+                              {row.status === 'approved'
+                                ? 'Retirar del sitio y rechazar'
+                                : 'Rechazar'}
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setDeleteId(row.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                            Eliminar el testimonio
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* Testimonials List */}
-      <Card className="border-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Quote className="h-5 w-5" />
-            Últimos Testimonios ({testimonials.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AnimatePresence mode="popLayout">
-            {testimonials.length === 0 ? (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center text-muted-foreground py-8"
-              >
-                No hay testimonios
-              </motion.p>
-            ) : (
-              <div className="space-y-3">
-                {testimonials.slice(0, 10).map((testimonial, index) => (
-                  <motion.div
-                    key={testimonial.id}
-                    layout
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={`p-4 rounded-lg border-2 hover:border-primary/50 transition-all duration-300 ${
-                      testimonial.status === 'pending_approval'
-                        ? 'bg-yellow-50/30 dark:bg-yellow-950/10 border-yellow-500/30'
-                        : 'border-border'
-                    }`}
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold">{testimonial.name}</span>
-                          </div>
-                          {testimonial.location && (
-                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <MapPin className="h-3.5 w-3.5" />
-                              {testimonial.location}
-                            </div>
-                          )}
-                        </div>
-                        {getStatusBadge(testimonial.status)}
-                      </div>
+      <Dialog open={detail !== null} onOpenChange={(open) => !open && setDetailId(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto border-line bg-surface sm:max-w-lg">
+          {detail && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-heading text-h4 text-ink">{detail.name}</DialogTitle>
+                <DialogDescription className="text-ink-soft">
+                  {detail.location ? `${detail.location} · ` : ''}
+                  Enviado el {detail.submittedAtLabel}
+                </DialogDescription>
+              </DialogHeader>
 
-                      <div className="pl-6 border-l-4 border-primary/30">
-                        <p className="text-sm italic text-muted-foreground">
-                          &ldquo;{testimonial.quote}&rdquo;
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(testimonial.submitted_at), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge meta={TESTIMONIAL_STATUS_META[detail.status]} />
+                <ModerationScore score={detail.moderationScore} />
               </div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-    </div>
+
+              {/* The public site sets a quote as a rule above and below it in
+                  the heading face (see sections/testimonials-section.tsx). The
+                  reviewer should be reading it in something close to the shape
+                  it will take once published, not in a styled box that exists
+                  only here. */}
+              <figure className="border-y border-line py-5">
+                <blockquote className="font-heading text-[1.15rem] font-normal italic leading-relaxed text-ink">
+                  <p>&ldquo;{detail.quote}&rdquo;</p>
+                </blockquote>
+              </figure>
+
+              {detail.reviewedAtLabel && (
+                <p className="text-small text-ink-faint">
+                  Revisado el {detail.reviewedAtLabel}
+                  {detail.reviewedBy ? ` por ${detail.reviewedBy}` : ''}.
+                </p>
+              )}
+
+              <p className="text-small text-ink-soft">
+                Al aprobarlo se publica en la página pública con el nombre y la localidad que se ven
+                arriba.
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {detail.status !== 'approved' && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={pendingId === detail.id}
+                    onClick={() => {
+                      decide(detail.id, 'approved');
+                      setDetailId(null);
+                    }}
+                  >
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                    Aprobar y publicar
+                  </Button>
+                )}
+                {detail.status !== 'rejected' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pendingId === detail.id}
+                    onClick={() => {
+                      decide(detail.id, 'rejected');
+                      setDetailId(null);
+                    }}
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                    Rechazar
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="¿Eliminar este testimonio?"
+        description={
+          pendingDelete
+            ? `Se eliminará definitivamente el testimonio de ${pendingDelete.name}. Para dejar de ` +
+              'mostrarlo en el sitio sin borrarlo, use «Rechazar».'
+            : ''
+        }
+        confirmLabel="Eliminar el testimonio"
+        onConfirm={() => {
+          if (pendingDelete) run(pendingDelete.id, deleteTestimonial);
+          setDeleteId(null);
+        }}
+      />
+    </>
   );
 }

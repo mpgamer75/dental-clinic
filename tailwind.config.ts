@@ -14,7 +14,7 @@ import type { Config } from "tailwindcss";
 const ok = (name: string) => `oklch(var(--${name}) / <alpha-value>)`;
 
 export default {
-  darkMode: ["class"],
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -28,7 +28,16 @@ export default {
         foreground: ok("foreground"),
         card: { DEFAULT: ok("card"), foreground: ok("card-foreground") },
         popover: { DEFAULT: ok("popover"), foreground: ok("popover-foreground") },
-        primary: { DEFAULT: ok("primary"), foreground: ok("primary-foreground") },
+        primary: {
+          DEFAULT: ok("primary"),
+          foreground: ok("primary-foreground"),
+          /* The hover/soft/border steps used to live under a `terracotta` key.
+             A hue-named utility is a trap: after a rebrand `bg-terracotta` is
+             blue, and the class reads as a bug at every call site forever. */
+          hover: ok("primary-hover"),
+          soft: ok("primary-soft"),
+          border: ok("primary-border"),
+        },
         secondary: { DEFAULT: ok("secondary"), foreground: ok("secondary-foreground") },
         muted: { DEFAULT: ok("muted"), foreground: ok("muted-foreground") },
         accent: { DEFAULT: ok("accent"), foreground: ok("accent-foreground") },
@@ -44,14 +53,8 @@ export default {
         canvas: { DEFAULT: ok("canvas"), sunk: ok("canvas-sunk") },
         surface: { DEFAULT: ok("surface"), raised: ok("surface-raised") },
         ink: { DEFAULT: ok("ink"), soft: ok("ink-soft"), faint: ok("ink-faint") },
-        terracotta: {
-          DEFAULT: ok("primary-base"),
-          hover: ok("primary-hover"),
-          soft: ok("primary-soft"),
-          border: ok("primary-border"),
-        },
         drench: { DEFAULT: ok("drench"), deep: ok("drench-deep"), on: ok("on-drench") },
-        petrol: { DEFAULT: ok("petrol"), soft: ok("petrol-soft") },
+        cyan: { DEFAULT: ok("cyan"), soft: ok("cyan-soft") },
         brass: {
           DEFAULT: ok("brass"),
           ink: ok("brass-ink"),
@@ -191,5 +194,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 } satisfies Config;

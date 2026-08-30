@@ -1,112 +1,64 @@
-# Configuration de l'Administrateur
+# Admin access
 
-## 📋 **Prérequis**
+The panel is at `/admin`. Getting someone in is two steps, deliberately separate.
 
-Avant de commencer, assurez-vous d'avoir :
-- ✅ Exécuté le script SQL `database-setup.sql` dans Supabase
-- ✅ Configuré les variables d'environnement dans `.env.local`
+## Why two steps
 
-## 🚀 **Méthode 1 : Configuration automatique (RECOMMANDÉ)**
+A Neon Auth account answers *who are you*. A row in `app.staff` answers *may you
+read the patient book*. Those are different questions, and treating the first as
+an answer to the second is how every account in the auth project becomes an
+administrator.
 
-### Étape 1 : Créer un compte utilisateur
+The application refuses to proxy sign-up — `/api/auth/[...path]` allowlists
+`sign-in/email`, `sign-out` and `get-session`, and answers 404 to everything
+else. So an account cannot be self-registered against a staff address, which is
+what makes matching staff by email safe. **Do not relax one half without
+revisiting the other.**
+
+## 1. Create the account
+
+In the Neon Console: **Auth → Users → Add user**. Set an email and a password.
+
+## 2. Authorise the address
+
 ```bash
-# Démarrez le serveur
-npm run dev
-
-# Visitez http://localhost:9003/admin/login
-# Essayez de vous connecter avec vos identifiants
-# Vous aurez une erreur qui affichera votre ID utilisateur
+npm run admin:grant -- dentist@clinic.do "Dr. Francis Valerio"
 ```
 
-### Étape 2 : Configurer comme admin
+Then check it:
+
 ```bash
-# Exécutez le script de diagnostic
-npm run diagnose-admin
-
-# OU exécutez le script de configuration rapide
-npm run quick-admin
+npm run admin:list
 ```
 
-Le script ajoutera automatiquement le premier utilisateur trouvé comme admin.
+The person can now sign in at `/admin/login`.
 
-## 🔧 **Méthode 2 : Configuration manuelle**
+## Removing access
 
-### Option A : Via Supabase SQL Editor
-
-1. **Connectez-vous à Supabase** : https://supabase.com
-2. **Ouvrez SQL Editor**
-3. **Trouvez votre ID utilisateur** :
-```sql
-SELECT id, email, created_at FROM auth.users ORDER BY created_at DESC;
+```bash
+npm run admin:revoke -- someone@clinic.do
 ```
 
-4. **Ajoutez-vous comme admin** :
-```sql
-INSERT INTO public.admin_users (id) 
-VALUES ('VOTRE_ID_UTILISATEUR_ICI') 
-ON CONFLICT (id) DO NOTHING;
-```
+This sets `disabled_at` rather than deleting the row — the row is the record
+that this person once had access, which is what an audit trail is for. The
+application role has no `DELETE` on the table.
 
-5. **Vérifiez** :
-```sql
-SELECT 
-  u.id,
-  u.email,
-  CASE WHEN au.id IS NOT NULL THEN 'Admin' ELSE 'User' END as role
-FROM auth.users u
-LEFT JOIN public.admin_users au ON u.id = au.id;
-```
+Their existing session stays valid until it expires. To cut it immediately,
+delete the session in the Neon Console.
 
-### Option B : Via le message d'erreur
+## What happens if you skip step 2
 
-1. **Allez sur** : http://localhost:9003/admin/login
-2. **Connectez-vous** avec vos identifiants
-3. **L'erreur affichera** : "Aucun utilisateur admin configuré. Votre ID: xxx-xxx-xxx"
-4. **Copiez l'ID** et utilisez-le dans la requête SQL ci-dessus
+The person signs in successfully and lands on a page that says *"Esta cuenta no
+tiene acceso"*, with a sign-out button. No panel markup, no patient data, and
+nothing is served before the check runs — the guard is a server component, so
+`redirect()` throws before any children render.
 
-## ✅ **Vérification**
+## Rate limiting
 
-Une fois configuré, vous devriez pouvoir :
-- ✅ Vous connecter sur `/admin/login`
-- ✅ Être redirigé vers `/admin` (dashboard)
-- ✅ Voir les statistiques et gérer le contenu
+Sign-in is throttled at 5 attempts per 15 minutes per hashed IP, and the limiter
+**fails closed**: if the counter is unreadable the attempt is refused. That does
+mean a database outage locks the clinic out of the panel. It is the right trade —
+being locked out for an hour is recoverable in a way a guessed password is not.
 
-## 🐛 **Dépannage**
-
-### Problème : "Variables d'environnement Supabase manquantes"
-**Solution** : Vérifiez votre fichier `.env.local` :
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_publique
-SUPABASE_SERVICE_ROLE_KEY=votre_cle_service
-```
-
-### Problème : "Table admin_users non configurée"
-**Solution** : Exécutez `database-setup.sql` dans Supabase SQL Editor
-
-### Problème : "Erreur de base de données"
-**Solution** : 
-1. Vérifiez que la table existe : `SELECT * FROM public.admin_users;`
-2. Vérifiez les permissions RLS
-3. Assurez-vous que RLS est désactivé sur `admin_users`
-
-### Problème : "La connexion ne redirige pas"
-**Solution** :
-1. Vérifiez que votre ID est bien dans `admin_users`
-2. Videz le cache du navigateur
-3. Réessayez en navigation privée
-
-## 🔐 **Sécurité**
-
-- ❌ **NE JAMAIS** commiter `.env.local`
-- ✅ **Utilisez** des mots de passe forts
-- ✅ **Limitez** l'accès admin aux personnes de confiance
-- ✅ **Surveillez** les logs d'authentification dans Supabase
-
-## 📞 **Support**
-
-Si vous rencontrez des problèmes :
-1. Vérifiez les logs dans la console navigateur (F12)
-2. Vérifiez les logs dans le terminal où tourne `npm run dev`
-3. Consultez les logs Supabase (Dashboard > Logs)
-
+The login screen says so, so a legitimate person who mistypes twice knows to stop
+rather than keep hammering.

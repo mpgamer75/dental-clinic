@@ -58,14 +58,14 @@ export function ThemeToggleButton() {
       <Sun
         aria-hidden="true"
         className={
-          "absolute h-[1.15rem] w-[1.15rem] text-brass-ink transition-all duration-base ease-out-quart " +
+          "absolute h-[1.15rem] w-[1.15rem] text-brass-ink transition-[transform,opacity] duration-base ease-out-quart " +
           (isDark ? "scale-50 opacity-0" : "scale-100 opacity-100")
         }
       />
       <Moon
         aria-hidden="true"
         className={
-          "absolute h-[1.15rem] w-[1.15rem] text-brass transition-all duration-base ease-out-quart " +
+          "absolute h-[1.15rem] w-[1.15rem] text-brass transition-[transform,opacity] duration-base ease-out-quart " +
           (isDark ? "scale-100 opacity-100" : "scale-50 opacity-0")
         }
       />

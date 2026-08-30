@@ -40,7 +40,7 @@ export function ContactForm() {
   //
   // These rules must MIRROR createContactFormSchema in src/app/actions.ts.
   // They had drifted: the client checked only the character set, while the
-  // server additionally required 7-15 digits and capped the message at 2000.
+  // server additionally required 7-15 digits and capped the message at 1000.
   // So "555" looked valid, submitted cleanly, and came back rejected after a
   // network round-trip with no field highlighted — the worst kind of form
   // error, because nothing on screen said what was wrong.
@@ -53,6 +53,11 @@ export function ContactForm() {
       .refine(
         (value) => {
           if (!value || value.trim() === '') return true;
+          // 40 is the column's own CHECK. Seven digits padded with thirty
+          // spaces satisfies both the digit count and the character class, so
+          // without this the value reaches Postgres and comes back as a generic
+          // failure on a number that looked perfectly fine on screen.
+          if (value.length > 40) return false;
           const digitsOnly = value.replace(/[^0-9]/g, '');
           return (
             digitsOnly.length >= 7 &&
@@ -65,7 +70,12 @@ export function ContactForm() {
     message: z
       .string()
       .min(10, { message: currentActionMessages.zod.messageMin })
-      .max(2000, { message: currentActionMessages.zod.messageMax }),
+      /* 1000, because that is what `app.contact_messages` CHECKs. The cap here
+         was 2000, so a longer message passed the browser, passed the server,
+         and was refused by Postgres — the patient wrote at length, waited, and
+         was told the site had a problem. A client limit that disagrees with the
+         column is not a looser limit, it is a delayed one. */
+      .max(1000, { message: currentActionMessages.zod.messageMax }),
   });
 
   const form = useForm<ContactFormData>({
@@ -213,13 +223,13 @@ export function ContactForm() {
               <FormControl>
                 <Textarea
                   placeholder={currentFormStrings.messagePlaceholder}
-                  maxLength={2000}
+                  maxLength={1000}
                   className="min-h-[140px] resize-none border-2 border-muted-foreground/20 bg-background text-base transition-colors focus-visible:border-primary"
                   {...field}
                 />
               </FormControl>
               <FormDescription className="text-right text-xs">
-                {messageValue?.length || 0} / 2000
+                {messageValue?.length || 0} / 1000
               </FormDescription>
               <FormMessage />
             </FormItem>

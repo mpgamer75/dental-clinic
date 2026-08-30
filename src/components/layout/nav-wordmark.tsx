@@ -68,7 +68,7 @@ export function NavWordmark({
         />
       </span>
 
-      <span className="truncate font-heading text-[1.14rem] font-medium leading-[1.18] tracking-[-0.012em] text-ink transition-colors duration-fast ease-out-quart group-hover/mark:text-terracotta">
+      <span className="truncate font-heading text-[1.14rem] font-medium leading-[1.18] tracking-[-0.012em] text-ink transition-colors duration-fast ease-out-quart group-hover/mark:text-primary">
         Orthoprotesis
       </span>
 

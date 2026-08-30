@@ -1,12 +1,20 @@
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 
-type Tone = 'canvas' | 'sunk' | 'surface' | 'drench' | 'drench-deep';
+type Tone = 'canvas' | 'sunk' | 'surface' | 'tint' | 'drench' | 'drench-deep';
 
 const TONE: Record<Tone, string> = {
   canvas: 'bg-canvas text-ink',
   sunk: 'bg-canvas-sunk text-ink',
   surface: 'bg-surface text-ink',
+  /* The one *coloured* band that is not drenched.
+     `--primary-soft` is the brand tint, and it is authored as a tonal fill in
+     both themes — a pale wash at L 0.945 in light, a deep navy at L 0.305
+     in dark — so it takes the ordinary `--ink` ramp on top and needs none of
+     the on-colour overrides a drenched band does. That is what makes it usable
+     on a section full of body copy, hairlines and a white figure card, where a
+     drenched band would have required re-toning every token inside it. */
+  tint: 'bg-primary-soft text-ink',
   drench: 'drenched',
   'drench-deep': 'drenched-deep',
 };
@@ -21,7 +29,12 @@ const SPACE = {
 interface SectionProps {
   id?: string;
   children: ReactNode;
-  /** Surface colour. `drench` bands are where colour carries the page. */
+  /**
+   * Surface colour. `drench` bands are where colour carries the page; `tint`
+   * is the lighter-weight way to mark a band as important without spending a
+   * full drench on it. VARY this — a run of three identical bands undoes the
+   * whole strategy.
+   */
   tone?: Tone;
   /** Vertical rhythm. VARY this between sections — uniform spacing reads flat. */
   space?: keyof typeof SPACE;

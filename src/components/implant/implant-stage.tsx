@@ -6,9 +6,10 @@ import { useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion'
 import { ImplantPlate, type PlateHandle } from './implant-plate';
 
 /**
- * WebGL chunk. Loaded only after {@link canRenderWebGL} says yes, so the
- * three.js payload never lands on a phone, a save-data connection, or a
- * reduced-motion session — and never blocks first paint on any device.
+ * WebGL chunk. Loaded only once the figure is within 400 px of the viewport
+ * AND {@link canRenderWebGL} says yes, so the three.js payload never lands on
+ * a phone, a save-data connection, or a reduced-motion session — and never
+ * blocks first paint on any device.
  */
 const ImplantScene = dynamic(() => import('./implant-scene'), {
   ssr: false,
@@ -67,7 +68,7 @@ interface ImplantStageProps {
    * read as "not working". Driving from the column gives it the column's full
    * height while the canvas stays pinned in view.
    */
-  driverRef: RefObject<HTMLElement>;
+  driverRef: RefObject<HTMLElement | null>;
   /** e.g. "Ø 4,1 × 10 mm" — the real fixture dimensions. */
   scaleNote: string;
   /** Phase captions, in order, shown as the sequence advances. */
@@ -84,8 +85,43 @@ export function ImplantStage({ label, driverRef, scaleNote, phases }: ImplantSta
   const plateRef = useRef<PlateHandle | null>(null);
   const reduce = useReducedMotion();
 
+  /* The 3D upgrade waits for the viewport, not just for a capable device.
+     This figure lives well below the fold, and promoting it at mount put all
+     of its cost on the hydration critical path: a ~150 KB three.js chunk, a
+     ~70 ms procedural geometry build (100–200 ms on mid-range hardware), a
+     baked PMREM environment and a dozen shader links, all competing with LCP
+     for a picture nobody has scrolled to yet. 400 px of margin is roughly a
+     flick of the wheel, which is enough for the chunk to arrive and the
+     geometry to build before the section is on screen.
+
+     The capability probe runs here rather than at mount for the same reason:
+     it allocates a throwaway WebGL context to sniff the renderer string, and
+     that is not something to do while the page is still hydrating. Evaluating
+     it late is also strictly more accurate — `innerWidth` is read after any
+     orientation change or window resize the visitor made on the way down. */
   useEffect(() => {
-    setUse3d(canRenderWebGL());
+    const host = hostRef.current;
+    if (!host) return;
+
+    const promote = () => {
+      if (canRenderWebGL()) setUse3d(true);
+    };
+
+    if (typeof IntersectionObserver === 'undefined') {
+      promote();
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      ([entry], obs) => {
+        if (!entry.isIntersecting) return;
+        obs.disconnect();
+        promote();
+      },
+      { rootMargin: '400px' },
+    );
+    io.observe(host);
+    return () => io.disconnect();
   }, []);
 
   /* The window must fit INSIDE the pinned window, or the sequence keeps
@@ -199,7 +235,7 @@ export function ImplantStage({ label, driverRef, scaleNote, phases }: ImplantSta
         {/* Scale annotation. A labelled dimension reads as more credible than
             an unlabelled render, and it is true: these are the real numbers the
             geometry is built to. */}
-        <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-line/70 bg-canvas/80 px-2.5 py-1 text-[0.72rem] text-ink-soft tabular backdrop-blur-sm">
+        <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-line/70 bg-canvas px-2.5 py-1 text-small text-ink-soft tabular">
           {scaleNote}
         </span>
       </div>

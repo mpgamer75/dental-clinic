@@ -50,13 +50,80 @@ function angDelta(a: number, b: number): number {
 }
 
 /**
+ * Averages the normals of the two coincident seam columns.
+ *
+ * Duplicating the seam (see {@link gridGeometry}) buys a second texture
+ * coordinate, but it costs the seam its shading, and the original comment here
+ * had the sign of that backwards. `computeVertexNormals` only ever sees the
+ * faces on ONE side of each copy — column 0 collects the quads to its right,
+ * column `radial` the quads to its left — so two vertices sitting at the same
+ * point to within a float ulp come out carrying different normals. Measured on
+ * the fixture that was a 7.7° median and 29° peak discontinuity running the
+ * full length of a `metalness: 1` part, which under an environment map is
+ * precisely the bright hairline the duplication was meant to prevent.
+ *
+ * Averaging the two copies gives each of them the normal a shared vertex would
+ * have had, and gives up nothing: u stays 0 on one and 1 on the other.
+ *
+ * One case where this is a VISIBLE change rather than only a fix: the gingiva
+ * closes its cross-section at a zero-thickness feather edge, and that fold
+ * turns the normal through 143°. It occurs twice — once at the lingual margin,
+ * on a column the grid SHARES, and once at the buccal margin, on this seam. So
+ * the two identical folds were shading differently, crisp on one side of the
+ * mouth and soft on the other, purely as an accident of index topology. They
+ * now match. Which of the two is prettier is a separate argument; having them
+ * disagree was never defensible.
+ *
+ * Guarded on the columns actually being coincident, so an open surface — a
+ * sector rather than a full revolution — is left alone rather than having its
+ * two free edges silently welded.
+ */
+function weldSeamNormals(
+  g: THREE.BufferGeometry,
+  cols: number,
+  rows: number,
+  radial: number,
+): void {
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const nrm = g.attributes.normal as THREE.BufferAttribute;
+  // Everything here is modelled in real millimetres, so a tenth of a micron is
+  // far below anything the surface could legitimately vary by.
+  const EPS = 1e-4;
+
+  for (let j = 0; j < rows; j++) {
+    const a = j * cols;
+    const b = a + radial;
+    if (
+      Math.abs(pos.getX(a) - pos.getX(b)) > EPS ||
+      Math.abs(pos.getY(a) - pos.getY(b)) > EPS ||
+      Math.abs(pos.getZ(a) - pos.getZ(b)) > EPS
+    ) {
+      return;
+    }
+  }
+
+  const n = new THREE.Vector3();
+  for (let j = 0; j < rows; j++) {
+    const a = j * cols;
+    const b = a + radial;
+    n.set(
+      nrm.getX(a) + nrm.getX(b),
+      nrm.getY(a) + nrm.getY(b),
+      nrm.getZ(a) + nrm.getZ(b),
+    ).normalize();
+    nrm.setXYZ(a, n.x, n.y, n.z);
+    nrm.setXYZ(b, n.x, n.y, n.z);
+  }
+}
+
+/**
  * Builds an indexed BufferGeometry from a (radial × axial) parametric grid.
  *
  * The seam column is DUPLICATED (cols = radial + 1) rather than wrapped by
- * index. Sharing the seam ring would force the u texture coordinate to be both
- * 0 and 1 at the same vertex, and — more visibly here — would average the
- * normals across the seam of a thread crest, producing a bright hairline down
- * the length of the screw.
+ * index, because sharing the seam ring would force the u texture coordinate to
+ * be both 0 and 1 at the same vertex — and both roughness maps are sampled
+ * through uv. The shading cost that duplication would otherwise incur is paid
+ * back by {@link weldSeamNormals} at the end.
  */
 function gridGeometry(
   radial: number,
@@ -75,9 +142,10 @@ function gridGeometry(
 ): THREE.BufferGeometry {
   const cols = radial + 1;
   const rows = axial + 1;
-  const positions = new Float32Array(cols * rows * 3);
-  const uvs = new Float32Array(cols * rows * 2);
-  const colors = tint ? new Float32Array(cols * rows * 3) : null;
+  const verts = cols * rows;
+  const positions = new Float32Array(verts * 3);
+  const uvs = new Float32Array(verts * 2);
+  const colors = tint ? new Float32Array(verts * 3) : null;
   const v3 = new THREE.Vector3();
   const col = new THREE.Color();
 
@@ -103,14 +171,34 @@ function gridGeometry(
     }
   }
 
-  const index: number[] = [];
+  /* The index is SIZED UP FRONT, not grown.
+     Two triangles per cell is known before the loop starts, and the fixture,
+     crown and gingiva between them need ~284,000 indices. Handed to a plain
+     array those are 284,000 boxed doubles, a backing store reallocated all the
+     way up, and then a full second copy when `setIndex` converts it — which it
+     does, into exactly the typed array chosen here. The GPU never saw the
+     difference; the main thread did, at the worst possible moment.
+     (Uint16 is not an optimisation, it is what `setIndex` would have picked:
+     every grid built here stays well under 65,536 vertices. The branch exists
+     so a future finer grid degrades instead of silently wrapping.) */
+  const index =
+    verts > 65535
+      ? new Uint32Array(radial * axial * 6)
+      : new Uint16Array(radial * axial * 6);
+  let n = 0;
   for (let j = 0; j < axial; j++) {
     for (let i = 0; i < radial; i++) {
       const a = j * cols + i;
       const b = a + 1;
       const c = a + cols;
       const d = c + 1;
-      index.push(a, c, b, b, c, d);
+      index[n] = a;
+      index[n + 1] = c;
+      index[n + 2] = b;
+      index[n + 3] = b;
+      index[n + 4] = c;
+      index[n + 5] = d;
+      n += 6;
     }
   }
 
@@ -118,8 +206,9 @@ function gridGeometry(
   g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   if (colors) g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  g.setIndex(index);
+  g.setIndex(new THREE.BufferAttribute(index, 1));
   g.computeVertexNormals();
+  weldSeamNormals(g, cols, rows, radial);
   return g;
 }
 
@@ -755,7 +844,26 @@ export function buildBoneRidge(): THREE.BufferGeometry {
   // a draped sheet rather than a block of bone. ExtrudeGeometry closes the
   // profile and caps both ends for free, which is exactly what a SECTION of
   // ridge needs — flat cut faces at the mesial and distal ends.
-  const N = 128;
+  /* Tessellation, and what `steps` actually buys.
+     It is tempting to read this as a constant cross-section extruded along a
+     straight axis and conclude that `steps` is free to collapse. It is not,
+     for two reasons that only show up downstream: the displacement pass below
+     is a function of x, so `steps` is what samples the surface noise ALONG the
+     jaw; and ExtrudeGeometry emits non-indexed triangles, so the
+     computeVertexNormals at the end leaves this mesh flat shaded and every
+     step boundary is a facet edge you can see.
+
+     128 × 40 was 12,122 triangles in 36,366 non-indexed vertices — 1.16 MB,
+     the largest buffer in the scene by a wide margin, and 11% of every frame's
+     triangles in both the main and the shadow pass. 88 × 30 is 6,582 triangles
+     in 632 KB, for a 1.44× facet around the section and 1.33× along the jaw,
+     neither of which resolves at the ~20 px/mm this renders at.
+
+     Cutting `steps` to 14, as was proposed, is where it stops being free: at
+     1.43 mm spacing the 2.15 and 4.3 rad/mm octaves of `bump` both fall below
+     Nyquist, the grain collapses into a slow beat, and the ridge goes back to
+     reading as the moulded plastic the noise exists to avoid. */
+  const N = 88;
   const pts: THREE.Vector2[] = [];
   for (let i = 0; i <= N; i++) {
     const [z, y] = ridgeSection(i / N);
@@ -769,8 +877,11 @@ export function buildBoneRidge(): THREE.BufferGeometry {
     bevelThickness: 0.22,
     bevelSize: 0.18,
     bevelSegments: 3,
+    // Inert for a Shape built from straight segments — Path.getPoints gives a
+    // LineCurve exactly one division regardless — but left as the record of
+    // what the profile is meant to be if it ever gains a curve.
     curveSegments: 1,
-    steps: 40,
+    steps: 30,
   });
 
   // Shape space is (z_anat, y_anat) extruded along +z. Rotate so the extrusion

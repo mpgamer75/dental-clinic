@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -24,7 +25,7 @@ import { cn } from '@/lib/utils';
  *   `useReducedMotion()` returns `null` during SSR but `true` on a
  *   reduced-motion client's first render. The server therefore emitted
  *   `<motion.div style="opacity:0">` while the client rendered a plain `<div>`
- *   with no style. React 18 hydration does not strip extra DOM attributes, so
+ *   with no style. React hydration does not strip extra DOM attributes, so
  *   `opacity: 0` stuck permanently — every section of the homepage rendered
  *   blank for anyone with "Reduce motion" enabled at OS level.
  *
@@ -37,6 +38,21 @@ import { cn } from '@/lib/utils';
  *
  * It also drops Framer Motion from this path entirely; CSS transitions carry
  * the same effect without the hydration hazard.
+ *
+ * ── On the `as` prop ──────────────────────────────────────────────────────
+ *
+ * Every one of these components used to be hard-wired to a `<div>`, and that
+ * quietly broke three sections of the homepage. A wrapper div between an
+ * `<ol>` and its `<li>` children is not a list any more: the rows stop being
+ * list items to a screen reader, so "step 1 of 4" is never announced. Worse in
+ * plain sight, it also makes every row the *only* child of its own wrapper, so
+ * `first:` and `last:` variants match all of them — `last:pb-0` on the booking
+ * steps collapsed the spacing between all four, which is why they rendered
+ * flush against each other.
+ *
+ * So the element is now the caller's choice. Inside a list, pass the list item
+ * itself (`<RevealGroup as="ol">` + `<RevealItem as="li">`) and no extra node
+ * is introduced at all.
  */
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
@@ -44,6 +60,11 @@ const DURATION = 620;
 const IO_MARGIN = '0px 0px -80px 0px';
 
 type Phase = 'visible' | 'hidden' | 'shown';
+
+/** Elements a single reveal may render as. Extend deliberately. */
+type RevealTag = 'div' | 'li' | 'article' | 'figure' | 'section';
+/** Elements a stagger container may render as — the list owners. */
+type RevealGroupTag = 'div' | 'ol' | 'ul' | 'dl';
 
 function prefersReducedMotion() {
   return (
@@ -55,14 +76,27 @@ function prefersReducedMotion() {
 /**
  * Drives one element from `visible` (SSR default) through `hidden` → `shown`,
  * but only when it is genuinely off-screen and motion is welcome.
+ *
+ * Hands back a *callback* ref rather than a ref object. With a polymorphic tag
+ * the expected ref type is the intersection of every candidate element's ref
+ * (`Ref<HTMLLIElement> & Ref<HTMLDivElement> & …`), which no single
+ * `RefObject` satisfies; a callback taking `HTMLElement | null` satisfies all
+ * of them by contravariance, so the tag stays free without a cast.
  */
-function useRevealPhase<T extends HTMLElement>(enabled = true) {
-  const ref = useRef<T>(null);
+function useRevealPhase(enabled = true) {
+  const node = useRef<HTMLElement | null>(null);
   const [phase, setPhase] = useState<Phase>('visible');
+
+  // Stable identity: React calls a changed callback ref with `null` and then
+  // the node again on every render, which would re-run the detach/attach cycle
+  // for no reason.
+  const setNode = useCallback((el: HTMLElement | null) => {
+    node.current = el;
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
-    const el = ref.current;
+    const el = node.current;
     if (!el) return;
 
     if (prefersReducedMotion() || typeof IntersectionObserver === 'undefined') return;
@@ -105,7 +139,7 @@ function useRevealPhase<T extends HTMLElement>(enabled = true) {
     };
   }, [enabled]);
 
-  return { ref, phase };
+  return { setNode, phase };
 }
 
 function revealStyle(phase: Phase, y: number, delayMs: number): React.CSSProperties {
@@ -128,14 +162,26 @@ interface RevealProps {
   delay?: number;
   /** Vertical offset (px) the content travels from. */
   y?: number;
+  /**
+   * Element to render. Pass the semantic element the parent expects — `li`
+   * inside a list, `figure` around a caption — rather than nesting a `div`
+   * inside it.
+   */
+  as?: RevealTag;
 }
 
-export function Reveal({ children, className, delay = 0, y = 24 }: RevealProps) {
-  const { ref, phase } = useRevealPhase<HTMLDivElement>();
+export function Reveal({
+  children,
+  className,
+  delay = 0,
+  y = 24,
+  as: Tag = 'div',
+}: RevealProps) {
+  const { setNode, phase } = useRevealPhase();
   return (
-    <div ref={ref} className={className} style={revealStyle(phase, y, delay * 1000)}>
+    <Tag ref={setNode} className={className} style={revealStyle(phase, y, delay * 1000)}>
       {children}
-    </div>
+    </Tag>
   );
 }
 
@@ -158,6 +204,11 @@ interface RevealGroupProps {
   stagger?: number;
   /** Seconds before the first child animates. */
   delayChildren?: number;
+  /**
+   * Element to render. Use `ol` / `ul` / `dl` when the group *is* the list —
+   * one observer then drives every row, and the rows stay real list items.
+   */
+  as?: RevealGroupTag;
 }
 
 export function RevealGroup({
@@ -165,8 +216,9 @@ export function RevealGroup({
   className,
   stagger = 0.08,
   delayChildren = 0,
+  as: Tag = 'div',
 }: RevealGroupProps) {
-  const { ref, phase } = useRevealPhase<HTMLDivElement>();
+  const { setNode, phase } = useRevealPhase();
   const counter = useRef(0);
 
   // Reset on every render pass so indices stay stable across re-renders
@@ -185,9 +237,9 @@ export function RevealGroup({
 
   return (
     <RevealGroupContext.Provider value={ctx}>
-      <div ref={ref} className={className}>
+      <Tag ref={setNode} className={className}>
         {children}
-      </div>
+      </Tag>
     </RevealGroupContext.Provider>
   );
 }
@@ -197,29 +249,31 @@ interface RevealItemProps {
   className?: string;
   /** Vertical offset (px) the item travels from. */
   y?: number;
+  /** Element to render — `li` when the group is a list. */
+  as?: RevealTag;
 }
 
-export function RevealItem({ children, className, y = 24 }: RevealItemProps) {
+export function RevealItem({ children, className, y = 24, as: Tag = 'div' }: RevealItemProps) {
   const group = useContext(RevealGroupContext);
   const indexRef = useRef<number | null>(null);
   if (indexRef.current === null) indexRef.current = group ? group.claimIndex() : 0;
 
   // Outside a RevealGroup an item still reveals, just without the stagger.
-  const solo = useRevealPhase<HTMLDivElement>(!group);
+  const solo = useRevealPhase(!group);
 
   if (!group) {
     return (
-      <div ref={solo.ref} className={className} style={revealStyle(solo.phase, y, 0)}>
+      <Tag ref={solo.setNode} className={className} style={revealStyle(solo.phase, y, 0)}>
         {children}
-      </div>
+      </Tag>
     );
   }
 
   const delayMs = (group.delayChildren + indexRef.current * group.stagger) * 1000;
 
   return (
-    <div className={cn(className)} style={revealStyle(group.phase, y, delayMs)}>
+    <Tag className={cn(className)} style={revealStyle(group.phase, y, delayMs)}>
       {children}
-    </div>
+    </Tag>
   );
 }
