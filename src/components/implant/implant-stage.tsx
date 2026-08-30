@@ -67,7 +67,7 @@ interface ImplantStageProps {
    * read as "not working". Driving from the column gives it the column's full
    * height while the canvas stays pinned in view.
    */
-  driverRef: RefObject<HTMLElement>;
+  driverRef: RefObject<HTMLElement | null>;
   /** e.g. "Ø 4,1 × 10 mm" — the real fixture dimensions. */
   scaleNote: string;
   /** Phase captions, in order, shown as the sequence advances. */

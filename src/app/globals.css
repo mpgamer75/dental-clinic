@@ -1,6 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind 4 replaces the three v3 directives with one import, and no longer
+   discovers `tailwind.config.ts` by convention — `@config` opts back in to it.
+   The token layer still lives in this file (see below), so the JS config's job
+   is now only the semantic colour mapping, type scale and keyframes.
+
+   `tw-animate-css` replaces the `tailwindcss-animate` plugin, which was a v3
+   PostCSS plugin and has no v4 equivalent. It provides the same
+   `animate-in` / `fade-in-0` / `slide-in-from-*` utilities the Radix-driven
+   overlays in src/components/ui/ are built on. */
+@import "tailwindcss";
+@import "tw-animate-css";
+@config "../../tailwind.config.ts";
 
 /* ============================================================================
    WARM CONSULTA — design tokens

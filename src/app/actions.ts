@@ -240,9 +240,8 @@ const createAppointmentFormSchema = (lang: Language) => {
         const date = parseCalendarDate(value);
         return date === null || date.getTime() - utcToday().getTime() <= MAX_LEAD_DAYS * DAY_MS;
       }, { message: zodMsgs.preferredDateTooFar }),
-    time_preference: z.enum(TIME_PREFERENCES, {
-      required_error: zodMsgs.timePreferenceRequired,
-      invalid_type_error: zodMsgs.timePreferenceRequired,
+    time_preference: z.enum([...TIME_PREFERENCES], {
+      error: zodMsgs.timePreferenceRequired,
     }),
     reason: z.string()
       .min(10, { message: zodMsgs.reasonMin })

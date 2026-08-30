@@ -232,9 +232,8 @@ function createAppointmentSchema(m: ZodMessages) {
         const date = parseCalendarDate(value);
         return date === null || date.getTime() - today().getTime() <= MAX_LEAD_DAYS * DAY_MS;
       }, { message: m.preferredDateTooFar }),
-    timePreference: z.enum(TIME_PREFERENCES, {
-      required_error: m.timePreferenceRequired,
-      invalid_type_error: m.timePreferenceRequired,
+    timePreference: z.enum([...TIME_PREFERENCES], {
+      error: m.timePreferenceRequired,
     }),
     reason: z
       .string()
@@ -1065,8 +1064,8 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                                 ? [{ before: bounds.minDate }, { after: bounds.maxDate }]
                                 : []),
                             ]}
-                            fromDate={bounds?.minDate}
-                            toDate={bounds?.maxDate}
+                            startMonth={bounds?.minDate}
+                            endMonth={bounds?.maxDate}
                             locale={dayPickerLocale}
                             // Monday-first in both languages: the clinic's five
                             // open days then sit together and the two closed ones
@@ -1074,7 +1073,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                             // legible at a glance. en-US would otherwise start on
                             // Sunday and split the weekend across both edges.
                             weekStartsOn={1}
-                            initialFocus
+                            autoFocus
                           />
                           <p className="border-t border-line px-4 py-3 text-small leading-relaxed text-ink-soft">
                             {t.preferredDateWeekendNote}

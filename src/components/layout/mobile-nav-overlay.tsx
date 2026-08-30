@@ -16,7 +16,7 @@ import type { NavEntry, NavLink } from '@/components/layout/nav-model';
 interface MobileNavOverlayProps {
   lang: Language;
   /** Owned by the navbar: Escape / outside-click / focus-return read it too. */
-  panelRef: RefObject<HTMLDivElement>;
+  panelRef: RefObject<HTMLDivElement | null>;
   primary: NavEntry[];
   secondary: NavLink[];
   activeKey: string | null;

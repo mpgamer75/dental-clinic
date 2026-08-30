@@ -22,7 +22,7 @@ const FOCUSABLE = [
  * Visibility is tested with `getClientRects()` rather than `offsetParent`,
  * which is null for anything inside a `position: fixed` panel.
  */
-export function useFocusTrap(ref: RefObject<HTMLElement>, active: boolean) {
+export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean) {
   useEffect(() => {
     if (!active) return;
     const node = ref.current;

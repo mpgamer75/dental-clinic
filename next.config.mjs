@@ -87,7 +87,6 @@ const nextConfig = {
 
   // Experimental features pour performance
   experimental: {
-    optimizeCss: true,
     scrollRestoration: true,
   },
 
@@ -98,19 +97,15 @@ const nextConfig = {
     } : false,
   },
 
-  // Webpack optimizations - SIMPLIFIÉ pour éviter erreur exports
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-
-    return config;
-  },
+  // Next 16 builds with Turbopack by default. An empty object is the explicit
+  // "no bundler customisation needed" signal — without it, Next errors out
+  // rather than guess whether a leftover config was meant to migrate.
+  //
+  // The `webpack` block this replaces stubbed `fs`/`net`/`tls` to false for the
+  // browser bundle, which existed only because the Supabase client was imported
+  // in client components. Database access is now server-only, so nothing in the
+  // browser graph reaches a Node built-in and the stubs are dead weight.
+  turbopack: {},
 
   // Production optimizations
   poweredByHeader: false,
