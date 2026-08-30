@@ -415,7 +415,6 @@ const STRUCTURAL_SIGNALS: readonly StructuralSignal[] = [
  * schema in front of it — which is the whole point of `moderateFields` — must
  * not be the weakest link in that chain.
  */
-// eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 /** Legal inside a textarea, never inside a name or a city. */
@@ -686,7 +685,7 @@ export function sanitizeText(text: string): string {
       // 4. Control characters, which hide payloads in logs and exports, and
       //    then the invisible formatting characters that outlive them — a bidi
       //    override stored here reorders the row wherever it is later read.
-      // eslint-disable-next-line no-control-regex
+       
       .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
       .replace(INVISIBLE_CHARS_GLOBAL, '')
       .trim()

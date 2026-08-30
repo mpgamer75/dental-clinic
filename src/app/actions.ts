@@ -139,12 +139,10 @@ const moderationRejection = {
    ========================================================================== */
 
 /** Control characters in a single-line field. A name does not contain a tab. */
-// eslint-disable-next-line no-control-regex
 const CONTROL_CHARACTERS = /[\x00-\x1F\x7F]/;
 
 /** The same set minus tab, newline and carriage return, which are the three a
  *  person legitimately produces in a textarea. */
-// eslint-disable-next-line no-control-regex
 const CONTROL_CHARACTERS_IN_PROSE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
 
 const isSingleLine = (value: string) => !CONTROL_CHARACTERS.test(value);
