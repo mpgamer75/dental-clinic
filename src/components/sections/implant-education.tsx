@@ -5,10 +5,11 @@ import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
-import { Reveal } from '@/components/reveal';
+import { Reveal, RevealGroup, RevealItem } from '@/components/reveal';
 import { ImplantStage } from '@/components/implant/implant-stage';
 import { useLanguage } from '@/contexts/language-context';
 import { implantEducation } from '@/lib/data';
+import { cn } from '@/lib/utils';
 
 /**
  * How an implant works — the page's hero object.
@@ -42,8 +43,15 @@ export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
   // A dimension, not copy: only the decimal separator is locale-dependent.
   const scaleNote = `Ø ${lang === 'es' ? '4,1' : '4.1'} × 10 mm`;
 
+  /* `tint`, not `canvas`. This is the band the page most wants read, and it
+     used to sit in the middle of problem → implants → services, three
+     identical canvas grounds in a row: the drenching strategy did nothing at
+     all between the hero and the booking CTA. The tint is the brand colour at
+     tonal weight, so it marks the centrepiece without spending a full drench
+     on a section built out of body copy, hairlines and a white figure card —
+     all of which keep their ordinary ink tokens on it. */
   return (
-    <Section id={id} tone="canvas" space="loose">
+    <Section id={id} tone="tint" space="loose">
       <SectionHeading
         lead={t.eyebrow}
         title={t.title}
@@ -81,11 +89,13 @@ export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
             later sibling wins and the legend text rendered straight over the
             top of the pinned figure. Only visible once the figure actually
             started sticking, which is why it appeared as a "new" bug. */}
-        {/* `bg-canvas` matches the section tone, so it is invisible — but it is
-            needed: the figcaption sits OUTSIDE the framed card, so without an
-            opaque backing the legend scrolled visibly through the caption text
-            once the figure started pinning. */}
-        <div className="sticky top-20 z-raised self-start bg-canvas pb-2 lg:col-span-6 lg:top-24">
+        {/* `bg-terracotta-soft` matches the section tone, so it is invisible —
+            but it is needed: the figcaption sits OUTSIDE the framed card, so
+            without an opaque backing the legend scrolled visibly through the
+            caption text once the figure started pinning. It must track the
+            band's tone; the moment the two disagree this reappears as a pale
+            rectangle behind the figure. */}
+        <div className="sticky top-20 z-raised self-start bg-terracotta-soft pb-2 lg:col-span-6 lg:top-24">
           <ImplantStage
             label={t.svgAlt}
             driverRef={driverRef}
@@ -101,7 +111,12 @@ export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
               {t.parts.map((part, i) => (
                 <li
                   key={part.label}
-                  className="grid grid-cols-[auto_1fr] gap-x-5 border-b border-line py-8 first:pt-0 last:border-b-0"
+                  /* `line-strong`, not `line`, and only on this band. The
+                     hairline tokens are tuned against canvas and surface; in
+                     dark mode `--line` is L 0.32 and the tint ground is L 0.31,
+                     so an ordinary rule disappears completely here. The strong
+                     step clears both grounds in both themes. */
+                  className="grid grid-cols-[auto_1fr] gap-x-5 border-b border-line-strong py-8 first:pt-0 last:border-b-0"
                 >
                   <span
                     aria-hidden="true"
@@ -129,25 +144,34 @@ export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
               <h3 className="font-heading text-h3 font-medium text-ink">{t.stepsTitle}</h3>
             </Reveal>
 
-            <ol className="mt-8 border-l border-line">
+            {/* `RevealItem as="li"`, not a `<Reveal>` div wrapped around the
+                row: the wrapper broke the `<ol>` into a stack of anonymous
+                divs and made `first:pt-0` match every step instead of the
+                first. */}
+            <RevealGroup as="ol" stagger={0.06} className="mt-8 border-l border-line-strong">
               {t.steps.map((step, i) => (
-                <Reveal key={step.title} delay={i * 0.06}>
-                  <li className="relative py-7 pl-7 first:pt-0">
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-0 top-8 h-px w-4 bg-brass/50 first:top-1"
-                    />
-                    <span className="font-heading text-small font-medium text-brass-ink tabular">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <h4 className="mt-2 font-heading text-h4 font-medium text-ink">
-                      {step.title}
-                    </h4>
-                    <p className="mt-2 max-w-measure leading-relaxed text-ink-soft">{step.desc}</p>
-                  </li>
-                </Reveal>
+                <RevealItem key={step.title} as="li" className="relative py-7 pl-7 first:pt-0">
+                  {/* The tick's height is driven by the row's own top padding,
+                      which the first row does not have. This used to be
+                      `first:top-1` on the span — but the span is always the
+                      first child of its row, so the variant matched every one
+                      of them and all four ticks sat at the top. The index is
+                      the honest source for "is this the first step". */}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'absolute left-0 h-px w-4 bg-brass/50',
+                      i === 0 ? 'top-1' : 'top-8',
+                    )}
+                  />
+                  <span className="font-heading text-small font-medium text-brass-ink tabular">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h4 className="mt-2 font-heading text-h4 font-medium text-ink">{step.title}</h4>
+                  <p className="mt-2 max-w-measure leading-relaxed text-ink-soft">{step.desc}</p>
+                </RevealItem>
               ))}
-            </ol>
+            </RevealGroup>
           </div>
 
           <Reveal className="mt-12">

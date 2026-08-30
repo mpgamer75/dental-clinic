@@ -17,6 +17,17 @@ import { useLanguage } from '@/contexts/language-context';
  * Both actions are now always one tap away. The bar is hidden at `lg` and up,
  * where the header already shows them.
  */
+/**
+ * The exact vertical space this bar occupies, for whatever has to clear it.
+ *
+ * 2 × `p-2.5` (1.25rem) + the `h-12` controls (3rem) + the 1px top rule, plus
+ * the safe-area inset the bar pads itself with. Exported rather than
+ * duplicated: the footer has to reserve precisely this much, and a second
+ * hand-copied number would drift the first time the buttons change size.
+ */
+export const MOBILE_ACTION_BAR_HEIGHT =
+  'calc(4.25rem + 1px + env(safe-area-inset-bottom, 0px))';
+
 export function MobileActionBar() {
   const { lang } = useLanguage();
   const phone = contactDetails.phone[lang];
@@ -29,7 +40,15 @@ export function MobileActionBar() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-canvas/95 backdrop-blur-lg lg:hidden print:hidden"
+      /* Opaque, and no `backdrop-blur`.
+         This bar is pinned to the bottom of the viewport for the whole visit
+         on the exact devices least able to afford it. A backdrop filter
+         re-samples and re-blurs the content behind it on every frame that
+         content moves, so on a phone it was paying for a blur pass through
+         every pixel of every scroll. `bg-canvas` at full opacity also gives
+         the two labels a stable ground instead of whatever photograph or
+         drenched band happens to be sliding past underneath. */
+      className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-canvas lg:hidden print:hidden"
       // Keeps the buttons clear of the iOS home indicator / Android gesture bar.
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Phone } from 'lucide-react';
 import { Section } from '@/components/primitives/section';
-import { Reveal } from '@/components/reveal';
+import { Reveal, RevealGroup, RevealItem } from '@/components/reveal';
 import { Button } from '@/components/ui/button';
 import type { homeContent } from '@/lib/data';
 
@@ -61,37 +61,43 @@ export function BookingSection({
         </div>
 
         {/* What happens next — an ordered process, so numbers are load-bearing
-            here rather than decorative section markers. */}
+            here rather than decorative section markers.
+
+            The rows are `RevealItem as="li"`, not `<Reveal>` wrapped around an
+            `<li>`. The wrapper version put a div between the `<ol>` and its
+            rows, which cost the list its semantics *and* made every row the
+            only child of its own wrapper — so `last:pb-0` matched all four and
+            the steps rendered flush with no separation at all. */}
         <div className="lg:col-span-6 lg:col-start-7">
-          <ol className="relative">
+          <RevealGroup as="ol" stagger={0.07} className="relative">
             {content.steps.map((s, i) => (
-              <Reveal key={s.title} delay={0.07 * i}>
-                <li className="relative grid grid-cols-[auto_1fr] gap-x-5 pb-9 last:pb-0">
-                  {/* Connector rail between steps. */}
-                  {i < content.steps.length - 1 && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-[1.375rem] top-11 h-[calc(100%-2.75rem)] w-px bg-drench-on/20"
-                    />
-                  )}
+              <RevealItem
+                key={s.title}
+                as="li"
+                className="relative grid grid-cols-[auto_1fr] gap-x-5 pb-9 last:pb-0"
+              >
+                {/* Connector rail between steps. */}
+                {i < content.steps.length - 1 && (
                   <span
                     aria-hidden="true"
-                    className="relative z-raised flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-brass/40 bg-drench-deep font-heading text-lg font-medium text-brass tabular"
-                  >
-                    {i + 1}
-                  </span>
-                  <div className="pt-1.5">
-                    <h3 className="font-heading text-h4 font-medium text-drench-on">
-                      {s.title}
-                    </h3>
-                    <p className="mt-1.5 max-w-measure leading-relaxed text-drench-on/70">
-                      {s.desc}
-                    </p>
-                  </div>
-                </li>
-              </Reveal>
+                    className="absolute left-[1.375rem] top-11 h-[calc(100%-2.75rem)] w-px bg-drench-on/20"
+                  />
+                )}
+                <span
+                  aria-hidden="true"
+                  className="relative z-raised flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-brass/40 bg-drench-deep font-heading text-lg font-medium text-brass tabular"
+                >
+                  {i + 1}
+                </span>
+                <div className="pt-1.5">
+                  <h3 className="font-heading text-h4 font-medium text-drench-on">{s.title}</h3>
+                  <p className="mt-1.5 max-w-measure leading-relaxed text-drench-on/70">
+                    {s.desc}
+                  </p>
+                </div>
+              </RevealItem>
             ))}
-          </ol>
+          </RevealGroup>
         </div>
       </div>
     </Section>

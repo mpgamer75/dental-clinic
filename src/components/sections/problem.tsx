@@ -1,6 +1,6 @@
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
-import { Reveal } from '@/components/reveal';
+import { Reveal, RevealGroup, RevealItem } from '@/components/reveal';
 import type { homeContent } from '@/lib/data';
 
 type Problem = (typeof homeContent)['es']['problem'];
@@ -28,26 +28,30 @@ export function ProblemSection({ id, content }: { id?: string; content: Problem 
             </p>
           </Reveal>
 
-          <dl className="mt-10">
+          {/* A `<dl>` may group each term/description pair in a `<div>` — but
+              exactly one level of it. `<Reveal>` wrapped around the row added
+              a second, which put the `<dt>`/`<dd>` two divs deep and stopped
+              them being list content at all. The group now *is* the `<dl>` and
+              each row is its own grouping div, so the pairing survives. */}
+          <RevealGroup as="dl" stagger={0.06} className="mt-10">
             {content.points.map((p, i) => (
-              <Reveal key={p.title} delay={0.06 * i}>
-                <div className="grid grid-cols-[auto_1fr] gap-x-5 border-t border-line py-6">
-                  <span
-                    aria-hidden="true"
-                    className="mt-1 font-heading text-small font-medium text-brass-ink tabular"
-                  >
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <div>
-                    <dt className="font-heading text-h4 font-medium text-ink">{p.title}</dt>
-                    <dd className="mt-2 max-w-measure leading-relaxed text-ink-soft">
-                      {p.desc}
-                    </dd>
-                  </div>
+              <RevealItem
+                key={p.title}
+                className="grid grid-cols-[auto_1fr] gap-x-5 border-t border-line py-6"
+              >
+                <span
+                  aria-hidden="true"
+                  className="mt-1 font-heading text-small font-medium text-brass-ink tabular"
+                >
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <div>
+                  <dt className="font-heading text-h4 font-medium text-ink">{p.title}</dt>
+                  <dd className="mt-2 max-w-measure leading-relaxed text-ink-soft">{p.desc}</dd>
                 </div>
-              </Reveal>
+              </RevealItem>
             ))}
-          </dl>
+          </RevealGroup>
         </div>
       </div>
     </Section>

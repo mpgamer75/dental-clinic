@@ -1,179 +1,250 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Archive, Inbox, Loader2, MailOpen, MoreVertical, Reply, Trash2 } from 'lucide-react';
+
+import { deleteMessage, setMessageStatus } from '@/app/admin/_actions/messages';
+import type { MessageRow } from '@/app/admin/_lib/queries';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Mail, Phone, User, Clock, Eye, Archive } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import type { ContactMessageStatus } from '@/lib/schema';
 
-interface Message {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  message: string;
-  submitted_at: string;
-  status: 'unread' | 'read' | 'archived';
-}
+import { ConfirmDialog } from './confirm-dialog';
+import { MESSAGE_STATUS_META, StatusBadge } from './status';
+import { useRowMutation } from './use-row-mutation';
 
-interface Props {
-  messages: Message[];
-}
+/* ============================================================================
+   CONTACT MESSAGES
+   ----------------------------------------------------------------------------
+   Same shape as the appointments table and for the same reasons — a real table,
+   columns that drop rather than scroll, one dialog and one confirmation shared
+   across every row.
 
-export function MessagesTable({ messages: initialMessages }: Props) {
-  const [messages] = useState(initialMessages);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+   The preview in the list is truncated by CSS (`line-clamp`), not by slicing
+   the string. A `.slice(0, 80)` cuts mid-word at a fixed count regardless of
+   how wide the column actually is, and it puts an ellipsis in the middle of a
+   sentence that had room to finish.
+   ========================================================================== */
 
-  const getStatusBadge = (status: Message['status']) => {
-    const colors = {
-      unread: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-      read: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
-      archived: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20',
-    };
+const STATUS_ACTIONS: { status: ContactMessageStatus; label: string; icon: typeof Inbox }[] = [
+  { status: 'read', label: 'Marcar como leído', icon: MailOpen },
+  { status: 'unread', label: 'Marcar como sin leer', icon: Inbox },
+  { status: 'archived', label: 'Archivar', icon: Archive },
+];
 
-    const labels = {
-      unread: 'No leído',
-      read: 'Leído',
-      archived: 'Archivado',
-    };
+export function MessagesTable({ rows }: { rows: MessageRow[] }) {
+  const { pendingId, run } = useRowMutation();
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-    return (
-      <Badge className={colors[status]}>
-        {labels[status]}
-      </Badge>
-    );
-  };
-
-  const stats = {
-    total: messages.length,
-    unread: messages.filter(m => m.status === 'unread').length,
-    read: messages.filter(m => m.status === 'read').length,
-    archived: messages.filter(m => m.status === 'archived').length,
-  };
+  const detail = rows.find((row) => row.id === detailId) ?? null;
+  const pendingDelete = rows.find((row) => row.id === deleteId) ?? null;
 
   return (
-    <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total', value: stats.total, icon: MessageCircle, color: 'text-blue-500' },
-          { label: 'No leídos', value: stats.unread, icon: Mail, color: 'text-red-500' },
-          { label: 'Leídos', value: stats.read, icon: Eye, color: 'text-green-500' },
-          { label: 'Archivados', value: stats.archived, icon: Archive, color: 'text-gray-500' },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card className="border-2 hover:shadow-lg transition-all duration-300 hover:scale-105">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                    <p className="text-3xl font-bold mt-2">{stat.value}</p>
-                  </div>
-                  <stat.icon className={`h-10 w-10 ${stat.color} opacity-50`} />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+    <>
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+        <table className="w-full border-collapse text-left">
+          <caption className="sr-only">Mensajes recibidos desde el formulario de contacto.</caption>
+          <thead>
+            <tr className="border-b border-line bg-canvas-sunk">
+              <th scope="col" className="px-4 py-3 text-small font-semibold text-ink-soft">
+                Remitente
+              </th>
+              <th scope="col" className="hidden px-4 py-3 text-small font-semibold text-ink-soft md:table-cell">
+                Mensaje
+              </th>
+              <th scope="col" className="hidden px-4 py-3 text-small font-semibold text-ink-soft lg:table-cell">
+                Recibido
+              </th>
+              <th scope="col" className="px-4 py-3 text-small font-semibold text-ink-soft">
+                Estado
+              </th>
+              <th scope="col" className="px-4 py-3 text-right text-small font-semibold text-ink-soft">
+                <span className="sr-only">Acciones</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {rows.map((row) => {
+              const busy = pendingId === row.id;
+
+              return (
+                <tr
+                  key={row.id}
+                  className={cn(
+                    'align-top transition-colors duration-fast ease-out-quart hover:bg-canvas-sunk/60',
+                    busy && 'opacity-60',
+                  )}
+                >
+                  <th scope="row" className="max-w-0 px-4 py-3 font-normal">
+                    <span
+                      className={cn(
+                        'block truncate text-ink',
+                        /* Unread is heavier, the way an inbox is. Weight is a
+                           second channel beside the badge's colour and word. */
+                        row.status === 'unread' ? 'font-semibold' : 'font-medium',
+                      )}
+                    >
+                      {row.name}
+                    </span>
+                    <span className="block truncate text-small text-ink-soft">{row.email}</span>
+                    <span className="mt-1 block line-clamp-2 text-small text-ink-faint md:hidden">
+                      {row.message}
+                    </span>
+                  </th>
+
+                  <td className="hidden max-w-0 px-4 py-3 md:table-cell">
+                    <p className="line-clamp-2 text-small text-ink-soft">{row.message}</p>
+                  </td>
+
+                  <td className="hidden whitespace-nowrap px-4 py-3 text-small text-ink-soft lg:table-cell">
+                    <time dateTime={row.submittedAtIso} title={row.submittedAtLabel}>
+                      {row.waitedLabel}
+                    </time>
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <StatusBadge meta={MESSAGE_STATUS_META[row.status]} />
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="px-2.5"
+                        onClick={() => setDetailId(row.id)}
+                      >
+                        Leer
+                        <span className="sr-only"> el mensaje completo de {row.name}</span>
+                      </Button>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            disabled={busy}
+                            aria-label={`Acciones para el mensaje de ${row.name}`}
+                          >
+                            {busy ? (
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <MoreVertical className="h-4 w-4" aria-hidden="true" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          {STATUS_ACTIONS.filter((action) => action.status !== row.status).map(
+                            (action) => {
+                              const Icon = action.icon;
+                              return (
+                                <DropdownMenuItem
+                                  key={action.status}
+                                  onSelect={() =>
+                                    run(row.id, setMessageStatus, { status: action.status })
+                                  }
+                                >
+                                  <Icon className="mr-2 h-4 w-4" aria-hidden="true" />
+                                  {action.label}
+                                </DropdownMenuItem>
+                              );
+                            },
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setDeleteId(row.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                            Eliminar el mensaje
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* Messages List */}
-      <Card className="border-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            Últimos Mensajes ({messages.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AnimatePresence mode="popLayout">
-            {messages.length === 0 ? (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center text-muted-foreground py-8"
-              >
-                No hay mensajes
-              </motion.p>
-            ) : (
-              <div className="space-y-3">
-                {messages.slice(0, 10).map((message, index) => (
-                  <motion.div
-                    key={message.id}
-                    layout
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={`p-4 rounded-lg border-2 hover:border-primary/50 transition-all duration-300 cursor-pointer ${
-                      selectedId === message.id ? 'border-primary bg-primary/5' : 'border-border'
-                    } ${message.status === 'unread' ? 'bg-blue-50/30 dark:bg-blue-950/10 font-medium' : ''}`}
-                    onClick={() => setSelectedId(selectedId === message.id ? null : message.id)}
+      <Dialog open={detail !== null} onOpenChange={(open) => !open && setDetailId(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto border-line bg-surface sm:max-w-lg">
+          {detail && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-heading text-h4 text-ink">{detail.name}</DialogTitle>
+                <DialogDescription className="text-ink-soft">
+                  Recibido el {detail.submittedAtLabel} ({detail.waitedLabel}).
+                </DialogDescription>
+              </DialogHeader>
+
+              <StatusBadge meta={MESSAGE_STATUS_META[detail.status]} />
+
+              <p className="whitespace-pre-line rounded-lg bg-canvas-sunk p-4 text-body text-ink">
+                {detail.message}
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                <Button asChild size="sm">
+                  {/* The subject is prefilled so a reply lands in the patient's
+                      inbox looking like an answer rather than a cold email. */}
+                  <a
+                    href={`mailto:${detail.email}?subject=${encodeURIComponent(
+                      'Respuesta a su consulta — Orthoprotesis',
+                    )}`}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold">{message.name}</span>
-                          </div>
-                          {getStatusBadge(message.status)}
-                        </div>
-
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1.5">
-                            <Mail className="h-3.5 w-3.5" />
-                            {message.email}
-                          </div>
-                          {message.phone && (
-                            <div className="flex items-center gap-1.5">
-                              <Phone className="h-3.5 w-3.5" />
-                              {message.phone}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5" />
-                            {format(new Date(message.submitted_at), "d 'de' MMMM, yyyy", { locale: es })}
-                          </div>
-                        </div>
-
-                        {selectedId === message.id && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="pt-3 border-t mt-3"
-                          >
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {message.message}
-                            </p>
-                          </motion.div>
-                        )}
-                      </div>
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
+                    <Reply className="h-4 w-4" aria-hidden="true" />
+                    Responder por correo
+                  </a>
+                </Button>
+                {detail.phone && (
+                  <Button asChild variant="outline" size="sm">
+                    <a href={`tel:${detail.phone.replace(/[^\d+]/g, '')}`} className="tabular">
+                      Llamar al {detail.phone}
+                    </a>
+                  </Button>
+                )}
               </div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-    </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="¿Eliminar este mensaje?"
+        description={
+          pendingDelete
+            ? `Se eliminará definitivamente el mensaje de ${pendingDelete.name}. Si aún no le han ` +
+              'respondido, archívelo en lugar de eliminarlo.'
+            : ''
+        }
+        confirmLabel="Eliminar el mensaje"
+        onConfirm={() => {
+          if (pendingDelete) run(pendingDelete.id, deleteMessage);
+          setDeleteId(null);
+        }}
+      />
+    </>
   );
 }

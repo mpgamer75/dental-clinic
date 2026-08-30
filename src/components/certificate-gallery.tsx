@@ -128,55 +128,79 @@ export function CertificateGallery({ items, className }: CertificateGalleryProps
                   institution: d.institution,
                   year: d.year,
                 })}
-                className="group relative block w-full rounded-xl border border-line bg-surface p-2.5 shadow-e1 transition duration-base ease-out-quart hover:-translate-y-1 hover:border-line-strong hover:shadow-e3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-canvas sm:p-3"
+                /* An explicit property list, not a bare `transition`.
+                   Tailwind's unqualified `transition` covers colour, opacity,
+                   transform, `box-shadow`, `filter` AND `backdrop-filter` — so
+                   this card was declaring a transition on two of the most
+                   expensive properties in CSS, on nine cards at once, on the
+                   off-chance one of them changed. Only the lift and the border
+                   move, so only they are named. */
+                className="group relative block w-full rounded-xl border border-line bg-surface shadow-e1 transition-[transform,border-color] duration-base ease-out-quart hover:-translate-y-1 hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-canvas"
               >
-                {/* The mount: recessed, one step darker than the frame around
-                    it, so a white certificate has something to sit against. */}
-                <span className="relative block aspect-[4/3] w-full rounded-md bg-canvas-sunk p-3 sm:p-4">
-                  <span className="relative block h-full w-full" style={PAPER_LIFT}>
-                    <Image
-                      src={d.image}
-                      /* Decorative, deliberately.
-                         The document's title, institution and year sit directly
-                         beneath it in real text, and the button that wraps this
-                         image carries an explicit accessible name naming the
-                         same three things. A descriptive alt here would be
-                         announced nowhere (aria-label wins) or announced twice.
-                         The text is the accessible content; this is its
-                         illustration. */
-                      alt=""
-                      fill
-                      /* The shell caps at --shell-max (94rem = 1598px at this
-                         project's 17px root), so a 3-up column is
-                         (1598 - 2*gap)/3 ≈ 507px, and the image box ≈ 447px
-                         after the card's padding. An earlier 400px here was
-                         derived from a `wide` track that does not exist and
-                         under-requested by ~12% on wide displays. */
-                      sizes="(min-width: 1712px) 460px, (min-width: 1024px) 30vw, (min-width: 640px) 44vw, 88vw"
-                      /* 88, not 60. These are text-bearing documents; JPEG
-                         ringing round 8pt serif type is far more destructive
-                         than it is on a photograph of a room. */
-                      quality={88}
-                      loading="lazy"
-                      className="object-contain"
-                    />
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 rounded-md"
-                    style={MAT_INSET}
-                  />
-                </span>
-
-                {/* Hover affordance. Kept permanently visible where there is no
-                    hover to detect, so the tap target announces itself on a
-                    phone too. */}
+                {/* The raised elevation, as a cross-faded layer.
+                    The card lifts from `e1` to `e3` on hover, and a card that
+                    rises without its shadow deepening reads as broken. But a
+                    box-shadow transition re-renders a large blurred spread on
+                    every frame, which is exactly what must not happen nine
+                    times over. Two static shadows and an opacity cross-fade
+                    give the identical result on the compositor. */}
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute bottom-5 right-5 inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-small font-medium text-canvas opacity-0 shadow-e2 transition-opacity duration-base ease-out-quart group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                  {t.openHint}
+                  className="pointer-events-none absolute inset-0 rounded-xl opacity-0 shadow-e3 transition-opacity duration-base ease-out-quart group-hover:opacity-100 group-focus-visible:opacity-100"
+                />
+
+                {/* The card's padding lives here rather than on the button, so
+                    that the elevation layer above can use `inset-0` and land on
+                    the card's real edge instead of inside its padding. */}
+                <span className="relative block p-2.5 sm:p-3">
+                  {/* The mount: recessed, one step darker than the frame around
+                      it, so a white certificate has something to sit against. */}
+                  <span className="relative block aspect-[4/3] w-full rounded-md bg-canvas-sunk p-3 sm:p-4">
+                    <span className="relative block h-full w-full" style={PAPER_LIFT}>
+                      <Image
+                        src={d.image}
+                        /* Decorative, deliberately.
+                           The document's title, institution and year sit directly
+                           beneath it in real text, and the button that wraps this
+                           image carries an explicit accessible name naming the
+                           same three things. A descriptive alt here would be
+                           announced nowhere (aria-label wins) or announced twice.
+                           The text is the accessible content; this is its
+                           illustration. */
+                        alt=""
+                        fill
+                        /* The shell caps at --shell-max (94rem = 1598px at this
+                           project's 17px root), so a 3-up column is
+                           (1598 - 2*gap)/3 ≈ 507px, and the image box ≈ 447px
+                           after the card's padding. An earlier 400px here was
+                           derived from a `wide` track that does not exist and
+                           under-requested by ~12% on wide displays. */
+                        sizes="(min-width: 1712px) 460px, (min-width: 1024px) 30vw, (min-width: 640px) 44vw, 88vw"
+                        /* 88, not 60. These are text-bearing documents; JPEG
+                           ringing round 8pt serif type is far more destructive
+                           than it is on a photograph of a room. */
+                        quality={88}
+                        loading="lazy"
+                        className="object-contain"
+                      />
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 rounded-md"
+                      style={MAT_INSET}
+                    />
+                  </span>
+
+                  {/* Hover affordance. Kept permanently visible where there is
+                      no hover to detect, so the tap target announces itself on
+                      a phone too. */}
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute bottom-5 right-5 inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-small font-medium text-canvas opacity-0 shadow-e2 transition-opacity duration-base ease-out-quart group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                    {t.openHint}
+                  </span>
                 </span>
               </button>
 

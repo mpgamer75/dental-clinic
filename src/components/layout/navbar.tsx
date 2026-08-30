@@ -130,12 +130,13 @@ export function Navbar() {
 
       {/* The <header> element reserves the flow space and never changes size.
           A sticky box still occupies its original space in the document, so
-          shrinking the element itself on scroll pulled 17px out of the page and
-          every section under it lurched upward at the moment it stuck
-          (measured: document height 13707 → 13690). The bar that actually
-          shrinks is the absolutely positioned child below, which costs the
-          layout nothing. Pointer events are handed to that child so the strip
-          of empty header left beside it cannot swallow clicks on the page. */}
+          changing the element's own size on scroll pulled 17px out of the page
+          and every section under it lurched upward at the moment it stuck
+          (measured: document height 13707 → 13690). Everything that reacts to
+          the scroll state is the absolutely positioned child below, which is
+          out of flow and so costs the layout nothing. Pointer events are handed
+          to that child so the strip of empty header left beside it cannot
+          swallow clicks on the page. */}
       <header
         data-stuck={stuck}
         className="group/header pointer-events-none sticky top-0 z-header h-[4.5rem] w-full print:hidden"
@@ -143,11 +144,27 @@ export function Navbar() {
         <div
           className={cn(
             'pointer-events-auto absolute inset-x-0 top-0',
-            // Exactly three properties move: the bar's height, its background
-            // and its bottom rule. A header that changes more than that on
-            // scroll is performing rather than responding.
+            // Exactly two properties move: the bar's ground and its bottom
+            // rule. A header that changes more than that on scroll is
+            // performing rather than responding — and the two it used to add
+            // were both expensive.
+            //
+            // The bar also shrank from 4.5rem to 3.5rem on a `transition-
+            // [height]`. Height is a layout property: every frame of that
+            // 220ms transition relaid out the bar's contents, and because the
+            // sticky header sits above a ~13,700px document the browser had to
+            // resolve the whole thing again each time.
+            //
+            // The ground was `bg-canvas/85` behind `backdrop-blur-xl`, which
+            // is worse than it looks. A backdrop filter re-samples and re-blurs
+            // whatever is behind the element every frame it changes — and this
+            // element is stuck to the top of a page whose entire content
+            // scrolls underneath it, so "every frame it changes" means the rest
+            // of the session. Opaque canvas costs one paint, reads more
+            // legibly over the hero photograph, and stops the header being a
+            // containing block for fixed descendants into the bargain.
             'border-b border-transparent bg-transparent',
-            'group-data-[stuck=true]/header:border-line/60 group-data-[stuck=true]/header:bg-canvas/85 group-data-[stuck=true]/header:backdrop-blur-xl',
+            'group-data-[stuck=true]/header:border-line/60 group-data-[stuck=true]/header:bg-canvas',
             'motion-safe:transition-[background-color,border-color] motion-safe:duration-base motion-safe:ease-out-quart',
           )}
         >
@@ -160,13 +177,9 @@ export function Navbar() {
               `width: min(100% - gap*2, --shell-max)` and run the header edge to
               edge while the page below it kept its gutters. */}
           <div className="shell">
-            <div
-              className={cn(
-                'flex h-[4.5rem] items-center justify-between gap-3',
-                'motion-safe:transition-[height] motion-safe:duration-base motion-safe:ease-out-quart',
-                'group-data-[stuck=true]/header:h-14',
-              )}
-            >
+            {/* One fixed height, at every scroll position. See the note on the
+                band above for why the shrink went. */}
+            <div className="flex h-[4.5rem] items-center justify-between gap-3">
               {/* ── Tier 1: the masthead ─────────────────────────────── */}
               <NavWordmark lang={lang} href={homeHref} current={onHome} withTagline />
 
@@ -266,8 +279,14 @@ export function Navbar() {
                   className={cn(
                     'group/cta ml-2 hidden h-11 shrink-0 items-center gap-2 rounded-lg px-4 sm:inline-flex',
                     'border border-terracotta/45 text-small uppercase tracking-[0.085em] text-terracotta',
-                    'transition-[color,background-color,border-color,box-shadow] duration-base ease-out-quart',
-                    'hover:border-terracotta hover:bg-terracotta hover:text-primary-foreground hover:shadow-e1',
+                    // Colour only. The hover used to raise an `e1` shadow as
+                    // well, which put box-shadow in the transition list — a
+                    // repaint of a blurred spread on every frame, on the one
+                    // element that is on screen for the entire visit. An
+                    // outlined control filling solid is already the loudest
+                    // hover on the page; it does not also need to lift.
+                    'transition-[color,background-color,border-color] duration-base ease-out-quart',
+                    'hover:border-terracotta hover:bg-terracotta hover:text-primary-foreground',
                     FOCUS_RING,
                   )}
                 >
@@ -301,10 +320,13 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Rendered outside <header> on purpose: the stuck header carries
-          `backdrop-filter`, which makes it a containing block for fixed
-          descendants — a full-screen overlay nested inside it would be
-          clipped to the height of the bar. */}
+      {/* Rendered outside <header> on purpose. The header is `sticky` with a
+          real `z-index`, so it establishes its own stacking context: an
+          overlay nested inside it is sealed into that context and cannot paint
+          above anything later in the document, however high its own z-index
+          goes. (Until this bar's blur was removed it was also a containing
+          block for fixed descendants, which clipped the full-screen panel to
+          the height of the header — one hazard fewer, same conclusion.) */}
       {open && (
         <MobileNavOverlay
           lang={lang}

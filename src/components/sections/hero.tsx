@@ -30,13 +30,36 @@ export function Hero({ content, trust, appointmentHref, implantHref, phone }: He
   return (
     <section className="drenched-deep relative isolate overflow-hidden">
       {/* Ambient light-wash. Decorative only, long and low-amplitude so it
-          reads as light moving through a room. Hidden under reduced-motion
-          by the global media query, which zeroes the animation. */}
+          reads as light moving through a room. Stilled under reduced-motion by
+          the global media query, which zeroes the animation.
+
+          The softness is a radial gradient, NOT `blur-3xl` on a filled circle,
+          and that distinction is the whole cost of this effect. A 64px blur
+          over a 70vw disc is a filter pass the compositor cannot cache across
+          a transform: the drift animates `scale`, so every frame re-rasterised
+          two full-viewport blurred layers for the entire time the hero was on
+          screen. Pre-blurring the shape into the gradient itself leaves a
+          plain painted layer that the compositor promotes once and then only
+          moves — same picture, no per-frame filter.
+
+          Both stops fade to the SAME hue at zero alpha rather than to
+          `transparent`, which is `rgba(0,0,0,0)` and interpolates through grey
+          — the classic muddy ring around a soft glow. */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -left-1/4 top-[-30%] h-[70vw] w-[70vw] rounded-full bg-brass/10 blur-3xl animate-drift" />
         <div
-          className="absolute -right-1/3 bottom-[-40%] h-[60vw] w-[60vw] rounded-full bg-terracotta/20 blur-3xl animate-drift"
-          style={{ animationDelay: '-13s' }}
+          className="absolute -left-1/4 top-[-30%] h-[70vw] w-[70vw] animate-drift"
+          style={{
+            backgroundImage:
+              'radial-gradient(closest-side, oklch(var(--brass) / 0.16), oklch(var(--brass) / 0))',
+          }}
+        />
+        <div
+          className="absolute -right-1/3 bottom-[-40%] h-[60vw] w-[60vw] animate-drift"
+          style={{
+            backgroundImage:
+              'radial-gradient(closest-side, oklch(var(--primary-base) / 0.26), oklch(var(--primary-base) / 0))',
+            animationDelay: '-13s',
+          }}
         />
       </div>
 

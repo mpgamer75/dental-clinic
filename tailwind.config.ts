@@ -51,7 +51,7 @@ export default {
           border: ok("primary-border"),
         },
         drench: { DEFAULT: ok("drench"), deep: ok("drench-deep"), on: ok("on-drench") },
-        petrol: { DEFAULT: ok("petrol"), soft: ok("petrol-soft") },
+        cyan: { DEFAULT: ok("cyan"), soft: ok("cyan-soft") },
         brass: {
           DEFAULT: ok("brass"),
           ink: ok("brass-ink"),

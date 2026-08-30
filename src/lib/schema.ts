@@ -214,6 +214,44 @@ export const siteSettings = appSchema.table(
 export const SITE_SETTINGS_ID = true;
 
 /* ============================================================================
+   app.staff — the authorization boundary
+   ----------------------------------------------------------------------------
+   A Neon Auth session answers "who are you". A row here answers "may you see
+   the patient book". Those are different questions, and for a while this
+   project only asked the first: the Supabase panel gated on an `admin_users`
+   row, the rewrite dropped that check, and every account in the auth project
+   silently became an administrator.
+
+   Matched by EMAIL rather than by the auth service's user id, because the id
+   does not exist until first sign-in and access has to be grantable before
+   then. `citext` makes the match case-insensitive.
+
+   This is only safe while src/app/api/auth/[...path]/route.ts refuses to proxy
+   sign-up. If anyone could self-register they could register a staff address
+   and inherit its access. The two halves hold each other up.
+   ========================================================================== */
+export const staff = appSchema.table(
+  'staff',
+  {
+    email: citext('email').primaryKey(),
+    name: text('name'),
+    /* Recorded on first sign-in so the audit log can address the account rather
+       than the address. Never consulted when deciding access — it is null until
+       that first sign-in, and access must work before it. */
+    userId: text('user_id').unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /* Revocation without deletion: dropping the row would erase the record that
+       this person ever had access, which is the opposite of what an audit trail
+       is for. The app role has no DELETE on this table. */
+    disabledAt: timestamp('disabled_at', { withTimezone: true }),
+  },
+  (t) => [check('staff_email_check', sql`position('@' in ${t.email}) > 1`)],
+);
+
+export type Staff = typeof staff.$inferSelect;
+export type NewStaff = typeof staff.$inferInsert;
+
+/* ============================================================================
    app.rate_limits
    ----------------------------------------------------------------------------
    Fixed-window counters for the public forms and for admin login. `bucket` is a

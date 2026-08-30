@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { auth } from '@/lib/auth/server';
+
 /**
  * The auth service's origin, for `connect-src`.
  *
@@ -61,6 +63,31 @@ const SECURITY_HEADERS = {
 const SUPPORTED_LANGUAGES = ['es', 'en'];
 const DEFAULT_LANGUAGE = 'es';
 
+/**
+ * The admin guard, as defence in depth.
+ *
+ * This file used to skip /admin outright, which meant the panel's only
+ * authentication was a `useState` in a client component — the markup, the
+ * patient rows and the database credential were all served before anything
+ * asked who was asking. The real boundary is now the server layout at
+ * src/app/admin/(panel)/layout.tsx, which will not render a byte of the panel
+ * without a session. This is the second lock: it turns an unauthenticated
+ * request into a redirect at the edge, before a route is even resolved, and it
+ * refreshes a session that is close to expiring so a working day does not end
+ * in a surprise sign-out.
+ *
+ * Scoped to /admin by the call site below, and that scoping is load-bearing:
+ * `auth.middleware` protects EVERY path it is handed except its own skip list,
+ * so running it over the matcher would put the clinic's public site behind a
+ * login form.
+ *
+ * `loginUrl` must stay in step with ADMIN_LOGIN_PATH in
+ * src/app/admin/_lib/session.ts. If the two disagree, an anonymous visitor is
+ * bounced between a middleware that sends them to one URL and a layout that
+ * sends them to the other.
+ */
+const guardAdminRoutes = auth.middleware({ loginUrl: '/admin/login' });
+
 /** Copies the security headers onto a response. Redirects need this too — see
  *  the call sites below. */
 function withSecurityHeaders(res: NextResponse): NextResponse {
@@ -83,15 +110,27 @@ export default async function proxy(req: NextRequest) {
     NextResponse.next({ request: { headers: requestHeaders } }),
   );
 
-  // Skip static assets and admin routes (admin is not locale-prefixed)
+  // Skip static assets. /api/ included: a sign-in POST rewritten to
+  // /es/api/auth/... arrives as a 404 and the admin can no longer log in.
   if (
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/images/') ||
     pathname.startsWith('/api/') ||
-    pathname.includes('.') ||
-    pathname.startsWith('/admin')
+    pathname.includes('.')
   ) {
     return res;
+  }
+
+  // Admin routes are not locale-prefixed — the panel is Spanish-only, and
+  // `activeLang` above already resolved to the default for them — so they skip
+  // the locale block below and go through the auth guard instead.
+  //
+  // The guard builds its own response (it may need to attach refreshed session
+  // cookies, or redirect), so the security headers are applied to whatever it
+  // returns rather than to `res`. Without that, every admin response — the
+  // redirect to the login form included — would ship with no CSP and no HSTS.
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    return withSecurityHeaders(await guardAdminRoutes(req));
   }
 
   // Locale handling for public routes.

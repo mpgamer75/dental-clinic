@@ -1,477 +1,220 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type ReactElement } from 'react';
 import {
-  PieChart,
-  Pie,
+  Bar,
+  BarChart,
+  CartesianGrid,
   Cell,
   ResponsiveContainer,
   Tooltip,
-  Legend,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Area,
-  AreaChart,
 } from 'recharts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, MessageCircle, Star, TrendingUp } from 'lucide-react';
-import { motion } from 'framer-motion';
 
-interface Appointment {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  service_type: string;
-  reason: string;
-  is_urgent: boolean;
-  submitted_at: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-}
+import type { ServiceDemand, TrendPoint } from '@/app/admin/_lib/queries';
 
-interface Message {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  message: string;
-  submitted_at: string;
-  status: 'unread' | 'read' | 'archived';
-}
+/* ============================================================================
+   TWO CHARTS, BOTH ABOUT DEMAND
+   ----------------------------------------------------------------------------
+   What was here before was five: three donuts of a status split the stat cards
+   already stated in words, and two bar charts — one of which had a numeric
+   X axis against a category Y axis on a horizontal layout, a contradiction
+   recharts resolves by drawing no bars at all. It had been rendering an empty
+   axis frame with correct labels since the day it was written.
 
-interface Testimonial {
-  id: string;
-  name: string;
-  quote: string;
-  location: string | null;
-  submitted_at: string;
-  status: 'pending_approval' | 'approved' | 'rejected';
-}
+   Worse, all five were computed in the browser from the ten rows the dashboard
+   had fetched. "Citas por estado" over the last ten submissions is not a
+   distribution, it is a rounding error with a legend. Everything below is
+   aggregated in Postgres over the whole table (see queries.ts) and arrives as
+   at most nineteen numbers.
 
-interface DashboardChartsProps {
-  appointments: Appointment[];
-  messages: Message[];
-  testimonials: Testimonial[];
-}
+   Colours come from --chart-1..5 through `oklch(var(--chart-n))`. CSS custom
+   properties resolve inside SVG presentation attributes, so the series follow
+   the theme — light, dark, and whatever the palette becomes next — without a
+   single literal in this file and without reading computed styles at runtime.
 
-const COLORS = {
-  pending: '#f59e0b',
-  confirmed: '#3b82f6',
-  cancelled: '#ef4444',
-  completed: '#10b981',
-  unread: '#f59e0b',
-  read: '#3b82f6',
-  archived: '#6b7280',
-  pending_approval: '#eab308',
-  approved: '#10b981',
-  rejected: '#ef4444',
-};
+   `isAnimationActive={false}` throughout. Recharts animates by recomputing path
+   geometry on every frame in JavaScript, which is layout work on the main
+   thread rather than a compositor transform; on a dashboard that redraws after
+   every mutation it is a stutter for no information.
+   ========================================================================== */
 
-interface TooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    name: string;
-    value: number;
-    payload: {
-      total: number;
-    };
-  }>;
-}
+const SERIES = {
+  routine: 'oklch(var(--chart-1))',
+  urgent: 'oklch(var(--chart-4))',
+  service: 'oklch(var(--chart-3))',
+} as const;
 
-const CustomTooltip = ({ active, payload }: TooltipProps) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-3">
-        <p className="text-sm font-semibold text-foreground">{payload[0].name}</p>
-        <p className="text-sm text-muted-foreground">
-          {payload[0].value} ({((payload[0].value / payload[0].payload.total) * 100).toFixed(1)}%)
-        </p>
+const AXIS_TICK = { fill: 'oklch(var(--ink-faint))', fontSize: 11 } as const;
+
+function ChartFrame({
+  title,
+  description,
+  empty,
+  emptyMessage,
+  children,
+}: {
+  title: string;
+  description: string;
+  empty: boolean;
+  emptyMessage: string;
+  children: ReactElement;
+}) {
+  return (
+    <section className="rounded-xl border border-line bg-surface p-5 shadow-e1">
+      <h2 className="font-heading text-h4 text-ink">{title}</h2>
+      <p className="mt-1 text-small text-ink-soft">{description}</p>
+
+      <div className="mt-4">
+        {empty ? (
+          <p className="flex h-[200px] items-center justify-center rounded-lg bg-canvas-sunk px-4 text-center text-small text-ink-faint">
+            {emptyMessage}
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            {children}
+          </ResponsiveContainer>
+        )}
       </div>
-    );
-  }
-  return null;
-};
+    </section>
+  );
+}
 
-export function DashboardCharts({ appointments, messages, testimonials }: DashboardChartsProps) {
-  // Appointments by status
-  const appointmentsByStatus = useMemo(() => {
-    const counts: Record<string, number> = {
-      pending: 0,
-      confirmed: 0,
-      cancelled: 0,
-      completed: 0,
-    };
-    appointments.forEach((apt) => {
-      counts[apt.status] = (counts[apt.status] || 0) + 1;
-    });
-    const total = Object.values(counts).reduce((a, b) => a + b, 0);
-    return Object.entries(counts).map(([status, value]) => ({
-      name: status === 'pending' ? 'Pendiente' : status === 'confirmed' ? 'Confirmado' : status === 'cancelled' ? 'Cancelado' : 'Completado',
-      value,
-      color: COLORS[status as keyof typeof COLORS],
-      total,
-    }));
-  }, [appointments]);
-
-  // Appointments over time (last 7 days).
-  //
-  // Everything here is computed in LOCAL time. The previous version bucketed by
-  // `toISOString().split('T')[0]` (a UTC calendar date) and then labelled that
-  // string via `new Date('YYYY-MM-DD')` — which JS parses as UTC midnight —
-  // formatted back into the viewer's local zone. In Santiago (UTC-4) UTC
-  // midnight is 8pm the previous day, so every weekday label was off by one and
-  // appointments submitted after 8pm local were counted on the following day.
-  const appointmentsOverTime = useMemo(() => {
-    /** Local YYYY-MM-DD, never round-tripped through UTC. */
-    const localKey = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate(),
-      ).padStart(2, '0')}`;
-
-    const today = new Date();
-    const days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      d.setDate(d.getDate() - (6 - i));
-      return d;
-    });
-
-    // Bucket once, so this is O(n) rather than a filter pass per day.
-    const buckets = new Map<string, number>(days.map((d) => [localKey(d), 0]));
-    for (const apt of appointments) {
-      const submitted = new Date(apt.submitted_at);
-      if (Number.isNaN(submitted.getTime())) continue;
-      const key = localKey(submitted);
-      if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
-    }
-
-    return days.map((d) => {
-      const dayName = d.toLocaleDateString('es-DO', { weekday: 'short' });
-      return {
-        date: dayName.charAt(0).toUpperCase() + dayName.slice(1),
-        citas: buckets.get(localKey(d)) ?? 0,
-      };
-    });
-  }, [appointments]);
-
-  // Messages by status
-  const messagesByStatus = useMemo(() => {
-    const counts: Record<string, number> = {
-      unread: 0,
-      read: 0,
-      archived: 0,
-    };
-    messages.forEach((msg) => {
-      counts[msg.status] = (counts[msg.status] || 0) + 1;
-    });
-    return Object.entries(counts).map(([status, value]) => ({
-      name: status === 'unread' ? 'No leído' : status === 'read' ? 'Leído' : 'Archivado',
-      value,
-      color: COLORS[status as keyof typeof COLORS],
-    }));
-  }, [messages]);
-
-  // Testimonials by status
-  const testimonialsByStatus = useMemo(() => {
-    const counts: Record<string, number> = {
-      pending_approval: 0,
-      approved: 0,
-      rejected: 0,
-    };
-    testimonials.forEach((test) => {
-      counts[test.status] = (counts[test.status] || 0) + 1;
-    });
-    const total = Object.values(counts).reduce((a, b) => a + b, 0);
-    return Object.entries(counts).map(([status, value]) => ({
-      name: status === 'pending_approval' ? 'Por aprobar' : status === 'approved' ? 'Aprobado' : 'Rechazado',
-      value,
-      color: COLORS[status as keyof typeof COLORS],
-      total,
-    }));
-  }, [testimonials]);
-
-  // Service type distribution
-  const serviceTypeDistribution = useMemo(() => {
-    const counts: Record<string, number> = {};
-    appointments.forEach((apt) => {
-      counts[apt.service_type] = (counts[apt.service_type] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([service, value], index) => ({
-        name: service.length > 20 ? service.substring(0, 20) + '...' : service,
-        value,
-        color: ['#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#3b82f6'][index],
-      }));
-  }, [appointments]);
+/** Tooltip styled with the same tokens as the rest of the panel. Recharts'
+ *  default is a white box with a grey border, which is a different product in
+ *  dark mode. */
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+  label?: string | number;
+}) {
+  if (!active || !payload?.length) return null;
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-      {/* Appointments by Status - Pie Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      >
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500/5 via-transparent to-transparent hover:shadow-xl transition-shadow">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold">Citas por Estado</CardTitle>
-                <CardDescription className="text-xs">Distribución de estados</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={appointmentsByStatus}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={70}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {appointmentsByStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: '12px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </motion.div>
+    <div className="rounded-lg border border-line bg-surface-raised px-3 py-2 shadow-e2">
+      <p className="text-small font-medium text-ink">{label}</p>
+      {payload.map((entry, index) => (
+        <p key={index} className="tabular text-small text-ink-soft">
+          <span
+            aria-hidden="true"
+            className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
+            style={{ backgroundColor: entry.color }}
+          />
+          {entry.name}: {entry.value}
+        </p>
+      ))}
+    </div>
+  );
+}
 
-      {/* Appointments Over Time - Area Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-      >
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500/5 via-transparent to-transparent hover:shadow-xl transition-shadow">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold">Citas (7 días)</CardTitle>
-                <CardDescription className="text-xs">Tendencia semanal</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={appointmentsOverTime}>
-                <defs>
-                  <linearGradient id="colorCitas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={30}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'oklch(var(--background))',
-                    border: '1px solid oklch(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="citas"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  fill="url(#colorCitas)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </motion.div>
+export function DashboardCharts({
+  trend,
+  services,
+}: {
+  trend: TrendPoint[];
+  services: ServiceDemand[];
+}) {
+  /* The urgent count is a subset of the total, so the routine bar is the
+     difference. Stacking `urgent` on `total` would draw a column twice as tall
+     as the day's real volume. */
+  const trendData = useMemo(
+    () =>
+      trend.map((point) => ({
+        label: point.label,
+        Habituales: point.total - point.urgent,
+        Urgentes: point.urgent,
+      })),
+    [trend],
+  );
 
-      {/* Messages by Status - Bar Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.3 }}
-      >
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500/5 via-transparent to-transparent hover:shadow-xl transition-shadow">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <MessageCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold">Mensajes</CardTitle>
-                <CardDescription className="text-xs">Estado de mensajes</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={messagesByStatus}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={30}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'oklch(var(--background))',
-                    border: '1px solid oklch(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                  }}
-                />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                  {messagesByStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </motion.div>
+  const trendEmpty = trend.every((point) => point.total === 0);
 
-      {/* Testimonials by Status */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.4 }}
-      >
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-500/5 via-transparent to-transparent hover:shadow-xl transition-shadow">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <Star className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold">Testimonios</CardTitle>
-                <CardDescription className="text-xs">Estado de testimonios</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={testimonialsByStatus}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={70}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {testimonialsByStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: '12px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </motion.div>
+  const serviceData = useMemo(
+    () =>
+      services.map((entry) => ({
+        /* Recharts renders a category tick as a single line, so a long service
+           name would be clipped by the axis width rather than wrapped. */
+        name: entry.service.length > 22 ? `${entry.service.slice(0, 21)}…` : entry.service,
+        full: entry.service,
+        Solicitudes: entry.total,
+      })),
+    [services],
+  );
 
-      {/* Service Type Distribution */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.5 }}
-        className="md:col-span-2"
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <ChartFrame
+        title="Solicitudes de cita"
+        description="Últimos 14 días, en hora de la clínica. Las urgentes se muestran aparte."
+        empty={trendEmpty}
+        emptyMessage="No se han recibido solicitudes de cita en los últimos 14 días."
       >
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent hover:shadow-xl transition-shadow">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold">Top 5 Servicios Solicitados</CardTitle>
-                <CardDescription className="text-xs">Servicios más populares</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              {/* `layout="vertical"` is what recharts calls horizontal BARS.
-                  This was `layout="horizontal"` (the default) while supplying a
-                  numeric XAxis and a category YAxis — a contradiction recharts
-                  resolves by rendering no bars at all. The card has been
-                  showing an empty axis frame with correct labels and zero data
-                  since it was written. */}
-              <BarChart data={serviceTypeDistribution} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tick={{ fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={150}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'oklch(var(--background))',
-                    border: '1px solid oklch(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                  }}
-                />
-                <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                  {serviceTypeDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </motion.div>
+        <BarChart data={trendData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+          <CartesianGrid vertical={false} stroke="oklch(var(--line))" strokeDasharray="3 3" />
+          <XAxis
+            dataKey="label"
+            tick={AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            interval="preserveStartEnd"
+            minTickGap={12}
+          />
+          <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} allowDecimals={false} width={36} />
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: 'oklch(var(--canvas-sunk))' }} />
+          <Bar
+            dataKey="Habituales"
+            stackId="citas"
+            fill={SERIES.routine}
+            isAnimationActive={false}
+          />
+          <Bar
+            dataKey="Urgentes"
+            stackId="citas"
+            fill={SERIES.urgent}
+            radius={[4, 4, 0, 0]}
+            isAnimationActive={false}
+          />
+        </BarChart>
+      </ChartFrame>
+
+      <ChartFrame
+        title="Servicios más solicitados"
+        description="Sobre el total histórico de solicitudes, no sobre la página que se está viendo."
+        empty={serviceData.length === 0}
+        emptyMessage="Todavía no hay solicitudes de cita registradas."
+      >
+        {/* `layout="vertical"` is what recharts calls horizontal BARS: a
+            numeric X axis and a category Y axis. The chart this replaces
+            supplied exactly these axes on the default horizontal layout and so
+            drew nothing at all. */}
+        <BarChart
+          data={serviceData}
+          layout="vertical"
+          margin={{ top: 4, right: 12, bottom: 0, left: 0 }}
+        >
+          <CartesianGrid horizontal={false} stroke="oklch(var(--line))" strokeDasharray="3 3" />
+          <XAxis type="number" tick={AXIS_TICK} tickLine={false} axisLine={false} allowDecimals={false} />
+          <YAxis
+            type="category"
+            dataKey="name"
+            tick={AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            width={140}
+          />
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: 'oklch(var(--canvas-sunk))' }} />
+          <Bar dataKey="Solicitudes" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+            {serviceData.map((entry) => (
+              <Cell key={entry.full} fill={SERIES.service} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ChartFrame>
     </div>
   );
 }
