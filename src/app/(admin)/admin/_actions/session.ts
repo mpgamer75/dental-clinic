@@ -19,10 +19,14 @@
    ========================================================================== */
 
 import { redirect } from 'next/navigation';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { recordAudit } from '@/lib/audit';
 import { auth } from '@/lib/auth/server';
+import { db } from '@/lib/db';
+import { formatDatabaseFailure } from '@/lib/db-errors';
+import { staff } from '@/lib/schema';
 import { CSRF_FIELD_NAME, assertCsrf, ensureCsrfToken } from '@/lib/csrf';
 import { checkAdminLoginLimit } from '@/lib/rate-limit';
 import { getRequestContext } from '@/lib/request-context';
@@ -163,6 +167,35 @@ export async function signInAction(
     entity: 'session',
     entityId: signedInUserId,
   });
+
+  /* Bind the auth account to the staff row, once.
+   *
+   * `app.staff.user_id` is documented as "recorded the first time this person
+   * signs in", and until this ran nothing wrote it — so the column was always
+   * null and `npm run admin:list` reported "never signed in" for people who had
+   * signed in that minute. A column whose comment describes behaviour the code
+   * does not have is worse than no column.
+   *
+   * Here rather than in `readAdminSession`, because this is a mutation context:
+   * the session lookup runs on every admin request and every admin action, and
+   * writing from it would put a needless UPDATE on the hot path.
+   *
+   * `is null` in the predicate makes it a one-time write rather than a write on
+   * every sign-in, and means a changed id is NOT silently accepted — if the
+   * address is ever re-registered against a different account, the row keeps the
+   * original binding and the mismatch stays visible. Failure is swallowed for
+   * the same reason `recordAudit` swallows: bookkeeping must not cost the
+   * dentist a login. */
+  if (signedInUserId) {
+    try {
+      await db
+        .update(staff)
+        .set({ userId: signedInUserId })
+        .where(and(eq(staff.email, parsed.data.email), isNull(staff.userId)));
+    } catch (cause) {
+      console.warn('[admin] could not bind staff row to account: %s', formatDatabaseFailure(cause));
+    }
+  }
 
   redirect(ADMIN_HOME_PATH);
 }
