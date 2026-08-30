@@ -66,7 +66,7 @@ export function PaginationBar({
         {hasPrevious ? (
           <Link
             href={buildListHref(pathname, current, { page: String(page - 1) })}
-            className={cn(linkClasses, 'text-ink hover:border-terracotta/50 hover:bg-terracotta-soft')}
+            className={cn(linkClasses, 'text-ink hover:border-primary/50 hover:bg-primary-soft')}
             rel="prev"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -82,7 +82,7 @@ export function PaginationBar({
         {hasNext ? (
           <Link
             href={buildListHref(pathname, current, { page: String(page + 1) })}
-            className={cn(linkClasses, 'text-ink hover:border-terracotta/50 hover:bg-terracotta-soft')}
+            className={cn(linkClasses, 'text-ink hover:border-primary/50 hover:bg-primary-soft')}
             rel="next"
           >
             Siguiente

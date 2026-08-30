@@ -62,7 +62,7 @@ export function MobileActionBar() {
         </a>
         <Link
           href={`/${lang}/agendar-cita`}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-terracotta font-medium text-primary-foreground shadow-e1 transition-colors duration-fast active:bg-terracotta-hover"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-primary font-medium text-primary-foreground shadow-e1 transition-colors duration-fast active:bg-primary-hover"
         >
           <CalendarCheck className="h-4 w-4" aria-hidden="true" />
           {t.book}

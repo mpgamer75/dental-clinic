@@ -194,7 +194,7 @@ export default async function AgendarCitaPage({ params }: { params: Promise<{ la
                   <dd className="mt-0.5">
                     <a
                       href={telHref}
-                      className="text-small text-ink underline-offset-4 transition-colors duration-fast hover:text-terracotta hover:underline tabular"
+                      className="text-small text-ink underline-offset-4 transition-colors duration-fast hover:text-primary hover:underline tabular"
                     >
                       {phone}
                     </a>

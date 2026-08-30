@@ -73,7 +73,7 @@ export function StatCard({
            possible way to say "this is a link". The translate reads as depth on
            its own and runs on the compositor. */
         'transition-[border-color,transform] duration-base ease-out-quart',
-        'hover:-translate-y-0.5 hover:border-terracotta/40',
+        'hover:-translate-y-0.5 hover:border-primary/40',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas',
         styles.surface,
       )}
@@ -93,7 +93,7 @@ export function StatCard({
 
       <p className="mt-3 text-small text-ink-soft">{caption}</p>
 
-      <span className="mt-4 inline-flex items-center gap-1.5 text-small font-medium text-terracotta">
+      <span className="mt-4 inline-flex items-center gap-1.5 text-small font-medium text-primary">
         {linkLabel}
         <ArrowRight
           className="h-3.5 w-3.5 transition-transform duration-fast ease-out-quart group-hover:translate-x-0.5"

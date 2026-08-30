@@ -39,7 +39,7 @@ export function FaqSection({ id, title, description, faqItemsList }: FaqSectionP
                 value={item.id}
                 className="border-b border-line last:border-b-0"
               >
-                <AccordionTrigger className="py-6 text-left font-heading text-h4 font-medium text-ink hover:no-underline data-[state=open]:text-terracotta">
+                <AccordionTrigger className="py-6 text-left font-heading text-h4 font-medium text-ink hover:no-underline data-[state=open]:text-primary">
                   {item.question}
                 </AccordionTrigger>
                 <AccordionContent className="max-w-measure pb-6 text-base leading-relaxed text-ink-soft">

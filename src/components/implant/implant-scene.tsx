@@ -155,10 +155,23 @@ function buildEnvironment(renderer: THREE.WebGLRenderer): THREE.WebGLRenderTarge
   // Large, bright, and wrapped around the subject. A mirror-finish part shows
   // you nothing but the room, so an under-lit room makes polished titanium read
   // as brown glass — which is exactly what the machined abutment was doing.
-  panel(0xfff0d8, 5.2, [-6, 7, 5], [14, 14]); // warm brass key
+  //
+  // The room was lit for the previous terracotta palette: a warm key, and a
+  // strongly orange floor bounce standing in for light coming back off a
+  // plaster wall. Against a navy page that left the hero object visibly warmer
+  // than everything around it — a reflective subject reports the room it is in,
+  // and it was reporting the wrong one.
+  //
+  // What changed is the ROOM, not the metal. The key stays warm on purpose:
+  // titanium is a warm, desaturated grey (measured #c1baaf), and lighting it
+  // coolly is precisely how a fixture stops reading as a medical implant and
+  // starts reading as a hardware-store bolt — the failure this rig was built to
+  // avoid. The warm key also keeps brass, which survives the rebrand, sitting
+  // in light it belongs to. Only the bounce and the ambient go cool.
+  panel(0xfff0d0, 5.2, [-6, 7, 5], [14, 14]); // brass key, still warm
   panel(0xd6e8f6, 2.8, [7, 3, 4], [11, 13]); // cool fill, opposite side
   panel(0xffffff, 2.4, [0, 10, -1], [16, 8]); // broad top softbox
-  panel(0xd8a86a, 1.2, [0, -6, 4], [12, 6]); // warm floor bounce
+  panel(0xa7bacd, 1.2, [0, -6, 4], [12, 6]); // floor bounce, now off a cool ground
   panel(0xffffff, 1.8, [-1, 2, -9], [12, 12]); // rim from behind
   panel(0xffffff, 1.1, [0, 2, 11], [12, 12]); // frontal fill, kills dead black
 
@@ -226,7 +239,7 @@ export default function ImplantScene({
     renderer.setClearAlpha(0);
     // AgX, not ACESFilmic. ACES crushes saturation toward a milky grey, which
     // is exactly the "cheap render" look — it is a film-emulation curve doing
-    // work this scene never asked for. AgX keeps the warm brass and terracotta
+    // work this scene never asked for. AgX keeps the warm brass and the navy
     // of the environment intact while still rolling off highlights.
     renderer.toneMapping = THREE.AgXToneMapping;
     renderer.toneMappingExposure = 0.92;
@@ -268,14 +281,18 @@ export default function ImplantScene({
     // lets the far end of the ridge fall away into the case — and it buys the
     // depth that a DOF pass would, for one line instead of a depth prepass and
     // a full-screen gather.
-    const fog = new THREE.Fog(resolveToken('--canvas', 0xe8ddcd), 62, 145);
+    /* The fallback is the CURRENT --canvas. It is only reached if the token
+       cannot be read, and it used to be the previous palette's warm off-white —
+       so the one path that was supposed to degrade gracefully would instead have
+       quietly restored the old brand. */
+    const fog = new THREE.Fog(resolveToken('--canvas', 0xf3f6fa), 62, 145);
     scene.fog = fog;
 
     // The theme toggle swaps a class on <html>, which changes what --canvas
     // resolves to. Without this the fog would keep the colour of whichever
     // theme happened to be active when the canvas mounted.
     const themeObserver = new MutationObserver(() => {
-      fog.color.copy(resolveToken('--canvas', 0xe8ddcd));
+      fog.color.copy(resolveToken('--canvas', 0xf3f6fa));
       dirty = true;
     });
     themeObserver.observe(document.documentElement, {
@@ -286,9 +303,14 @@ export default function ImplantScene({
     const envTarget = buildEnvironment(renderer);
     scene.environment = envTarget.texture;
 
-    scene.add(new THREE.AmbientLight(0xfff2e2, 0.28));
+    /* Cool, matching the page's ground. This was 0xfff2e2 — a warm white
+       lifting every shadow towards the old palette. */
+    scene.add(new THREE.AmbientLight(0xedf2f8, 0.28));
 
-    const key = new THREE.DirectionalLight(0xffeacc, 2.1);
+    /* Held warm, for the reason argued at the environment panels above:
+       cool-lit titanium is chrome. Slightly less amber than before so it sits
+       in a cool room without fighting it. */
+    const key = new THREE.DirectionalLight(0xfef4df, 2.1);
     key.position.set(-26, 40, 30);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);

@@ -9,12 +9,12 @@ const TONE: Record<Tone, string> = {
   surface: 'bg-surface text-ink',
   /* The one *coloured* band that is not drenched.
      `--primary-soft` is the brand tint, and it is authored as a tonal fill in
-     both themes — a warm blush at L 0.93 in light, a deep terracotta at L 0.31
+     both themes — a pale wash at L 0.945 in light, a deep navy at L 0.305
      in dark — so it takes the ordinary `--ink` ramp on top and needs none of
      the on-colour overrides a drenched band does. That is what makes it usable
      on a section full of body copy, hairlines and a white figure card, where a
      drenched band would have required re-toning every token inside it. */
-  tint: 'bg-terracotta-soft text-ink',
+  tint: 'bg-primary-soft text-ink',
   drench: 'drenched',
   'drench-deep': 'drenched-deep',
 };

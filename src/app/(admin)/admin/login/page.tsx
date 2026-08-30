@@ -77,7 +77,7 @@ export default async function AdminLoginPage() {
         <div className="w-full max-w-sm">
           <Link
             href="/es"
-            className="group inline-flex items-center gap-2 text-small text-ink-soft transition-colors duration-fast hover:text-terracotta"
+            className="group inline-flex items-center gap-2 text-small text-ink-soft transition-colors duration-fast hover:text-primary"
           >
             <ArrowLeft
               className="h-4 w-4 transition-transform duration-fast ease-out-quart group-hover:-translate-x-0.5"
@@ -86,7 +86,7 @@ export default async function AdminLoginPage() {
             Volver al sitio
           </Link>
 
-          <span className="mt-8 flex h-12 w-12 items-center justify-center rounded-xl bg-terracotta-soft text-terracotta lg:hidden">
+          <span className="mt-8 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary lg:hidden">
             <ShieldCheck className="h-6 w-6" aria-hidden="true" />
           </span>
 

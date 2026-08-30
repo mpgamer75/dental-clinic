@@ -89,13 +89,13 @@ export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
             later sibling wins and the legend text rendered straight over the
             top of the pinned figure. Only visible once the figure actually
             started sticking, which is why it appeared as a "new" bug. */}
-        {/* `bg-terracotta-soft` matches the section tone, so it is invisible —
+        {/* `bg-primary-soft` matches the section tone, so it is invisible —
             but it is needed: the figcaption sits OUTSIDE the framed card, so
             without an opaque backing the legend scrolled visibly through the
             caption text once the figure started pinning. It must track the
             band's tone; the moment the two disagree this reappears as a pale
             rectangle behind the figure. */}
-        <div className="sticky top-20 z-raised self-start bg-terracotta-soft pb-2 lg:col-span-6 lg:top-24">
+        <div className="sticky top-20 z-raised self-start bg-primary-soft pb-2 lg:col-span-6 lg:top-24">
           <ImplantStage
             label={t.svgAlt}
             driverRef={driverRef}

@@ -18,7 +18,7 @@ interface HeroProps {
 /**
  * Hero.
  *
- * Drenched deep-terracotta band: colour carries the surface here rather than
+ * Drenched deep-primary band: colour carries the surface here rather than
  * sitting as an accent on a pale page. Asymmetric 7/5 split with the clinic's
  * own photograph bleeding off the right edge — the room is the proof, so it
  * gets real estate instead of a stock illustration.

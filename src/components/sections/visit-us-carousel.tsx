@@ -254,7 +254,7 @@ export function VisitUsCarousel({
                     type="button"
                     onClick={() => step(-1)}
                     aria-label={t.prev}
-                    className="absolute left-3 top-1/2 z-raised flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-e2 transition-colors duration-fast hover:text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="absolute left-3 top-1/2 z-raised flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-e2 transition-colors duration-fast hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                   </button>
@@ -262,7 +262,7 @@ export function VisitUsCarousel({
                     type="button"
                     onClick={() => step(1)}
                     aria-label={t.next}
-                    className="absolute right-3 top-1/2 z-raised flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-e2 transition-colors duration-fast hover:text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="absolute right-3 top-1/2 z-raised flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-e2 transition-colors duration-fast hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <ChevronRight className="h-5 w-5" aria-hidden="true" />
                   </button>
@@ -310,7 +310,7 @@ export function VisitUsCarousel({
                           'block h-1 w-10 origin-center rounded-full',
                           'transition-[transform,background-color] duration-base ease-out-quart',
                           i === active
-                            ? 'scale-x-100 bg-terracotta'
+                            ? 'scale-x-100 bg-primary'
                             : 'scale-x-50 bg-line-strong group-hover/dot:bg-brass-ink',
                         )}
                       />
@@ -327,7 +327,7 @@ export function VisitUsCarousel({
                     onClick={() => setAutoplay((on) => !on)}
                     aria-label={autoplay ? t.pause : t.play}
                     title={autoplay ? t.pause : t.play}
-                    className="-my-2 ml-2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-ink-soft transition-colors duration-fast hover:text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="-my-2 ml-2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-ink-soft transition-colors duration-fast hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     {autoplay ? (
                       <Pause className="h-4 w-4" aria-hidden="true" />

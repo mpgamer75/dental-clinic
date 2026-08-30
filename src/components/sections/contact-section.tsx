@@ -99,7 +99,7 @@ export function ContactSection({
                       {...(item.external
                         ? { target: '_blank', rel: 'noopener noreferrer' }
                         : {})}
-                      className="-my-2.5 inline-block break-words py-2.5 text-ink underline-offset-4 transition-colors duration-fast hover:text-terracotta hover:underline"
+                      className="-my-2.5 inline-block break-words py-2.5 text-ink underline-offset-4 transition-colors duration-fast hover:text-primary hover:underline"
                     >
                       {item.value}
                     </a>

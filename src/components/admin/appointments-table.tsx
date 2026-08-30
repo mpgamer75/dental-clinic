@@ -53,7 +53,7 @@ import { useRowMutation } from './use-row-mutation';
    rather than be clipped by the rounded corner it disappears behind.
 
    Urgency is marked three ways at once — a badge with its own word and icon, a
-   terracotta rule down the left edge of the row, and its position at the top of
+   primary-coloured rule down the left edge of the row, and its position at the top of
    the default order. That redundancy is the point: this is the signal the old
    panel let a page limit erase.
    ========================================================================== */
@@ -142,7 +142,7 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                   <td className="hidden max-w-0 px-4 py-3 lg:table-cell">
                     <a
                       href={`mailto:${row.email}`}
-                      className="flex items-center gap-1.5 truncate text-small text-ink-soft underline-offset-4 hover:text-terracotta hover:underline"
+                      className="flex items-center gap-1.5 truncate text-small text-ink-soft underline-offset-4 hover:text-primary hover:underline"
                     >
                       <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                       <span className="truncate">{row.email}</span>
@@ -150,7 +150,7 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                     {row.phone && (
                       <a
                         href={`tel:${row.phone.replace(/[^\d+]/g, '')}`}
-                        className="tabular mt-1 flex items-center gap-1.5 text-small text-ink-soft underline-offset-4 hover:text-terracotta hover:underline"
+                        className="tabular mt-1 flex items-center gap-1.5 text-small text-ink-soft underline-offset-4 hover:text-primary hover:underline"
                       >
                         <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         {row.phone}
@@ -277,7 +277,7 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                   value={
                     <a
                       href={`mailto:${detail.email}`}
-                      className="text-terracotta underline-offset-4 hover:underline"
+                      className="text-primary underline-offset-4 hover:underline"
                     >
                       {detail.email}
                     </a>
@@ -289,7 +289,7 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                     detail.phone ? (
                       <a
                         href={`tel:${detail.phone.replace(/[^\d+]/g, '')}`}
-                        className="tabular text-terracotta underline-offset-4 hover:underline"
+                        className="tabular text-primary underline-offset-4 hover:underline"
                       >
                         {detail.phone}
                       </a>

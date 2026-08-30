@@ -271,7 +271,7 @@
    ----------------------------------------------------------------------------
    Used ONLY by the 2D implant plate (src/components/implant/). These are
    MATERIAL colours, not brand colours: titanium is not a brand grey and healthy
-   gingiva is not the terracotta ramp, so pulling them from the palette would be
+   gingiva is not the brand ramp, so pulling them from the palette would be
    wrong in both directions. They live here rather than inline in the SVG so the
    plate tracks light/dark from one place, and so the two themes are authored
    together instead of one being inferred from the other.

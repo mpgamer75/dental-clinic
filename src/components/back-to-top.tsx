@@ -79,7 +79,7 @@ export function BackToTop() {
         className={cn(
           // Desktop only: on phones the MobileActionBar owns this corner.
           'fixed bottom-8 right-8 z-sticky hidden h-12 w-12 rounded-full shadow-e3 lg:flex',
-          'bg-terracotta text-primary-foreground hover:bg-terracotta-hover',
+          'bg-primary text-primary-foreground hover:bg-primary-hover',
           // Every property in this list is compositor- or paint-only. The
           // hover state used to raise the button to `shadow-e4` as well, which
           // is not in the list and so snapped between elevations in one frame

@@ -91,7 +91,7 @@ export function ImplantArticle({
             <li>
               <Link
                 href={homeHref}
-                className="transition-colors duration-fast hover:text-terracotta"
+                className="transition-colors duration-fast hover:text-primary"
               >
                 {ui.home}
               </Link>
@@ -106,7 +106,7 @@ export function ImplantArticle({
                 ) : (
                   <Link
                     href={crumb.href}
-                    className="transition-colors duration-fast hover:text-terracotta"
+                    className="transition-colors duration-fast hover:text-primary"
                   >
                     {crumb.name}
                   </Link>
@@ -151,7 +151,7 @@ export function ImplantArticle({
                     </span>
                     <a
                       href={`#${section.id}`}
-                      className="text-small leading-snug text-ink-soft transition-colors duration-fast hover:text-terracotta"
+                      className="text-small leading-snug text-ink-soft transition-colors duration-fast hover:text-primary"
                     >
                       {section.heading}
                     </a>
@@ -223,7 +223,7 @@ export function ImplantArticle({
               <RevealItem key={item.key} as="article" className="h-full">
                 <Link
                   href={item.href}
-                  className="group flex h-full flex-col rounded-xl border border-line bg-surface p-6 transition-colors duration-base ease-out-quart hover:border-terracotta/50 hover:bg-terracotta-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="group flex h-full flex-col rounded-xl border border-line bg-surface p-6 transition-colors duration-base ease-out-quart hover:border-primary/50 hover:bg-primary-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   <h3 className="font-heading text-h4 font-medium text-ink">{item.label}</h3>
                   <p className="mt-3 text-small leading-relaxed text-ink-soft">
@@ -235,7 +235,7 @@ export function ImplantArticle({
                       list. It is here for sighted readers as an affordance. */}
                   <span
                     aria-hidden="true"
-                    className="mt-auto inline-flex items-center gap-1.5 pt-6 text-small text-terracotta"
+                    className="mt-auto inline-flex items-center gap-1.5 pt-6 text-small text-primary"
                   >
                     {readMore}
                     <ArrowRight className="h-4 w-4 transition-transform duration-base ease-out-quart group-hover:translate-x-1" />
@@ -249,7 +249,7 @@ export function ImplantArticle({
             <Reveal className="mt-10 lg:col-span-12">
               <Link
                 href={backLink.href}
-                className="inline-flex items-center gap-2 text-small text-ink-soft transition-colors duration-fast hover:text-terracotta"
+                className="inline-flex items-center gap-2 text-small text-ink-soft transition-colors duration-fast hover:text-primary"
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 {backLink.label}

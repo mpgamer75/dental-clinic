@@ -235,7 +235,7 @@ export function ImplantStage({ label, driverRef, scaleNote, phases }: ImplantSta
         {/* Scale annotation. A labelled dimension reads as more credible than
             an unlabelled render, and it is true: these are the real numbers the
             geometry is built to. */}
-        <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-line/70 bg-canvas/80 px-2.5 py-1 text-[0.72rem] text-ink-soft tabular backdrop-blur-sm">
+        <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-line/70 bg-canvas px-2.5 py-1 text-small text-ink-soft tabular">
           {scaleNote}
         </span>
       </div>

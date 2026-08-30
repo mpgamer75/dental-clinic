@@ -35,7 +35,7 @@ const FOCUS_RING =
  *      anything with words in it, so only the glyphs take it.
  *
  * The call to action sits outside that ramp on colour rather than on weight: an
- * outlined terracotta control that fills on hover, which stays the loudest
+ * outlined primary control that fills on hover, which stays the loudest
  * element without becoming a solid slab parked in the corner of every page.
  *
  * Two behaviours carry the rest of it — the bar changes shape once it leaves
@@ -209,7 +209,7 @@ export function Navbar() {
                         right on exit — the origin flip is what makes it read as
                         one continuous stroke passing through rather than a box
                         appearing. The active item holds the same rule in
-                        terracotta, so hover and state speak one language. */}
+                        the primary, so hover and state speak one language. */}
                       <span
                         className={cn(
                           'relative after:absolute after:inset-x-0 after:-bottom-1.5 after:h-px',
@@ -218,7 +218,7 @@ export function Navbar() {
                           'group-hover/link:after:origin-left group-hover/link:after:scale-x-100',
                           'group-focus-visible/link:after:origin-left group-focus-visible/link:after:scale-x-100',
                           'group-data-[active=true]/link:after:origin-left group-data-[active=true]/link:after:scale-x-100',
-                          'group-data-[active=true]/link:after:bg-terracotta',
+                          'group-data-[active=true]/link:after:bg-primary',
                         )}
                       >
                         {item.label}
@@ -237,7 +237,7 @@ export function Navbar() {
                   aria-label={callLabel}
                   className={cn(
                     'hidden h-11 items-center gap-2 rounded-lg px-2.5 lg:inline-flex',
-                    'text-small text-ink-soft transition-colors duration-fast hover:text-terracotta',
+                    'text-small text-ink-soft transition-colors duration-fast hover:text-primary',
                     FOCUS_RING,
                   )}
                 >
@@ -254,7 +254,7 @@ export function Navbar() {
                   This is the one place `ink-faint` is used: measured 3.58:1 on
                   canvas, which clears the 3:1 that a non-text graphic needs and
                   falls short of the 4.5:1 that any label would. */}
-                <span className="hidden md:block [&_button:hover]:bg-transparent [&_button:hover_svg]:text-terracotta [&_svg]:text-ink-faint">
+                <span className="hidden md:block [&_button:hover]:bg-transparent [&_button:hover_svg]:text-primary [&_svg]:text-ink-faint">
                   <ThemeToggleButton />
                 </span>
 
@@ -265,7 +265,7 @@ export function Navbar() {
                   title={t.switchTo}
                   className={cn(
                     'hidden h-11 w-11 items-center justify-center rounded-lg md:inline-flex',
-                    'text-eyebrow uppercase text-ink-soft transition-colors duration-fast hover:text-terracotta',
+                    'text-eyebrow uppercase text-ink-soft transition-colors duration-fast hover:text-primary',
                     FOCUS_RING,
                   )}
                 >
@@ -278,7 +278,7 @@ export function Navbar() {
                   aria-current={onBooking ? 'page' : undefined}
                   className={cn(
                     'group/cta ml-2 hidden h-11 shrink-0 items-center gap-2 rounded-lg px-4 sm:inline-flex',
-                    'border border-terracotta/45 text-small uppercase tracking-[0.085em] text-terracotta',
+                    'border border-primary/45 text-small uppercase tracking-[0.085em] text-primary',
                     // Colour only. The hover used to raise an `e1` shadow as
                     // well, which put box-shadow in the transition list — a
                     // repaint of a blurred spread on every frame, on the one
@@ -286,7 +286,7 @@ export function Navbar() {
                     // outlined control filling solid is already the loudest
                     // hover on the page; it does not also need to lift.
                     'transition-[color,background-color,border-color] duration-base ease-out-quart',
-                    'hover:border-terracotta hover:bg-terracotta hover:text-primary-foreground',
+                    'hover:border-primary hover:bg-primary hover:text-primary-foreground',
                     FOCUS_RING,
                   )}
                 >
@@ -308,7 +308,7 @@ export function Navbar() {
                      alone is valid here. */
                   className={cn(
                     '-mr-2.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg xl:hidden',
-                    'text-ink-soft transition-colors duration-fast hover:text-terracotta',
+                    'text-ink-soft transition-colors duration-fast hover:text-primary',
                     FOCUS_RING,
                   )}
                 >

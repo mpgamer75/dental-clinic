@@ -326,11 +326,11 @@ const REASSURANCE_ICON: Record<'call' | 'reply' | 'cost', LucideIcon> = {
 const invalidClass =
   'aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive';
 const fieldClass = cn(
-  'h-12 text-base transition-colors duration-fast ring-offset-card focus-visible:border-terracotta',
+  'h-12 text-base transition-colors duration-fast ring-offset-card focus-visible:border-primary',
   invalidClass,
 );
 const textareaClass = cn(
-  'min-h-[9rem] resize-y text-base leading-relaxed transition-colors duration-fast ring-offset-card focus-visible:border-terracotta',
+  'min-h-[9rem] resize-y text-base leading-relaxed transition-colors duration-fast ring-offset-card focus-visible:border-primary',
   invalidClass,
 );
 const labelClass = 'text-base font-medium text-ink';
@@ -342,7 +342,7 @@ function RequiredMark({ srLabel }: { srLabel: string }) {
   // group already made this choice — this makes the text fields agree.
   void srLabel;
   return (
-    <span aria-hidden="true" className="text-terracotta">
+    <span aria-hidden="true" className="text-primary">
       {' *'}
     </span>
   );
@@ -764,7 +764,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
               convention the patient has already had to work out for themselves
               across eight controls. */}
           <p className="text-small text-ink-soft">
-            <span aria-hidden="true" className="font-medium text-terracotta">
+            <span aria-hidden="true" className="font-medium text-primary">
               *
             </span>{' '}
             {c.requiredFields}
@@ -1202,7 +1202,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                                 'peer-focus:ring-2 peer-focus:ring-ring peer-focus:ring-offset-2 peer-focus:ring-offset-card',
                                 'peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card',
                                 selected
-                                  ? 'border-terracotta bg-terracotta-soft shadow-e1'
+                                  ? 'border-primary bg-primary-soft shadow-e1'
                                   : 'border-input bg-background hover:border-line-strong',
                                 // Nothing is selected when the group is invalid,
                                 // so the marking has to land on all three.
@@ -1344,7 +1344,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                 // patient has — the "Enviando…" label — at under half contrast in
                 // both themes. Hold full opacity and shift to the hover shade so
                 // the state still reads as a change.
-                isSubmitting && 'disabled:bg-terracotta-hover disabled:opacity-100',
+                isSubmitting && 'disabled:bg-primary-hover disabled:opacity-100',
               )}
               disabled={isSubmitting}
               aria-busy={isSubmitting || undefined}

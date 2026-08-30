@@ -76,12 +76,12 @@ function Calendar({
         ),
         range_end: "day-range-end",
         selected:
-          "bg-terracotta text-primary-foreground shadow-e1 hover:bg-terracotta-hover hover:text-primary-foreground focus:bg-terracotta focus:text-primary-foreground",
-        today: "font-medium text-terracotta ring-1 ring-inset ring-terracotta/50",
+          "bg-primary text-primary-foreground shadow-e1 hover:bg-primary-hover hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+        today: "font-medium text-primary ring-1 ring-inset ring-primary/50",
         outside: "day-outside text-ink-faint opacity-60",
         disabled:
           "text-ink-faint line-through opacity-45 hover:bg-transparent hover:text-ink-faint",
-        range_middle: "aria-selected:bg-terracotta-soft aria-selected:text-ink",
+        range_middle: "aria-selected:bg-primary-soft aria-selected:text-ink",
         hidden: "invisible",
         ...classNames,
       }}
