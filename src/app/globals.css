@@ -112,22 +112,34 @@
     --input: var(--line-strong);
     --ring: var(--primary-base);
 
-    /* Charts: terracotta -> brass -> petrol, distinguishable without hue
-       alone (the series also differ in lightness). */
-    --chart-1: 0.5077 0.1168 38.7;
-    --chart-2: 0.6742 0.1014 67.5;
-    --chart-3: 0.47 0.09 240.4;
-    --chart-4: 0.62 0.09 12;
-    --chart-5: 0.585 0.015 55;
+    /* Charts: primary -> brass -> petrol, distinguishable without hue alone
+       (the series also differ in lightness).
 
-    --sidebar-background: 0.288 0.074 38.7;
+       These alias the raw palette rather than repeating its values. They used
+       to be byte-copies — --chart-1 restated --primary-base's triple, --chart-2
+       --brass's, and so on — which meant the palette had two sources of truth
+       and only one of them was obvious. Any hue change edited the visible
+       surfaces and silently left every chart series on the old brand.
+       --chart-4 is the only genuinely independent value here: it is a distinct
+       series colour with no counterpart in the palette. */
+    --chart-1: var(--primary-base);
+    --chart-2: var(--brass);
+    --chart-3: var(--petrol);
+    --chart-4: 0.62 0.09 12;
+    --chart-5: var(--ink-faint);
+
+    /* Same story as the chart ramp: the sidebar is a drenched dark panel, so
+       its background and accent ARE --drench-deep and --drench, and its primary
+       IS --brass. Only the two foregrounds and the border are specific to the
+       panel — they are tuned against it rather than against --canvas. */
+    --sidebar-background: var(--drench-deep);
     --sidebar-foreground: 0.95 0.012 70;
-    --sidebar-primary: 0.6742 0.1014 67.5;
+    --sidebar-primary: var(--brass);
     --sidebar-primary-foreground: 0.2 0.03 40;
-    --sidebar-accent: 0.372 0.096 38.7;
-    --sidebar-accent-foreground: 0.988 0.0035 62;
+    --sidebar-accent: var(--drench);
+    --sidebar-accent-foreground: var(--on-drench);
     --sidebar-border: 0.36 0.06 40;
-    --sidebar-ring: 0.6742 0.1014 67.5;
+    --sidebar-ring: var(--brass);
 
     /* ---- radius ------------------------------------------------------ */
     --radius: 0.5rem;
@@ -198,20 +210,24 @@
     --accent-foreground: var(--primary-base);
     --highlight: var(--brass);
 
-    --chart-1: 0.685 0.129 38.7;
-    --chart-2: 0.79 0.105 67.5;
-    --chart-3: 0.69 0.098 240.4;
+    /* Aliased for the same reason as the light block above. Note that the dark
+       theme's --sidebar-background is NOT --drench-deep: on a dark canvas the
+       panel has to sit below the page rather than above it, so it keeps its own
+       near-black value. Same for --sidebar-accent. */
+    --chart-1: var(--primary-base);
+    --chart-2: var(--brass);
+    --chart-3: var(--petrol);
     --chart-4: 0.72 0.11 12;
-    --chart-5: 0.69 0.014 62;
+    --chart-5: var(--ink-faint);
 
     --sidebar-background: 0.152 0.011 48;
     --sidebar-foreground: 0.9 0.012 70;
-    --sidebar-primary: 0.79 0.105 67.5;
+    --sidebar-primary: var(--brass);
     --sidebar-primary-foreground: 0.16 0.012 48;
     --sidebar-accent: 0.26 0.03 40;
     --sidebar-accent-foreground: 0.956 0.009 75;
     --sidebar-border: 0.3 0.018 48;
-    --sidebar-ring: 0.79 0.105 67.5;
+    --sidebar-ring: var(--brass);
 
     --shadow-color: 24 50% 3%;
     --e1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.5),
