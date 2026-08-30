@@ -3,8 +3,8 @@
 import { useActionState, useId, useState } from 'react';
 import { AlertCircle, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 
-import { signInAction } from '@/app/admin/_actions/session';
-import { LOGIN_INITIAL_STATE } from '@/app/admin/_lib/form-contracts';
+import { signInAction } from '@/app/(admin)/admin/_actions/session';
+import { LOGIN_INITIAL_STATE } from '@/app/(admin)/admin/_lib/form-contracts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

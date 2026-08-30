@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PARAM, buildListHref, type RawSearchParams } from '@/app/admin/_lib/list-href';
+import { PARAM, buildListHref, type RawSearchParams } from '@/app/(admin)/admin/_lib/list-href';
 
 /* ============================================================================
    SEARCH, FILTER, SORT — written into the URL

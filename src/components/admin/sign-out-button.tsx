@@ -3,7 +3,7 @@
 import { useTransition } from 'react';
 import { LogOut } from 'lucide-react';
 
-import { signOutAction } from '@/app/admin/_actions/session';
+import { signOutAction } from '@/app/(admin)/admin/_actions/session';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 

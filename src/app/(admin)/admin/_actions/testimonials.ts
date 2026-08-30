@@ -15,7 +15,7 @@
    been ignored, and "who published this?" has no answer.
 
    Both also revalidate the public route. The homepage is ISR with a five-minute
-   window (`export const revalidate = 300` in src/app/[lang]/page.tsx), so
+   window (`export const revalidate = 300` in src/app/(site)/[lang]/page.tsx), so
    without this a reviewer approves a testimonial, looks at the site, does not
    see it, and approves it again.
    ========================================================================== */

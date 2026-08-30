@@ -70,7 +70,7 @@ const DEFAULT_LANGUAGE = 'es';
  * authentication was a `useState` in a client component — the markup, the
  * patient rows and the database credential were all served before anything
  * asked who was asking. The real boundary is now the server layout at
- * src/app/admin/(panel)/layout.tsx, which will not render a byte of the panel
+ * src/app/(admin)/admin/(panel)/layout.tsx, which will not render a byte of the panel
  * without a session. This is the second lock: it turns an unauthenticated
  * request into a redirect at the edge, before a route is even resolved, and it
  * refreshes a session that is close to expiring so a working day does not end
@@ -82,7 +82,7 @@ const DEFAULT_LANGUAGE = 'es';
  * login form.
  *
  * `loginUrl` must stay in step with ADMIN_LOGIN_PATH in
- * src/app/admin/_lib/session.ts. If the two disagree, an anonymous visitor is
+ * src/app/(admin)/admin/_lib/session.ts. If the two disagree, an anonymous visitor is
  * bounced between a middleware that sends them to one URL and a layout that
  * sends them to the other.
  */

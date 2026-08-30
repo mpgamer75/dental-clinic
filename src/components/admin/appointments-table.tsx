@@ -13,8 +13,8 @@ import {
   X,
 } from 'lucide-react';
 
-import { deleteAppointment, setAppointmentStatus } from '@/app/admin/_actions/appointments';
-import type { AppointmentRow } from '@/app/admin/_lib/queries';
+import { deleteAppointment, setAppointmentStatus } from '@/app/(admin)/admin/_actions/appointments';
+import type { AppointmentRow } from '@/app/(admin)/admin/_lib/queries';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

@@ -1,6 +1,9 @@
 import { ImageResponse } from 'next/og';
 
-export const runtime = 'edge';
+// The edge runtime is deprecated in Next 16, and declaring it here disabled
+// static generation for this route — the OG image is derived entirely from
+// data.ts, so there is nothing per-request about it.
+export const runtime = 'nodejs';
 
 export const alt = 'Orthoprotesis Dental Clinic — Dr. Francis Valerio';
 export const size = { width: 1200, height: 630 };

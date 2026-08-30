@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useId, useState, useTransition, type FormEvent } from 'react';
 import { CalendarDays, MailQuestion, MessageSquareQuote, TriangleAlert } from 'lucide-react';
 
-import { updateSiteSettings } from '@/app/admin/_actions/settings';
-import { SETTINGS_FIELDS } from '@/app/admin/_lib/form-contracts';
-import type { SiteSettingsView } from '@/app/admin/_lib/queries';
+import { updateSiteSettings } from '@/app/(admin)/admin/_actions/settings';
+import { SETTINGS_FIELDS } from '@/app/(admin)/admin/_lib/form-contracts';
+import type { SiteSettingsView } from '@/app/(admin)/admin/_lib/queries';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';

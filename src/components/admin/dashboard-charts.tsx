@@ -12,7 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 
-import type { ServiceDemand, TrendPoint } from '@/app/admin/_lib/queries';
+import type { ServiceDemand, TrendPoint } from '@/app/(admin)/admin/_lib/queries';
 
 /* ============================================================================
    TWO CHARTS, BOTH ABOUT DEMAND

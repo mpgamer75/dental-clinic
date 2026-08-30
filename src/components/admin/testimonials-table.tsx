@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Check, Loader2, MapPin, MoreVertical, Trash2, X } from 'lucide-react';
 
-import { deleteTestimonial, reviewTestimonial } from '@/app/admin/_actions/testimonials';
-import type { TestimonialRow } from '@/app/admin/_lib/queries';
+import { deleteTestimonial, reviewTestimonial } from '@/app/(admin)/admin/_actions/testimonials';
+import type { TestimonialRow } from '@/app/(admin)/admin/_lib/queries';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

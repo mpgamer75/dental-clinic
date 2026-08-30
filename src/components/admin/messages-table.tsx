@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Archive, Inbox, Loader2, MailOpen, MoreVertical, Reply, Trash2 } from 'lucide-react';
 
-import { deleteMessage, setMessageStatus } from '@/app/admin/_actions/messages';
-import type { MessageRow } from '@/app/admin/_lib/queries';
+import { deleteMessage, setMessageStatus } from '@/app/(admin)/admin/_actions/messages';
+import type { MessageRow } from '@/app/(admin)/admin/_lib/queries';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

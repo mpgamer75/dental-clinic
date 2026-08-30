@@ -2,8 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import { issueCsrfToken } from '@/app/admin/_actions/session';
-import type { CsrfSeal } from '@/app/admin/_lib/csrf-seal';
+import { issueCsrfToken } from '@/app/(admin)/admin/_actions/session';
+import type { CsrfSeal } from '@/app/(admin)/admin/_lib/csrf-seal';
 
 /* ============================================================================
    THE TOKEN, MADE AVAILABLE TO EVERY FORM IN THE PANEL

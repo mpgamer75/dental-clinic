@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useState, useTransition } from 'react';
 
 import { useToast } from '@/hooks/use-toast';
-import type { MutationResult } from '@/app/admin/_lib/mutation';
+import type { MutationResult } from '@/app/(admin)/admin/_lib/mutation';
 
 import { useMutationFormData } from './csrf-provider';
 

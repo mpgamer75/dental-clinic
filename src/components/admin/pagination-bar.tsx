@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { buildListHref, type RawSearchParams } from '@/app/admin/_lib/list-href';
+import { buildListHref, type RawSearchParams } from '@/app/(admin)/admin/_lib/list-href';
 import { cn } from '@/lib/utils';
 
 /* ============================================================================
