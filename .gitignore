@@ -52,3 +52,9 @@ firestore-debug.log.env.local
 *.backup
 *.dump
 *.sql.gz
+
+# local AI tooling caches (plugin/skill copies, not project source)
+.claude/
+.cursor/
+.gemini/
+.impeccable/
