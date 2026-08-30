@@ -46,3 +46,9 @@ firestore-debug.log.env.local
 
 # Playwright MCP scratch output
 .playwright-mcp/
+
+# database dumps / backups — contain patient PII and credential hashes
+*.backup.gz
+*.backup
+*.dump
+*.sql.gz
