@@ -86,7 +86,7 @@ export default async function AdminPanelLayout({ children }: { children: ReactNo
             seed={csrfSeed ? { field: CSRF_FIELD_NAME, token: csrfSeed } : null}
           >
             <div className="self-start">
-              <SignOutButton />
+              <SignOutButton ground="surface" />
             </div>
           </AdminCsrfProvider>
         </main>

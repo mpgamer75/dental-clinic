@@ -17,7 +17,12 @@ import { useMutationFormData } from './csrf-provider';
  * silently does nothing leaves someone believing they have logged out of a
  * clinic's patient records on a shared machine.
  */
-export function SignOutButton() {
+/** The ground the button sits on. `onDrench` is near-invisible on a light
+ *  surface, which is exactly what happened when the refusal panel — a light
+ *  page, not the drenched sidebar — reused the default. */
+type SignOutGround = 'drench' | 'surface';
+
+export function SignOutButton({ ground = 'drench' }: { ground?: SignOutGround }) {
   const [pending, startTransition] = useTransition();
   const buildFormData = useMutationFormData();
   const { toast } = useToast();
@@ -25,9 +30,9 @@ export function SignOutButton() {
   return (
     <Button
       type="button"
-      variant="onDrench"
+      variant={ground === 'drench' ? 'onDrench' : 'outline'}
       size="sm"
-      className="w-full"
+      className={ground === 'drench' ? 'w-full' : undefined}
       loading={pending}
       disabled={pending}
       onClick={() => {
