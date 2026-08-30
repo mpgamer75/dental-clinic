@@ -53,11 +53,27 @@ const damp = (cur: number, target: number, lambda: number, dt: number) =>
   lerp(cur, target, 1 - Math.exp(-lambda * dt));
 
 /**
+ * Collapses an exponential approach onto its target once the remainder has
+ * stopped mattering.
+ *
+ * `damp` never actually arrives — it halves the gap forever — so a loop that
+ * asks "has anything moved?" by comparing against the target is asking a
+ * question whose answer is permanently yes, and the idle gate in tick() can
+ * never fire. Snapping inside a threshold that is already far under a pixel
+ * (1e-3 of the progress ramp; 0.06° of orbit) is what makes "nothing is
+ * moving" an expressible state at all, and it lets that test be an exact
+ * comparison rather than another epsilon to keep in sync.
+ */
+const settle = (v: number, target: number) =>
+  Math.abs(v - target) < 1e-3 ? target : v;
+
+/**
  * Resolves a CSS custom property to a THREE.Color.
  *
  * The design tokens hold bare `L C H` triples consumed as `oklch(var(--x))`,
- * and THREE.Color.setStyle in r0.169 parses hex/rgb/hsl/named colours but NOT
- * oklch. So the browser is asked to do the conversion.
+ * and THREE.Color.setStyle parses hex/rgb/hsl/named colours but NOT oklch —
+ * still true as of r0.185, which is where this was last checked. So the
+ * browser is asked to do the conversion.
  *
  * The obvious version of this — read `getComputedStyle(probe).color` and hand
  * the string to `setStyle` — SILENTLY DOES NOTHING. Per CSS Color 4 §15 a
@@ -147,7 +163,11 @@ function buildEnvironment(renderer: THREE.WebGLRenderer): THREE.WebGLRenderTarge
   panel(0xffffff, 1.1, [0, 2, 11], [12, 12]); // frontal fill, kills dead black
 
   const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
+  // Deliberately NOT compileEquirectangularShader(). That pre-links the
+  // equirect→cubeUV program and draws a full-screen quad with it to force the
+  // link through; this environment comes from `fromScene`, which never touches
+  // that path. It was a program link and a draw call for a shader the scene
+  // has no way to reach.
   const target = pmrem.fromScene(scene, 0.03);
   pmrem.dispose();
   scene.traverse((o) => {
@@ -195,13 +215,13 @@ export default function ImplantScene({
       alpha: true,
       powerPreference: 'high-performance',
     });
-    // The crown's `transmission` makes the renderer run a SECOND full pass of
-    // the opaque scene into a viewport-sized target every frame, so every
-    // fragment here is paid for twice. DPR 2 on a ~620×744 vitrine is ~1.85 M
-    // pixels, i.e. ~3.7 M shaded. Capping at 1.75 is invisible at arm's length
-    // and takes roughly a quarter off that. (three r172 adds
-    // `transmissionResolutionScale`, which would be the better lever; this
-    // project is pinned to r0.169.)
+    // DPR 2 on a ~620×744 vitrine is ~1.85 M fragments, every one of them
+    // running a physical shader with clearcoat, sheen and a cubeUV environment
+    // lookup. Capping at 1.75 takes roughly a quarter off that and is
+    // invisible at arm's length on a display this content is never the focus
+    // of. (The cap used to be justified by the crown's transmission doubling
+    // the fragment count; that pass is gone — see the crown material — and the
+    // cap is kept on its own merit.)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.setClearAlpha(0);
     // AgX, not ACESFilmic. ACES crushes saturation toward a milky grey, which
@@ -213,6 +233,17 @@ export default function ImplantScene({
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    /* The shadow map is redrawn only when the assembly actually moves.
+       The single caster is a DirectionalLight with a fixed position and a
+       fixed orthographic frustum, so its depth pass does not depend on the
+       camera at all — yet on autoUpdate every frame re-rendered a
+       bit-identical 87,354-triangle pass into the same 1024² target. That is
+       most of the cost of a pointer-parallax frame, where the camera swings
+       but nothing in the scene has changed. The loop below raises
+       `needsUpdate` on the frames that do change something (the parts
+       descending, and the cutaway plane sweeping open, which the bone and gum
+       materials now honour in the depth pass). */
+    renderer.shadowMap.autoUpdate = false;
     // Cutaway: everything is clipped against a plane so the viewer can see the
     // fixture INSIDE the bone. Without this the implant descends into an opaque
     // block and the entire point of the graphic is hidden — which is precisely
@@ -321,6 +352,38 @@ export default function ImplantScene({
     // occlusal third more translucent and greyer — that gradient is how a real
     // multilayer crown is engineered, and it is the difference between "tooth"
     // and "white plastic blob".
+    /* NO TRANSMISSION, and this is the most consequential judgement in the
+       file, so here is the whole of it.
+
+       `transmission: 0.34` cost a viewport-sized HalfFloat render target with
+       4× MSAA (~39 MB of VRAM), a SECOND full pass over every opaque object in
+       the scene, an MSAA resolve and a half-float mipmap chain — every frame,
+       for one object about 120 px tall. Measured against the frame's triangle
+       budget that pass alone was 78,842 of 278,830 triangles.
+
+       What it actually bought: the crown is seen against the vitrine's own
+       background over most of its silhouette and against opaque bone below the
+       margin, so there was almost nothing behind it to refract. The visible
+       residue was a slight warm desaturation from `attenuationColor` and a
+       softening of the cusp ridges — both of which the clearcoat, the sheen
+       lobe and the baked cervical→occlusal vertex colours were already
+       carrying. `thickness`, `attenuationDistance` and `attenuationColor` are
+       gone with it: three only reads them under USE_TRANSMISSION, so leaving
+       them would have been configuration that looks load-bearing and is inert.
+
+       Traded back, without touching a single hue:
+         roughness      0.18 → 0.14  tighter specular; the wet-enamel gloss now
+                                     has to come entirely from the reflection
+                                     lobes, so it has to be a sharper lobe
+         envMapIntensity 1.25 → 1.5  the crown shows the studio room where it
+                                     used to show what was behind it
+         sheen           0.50 → 0.62 } the soft edge glow transmitted light gave
+         sheenRoughness  0.60 → 0.50 } at the thin cusp ridges and the collar
+
+       `ior: 1.62` stays and is NOT inert without transmission: MeshPhysical
+       always defines IOR, so it still drives the dielectric F0 (0.056 against
+       the 0.04 default), which is the specular strength that reads as enamel
+       rather than as paint. */
     const matCrown = new THREE.MeshPhysicalMaterial({
       color: 0xf3ece0,
       // The cervical→occlusal layering is baked into the geometry's vertex
@@ -329,19 +392,15 @@ export default function ImplantScene({
       // bottom, which is the difference between "tooth" and "white blob".
       vertexColors: true,
       metalness: 0,
-      roughness: 0.18,
+      roughness: 0.14,
       clearcoat: 1,
       clearcoatRoughness: 0.09,
-      transmission: 0.34,
-      thickness: 2.2,
       ior: 1.62,
-      attenuationDistance: 6,
-      attenuationColor: new THREE.Color(0xd9c39c),
-      sheen: 0.5,
+      sheen: 0.62,
       sheenColor: new THREE.Color(0xfff0dc),
-      sheenRoughness: 0.6,
+      sheenRoughness: 0.5,
       specularIntensity: 1,
-      envMapIntensity: 1.25,
+      envMapIntensity: 1.5,
     });
 
     const boneClip = new THREE.Plane(new THREE.Vector3(0, 0, -1), 1.2);
@@ -355,6 +414,13 @@ export default function ImplantScene({
       sheenColor: new THREE.Color(0xc0a37c),
       side: THREE.DoubleSide, // the cut face must render, not show through
       clippingPlanes: [boneClip],
+      /* Clipping planes are ignored by the shadow pass unless this is set, so
+         without it the half of the ridge that has been cut away goes on
+         casting a shadow — a hard band of shade thrown across the crest by a
+         wall of bone the viewer can see is not there. The bug is invisible
+         while the cutaway is shut and appears as the plane sweeps open, which
+         is exactly the moment the graphic is asking to be trusted. */
+      clipShadows: true,
       // OPAQUE, deliberately.
       //
       // This used to fade to 0.72 for the osseointegration phase. With
@@ -406,6 +472,11 @@ export default function ImplantScene({
       // normal the cut face is a proper band of tissue, which is exactly what a
       // dental atlas shows.
       clippingPlanes: [boneClip],
+      // Carried for the same reason as the bone's. Inert while this mesh only
+      // receives shadows — but the pairing of `clippingPlanes` with a silently
+      // unclipped depth pass is a trap worth closing at the definition rather
+      // than remembering to close on the day someone sets castShadow here.
+      clipShadows: true,
     });
 
     /* --- assembly ---
@@ -528,22 +599,25 @@ export default function ImplantScene({
 
     /* --- run only while on screen --- */
     let visible = true;
-    const io = new IntersectionObserver(([e]) => {
-      visible = e.isIntersecting;
-      // Coming back on screen after a resize or theme change must repaint even
-      // if nothing is moving.
-      if (visible) dirty = true;
-    });
+    const io = new IntersectionObserver(
+      ([e]) => {
+        visible = e.isIntersecting;
+        // Coming back on screen after a resize or theme change must repaint
+        // even if nothing is moving.
+        if (visible) dirty = true;
+      },
+      /* A margin, so the first frame is drawn just BEFORE the vitrine reaches
+         the viewport. <ImplantStage> only mounts this component within 400 px
+         of the fold; with a zero margin here the scene would then sit idle
+         until the frame the section is already visible, and the visitor would
+         catch one frame of empty case. */
+      { rootMargin: '200px' },
+    );
     io.observe(host);
 
     /* --- loop --- */
     const clock = new THREE.Clock();
     let shown = 0;
-    /* How long the scroll has been quiet, and how far the ambient drift has
-       faded back in as a result. */
-    let quiet = 0;
-    let driftGain = 0;
-    let lastProgress = progress.current;
 
     const tick = () => {
       if (disposed) return;
@@ -552,26 +626,45 @@ export default function ImplantScene({
       const dt = Math.min(clock.getDelta(), 1 / 30);
       if (!visible) return; // keep the delta consumed, skip the work
 
-      /* Ambient drift is suppressed WHILE SCROLLING and ramps back in once the
-         scroll has been quiet for a beat.
+      const pTarget = progress.current;
+      /* Pointer parallax targets. The damping below at lambda 3 gives about a
+         300 ms settle — slow enough to feel weighted, fast enough not to lag
+         behind the cursor. Kept small: this is a medical diagram, not a
+         turntable. */
+      const targetX = hovering ? pointer.x * 0.32 : 0;
+      const targetY = hovering ? pointer.y * 0.16 : 0;
 
-         It used to be added to the yaw unconditionally: a ±5° wobble on a 39 s
-         period running the entire time the user was scrubbing, fighting the
-         scroll-driven yaw for control of the same axis. That is a large part of
-         why the sequence felt unsteady. Still while it is being driven, alive
-         once it is left alone — and, because the drift is the only thing moving
-         in the resting state, gating it is also what makes the frame skip below
-         possible at all. */
-      if (progress.current !== lastProgress) {
-        lastProgress = progress.current;
-        quiet = 0;
-      } else {
-        quiet += dt;
-      }
-      const driftTarget = reduced ? 0 : quiet > 0.8 ? 1 : 0;
-      driftGain = damp(driftGain, driftTarget, driftTarget > driftGain ? 2.4 : 9, dt);
+      /* Render only when the image would actually differ.
 
-      shown = damp(shown, progress.current, 5, dt);
+         Everything that can move here is an exponential approach to a target,
+         so "is anything moving?" is exactly "is anything still off its
+         target?" — asked BEFORE this frame's damping step, so the frame that
+         lands on the target is still drawn, and answered by exact comparison
+         because `settle` guarantees a value is either on its target or a
+         visible distance from it.
+
+         This gate used to be unreachable, and the comment that stood here
+         admitted as much without drawing the conclusion. An ambient yaw drift
+         faded in whenever the scroll went quiet and `driftGain > 1e-3` was one
+         of the terms, so the condition held forever: the scene re-rendered
+         278,830 triangles at 60 fps for as long as the section stayed on
+         screen, while the visitor read the legend beside it. The drift is gone
+         (see the yaw below) and resting now costs nothing at all — no draw, no
+         shadow pass, no matrix update, just this comparison. */
+      const assemblyMoving = shown !== pTarget;
+      const moving = assemblyMoving || orbit.x !== targetX || orbit.y !== targetY;
+      if (!moving && !dirty) return;
+      dirty = false;
+
+      /* The shadow map is camera-independent (one fixed DirectionalLight), so
+         it only goes stale when the parts move or the cutaway plane sweeps.
+         A pointer-parallax frame re-uses the depth buffer it already has. */
+      if (assemblyMoving) renderer.shadowMap.needsUpdate = true;
+
+      shown = settle(damp(shown, pTarget, 5, dt), pTarget);
+      orbit.x = settle(damp(orbit.x, targetX, 3, dt), targetX);
+      orbit.y = settle(damp(orbit.y, targetY, 3, dt), targetY);
+
       const p = shown;
 
       /* Phase 1 — the fixture threads down into the osteotomy.
@@ -625,19 +718,23 @@ export default function ImplantScene({
       fog.near = dist - 14;
       fog.far = dist + 88;
 
-      /* Pointer parallax, damped. lambda 3 gives about a 300ms settle — slow
-         enough to feel weighted, fast enough not to lag behind the cursor. */
-      const targetX = hovering ? pointer.x * 0.32 : 0;
-      const targetY = hovering ? pointer.y * 0.16 : 0;
-      orbit.x = damp(orbit.x, targetX, 3, dt);
-      orbit.y = damp(orbit.y, targetY, 3, dt);
+      /* No ambient presentation drift.
 
-      /* Ambient presentation drift, faded in only once the scroll is quiet. */
-      const idle = Math.sin(clock.elapsedTime * 0.16) * 0.09 * driftGain;
+         There used to be a ±5° yaw oscillation on a 39 s period, faded in once
+         the scroll had been quiet for 0.8 s. It was the only thing moving in
+         the resting state, and that made it the single most expensive line in
+         the file: it held the render gate above permanently open, so a fully
+         assembled implant that the visitor had stopped interacting with was
+         still redrawing 278,830 triangles and a bit-identical 1024² shadow
+         pass sixty times a second, to swing the camera by well under a degree
+         per second. Nothing replaces it, deliberately — the resting frame is a
+         finished implant seen in section, which is the informative state, and
+         the pointer parallax below still answers any movement the visitor
+         actually makes. */
       // Three-quarter view. The ridge runs along X, so a near-frontal yaw
       // shows only its length and it reads as a block; swinging round lets the
       // cut end — and therefore the arch — be seen.
-      const yaw = -1.0 + idle + p * 0.32 + orbit.x;
+      const yaw = -1.0 + p * 0.32 + orbit.x;
       const pitch = 0.06 + orbit.y * 0.5;
 
       camera.position.set(
@@ -647,28 +744,43 @@ export default function ImplantScene({
       );
       camera.lookAt(0, focus, 0);
 
-      /* Render only when the image would actually differ.
-
-         Scope, stated honestly: the ambient drift IS the resting state, so
-         `driftGain` sits at ~1 whenever the scene is idle and in view, and the
-         skip therefore does not fire for a typical visitor. What it does buy is
-         a genuinely static scene under reduced motion, and no redraw during the
-         first 0.8 s after mount. Mid-scroll it never fires either — `shown` is
-         chasing `progress.current`, so `moving` is true regardless of drift.
-         Kept because the reduced-motion case is the one that matters most, and
-         because it costs four comparisons. */
-      const moving =
-        Math.abs(shown - progress.current) > 1e-4 ||
-        Math.abs(orbit.x - targetX) > 1e-4 ||
-        Math.abs(orbit.y - targetY) > 1e-4 ||
-        driftGain > 1e-3;
-
-      if (!moving && !dirty) return;
-      dirty = false;
-
       renderer.render(scene, camera);
     };
-    tick();
+
+    /* Link the programs BEFORE the first frame rather than during it.
+
+       Five physical materials, each with clearcoat, sheen, a cubeUV
+       environment lookup, fog and — on the tissue — clipping planes, is a lot
+       of generated GLSL. Compiled lazily they all land inside the first
+       `render`, as a synchronous stall of tens of milliseconds arriving at
+       exactly the moment the section scrolls into view. `compileAsync` hands
+       them to the driver up front and, where KHR_parallel_shader_compile
+       exists, resolves only once they report ready, so the first frame is a
+       draw and nothing else.
+
+       It walks with `scene.traverse`, not traverseVisible, so it finds the
+       parts regardless of the `visible` flags tick() is about to set. It does
+       NOT reach the shadow pass's depth variants — those are built by
+       WebGLShadowMap and there is no public lever for them — so the first
+       frame still pays for four of those. That is a quarter of the stall
+       rather than all of it.
+
+       The catch is not defensive padding: `compile` runs outside the promise,
+       so if it throws there is no promise to reject and the loop would simply
+       never be started — turning a slow first frame into a blank canvas
+       forever. */
+    const start = () => {
+      if (disposed) return;
+      // Nothing has drawn yet, so the shadow map does not exist. autoUpdate is
+      // off, so the first pass has to be asked for explicitly.
+      renderer.shadowMap.needsUpdate = true;
+      tick();
+    };
+    try {
+      renderer.compileAsync(scene, camera).then(start, start);
+    } catch {
+      start();
+    }
 
     /* --- teardown: three.js does not garbage collect GPU resources --- */
     return () => {
@@ -695,13 +807,18 @@ export default function ImplantScene({
       // frees both `map` and `mapPass`.
       key.shadow.dispose();
       renderer.dispose();
-      /* The crown's transmission makes the renderer allocate a viewport-sized
-         HalfFloat target with 4× MSAA and mipmaps, held in WebGLRenderStates.
-         `renderer.dispose()` does NOT free it — renderStates.dispose() merely
-         swaps the WeakMap — and it is unreachable from here, so there is no
-         handle to dispose. Dropping the context is the only lever that
-         actually returns that memory, and it is safe: this element is being
-         torn down. */
+      /* `renderer.dispose()` releases three's own caches and nothing else — it
+         never touches the WebGL context, and several of the things that hang
+         off one (the drawing buffer, the default framebuffer, the compiled
+         program objects the driver still holds) are unreachable from here, so
+         there is no handle to dispose. Browsers cap live contexts at around 16
+         and silently kill the oldest on overflow, so a visitor who toggles the
+         language a dozen times — every toggle rewrites the path and remounts
+         this tree — would otherwise take down some other canvas on the page.
+         Dropping the context is the only lever that actually returns any of
+         it, and it is safe here: the element is going away.
+         (This used to be justified by the crown's transmission render target,
+         which no longer exists. The lever is still the right one.) */
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };

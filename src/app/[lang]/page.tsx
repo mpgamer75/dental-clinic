@@ -18,82 +18,83 @@ import { FaqSection } from '@/components/sections/faq-section';
 import { BookingSection } from '@/components/sections/booking';
 import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
 import { ContactSection } from '@/components/sections/contact-section';
-import type { Language, TestimonialSupabase } from '@/lib/types';
-import { createServerClient } from '@/lib/supabase-server';
+import type { Language } from '@/lib/types';
+import { db } from '@/lib/db';
+import { testimonials as testimonialsTable } from '@/lib/schema';
+import { desc, eq } from 'drizzle-orm';
 import {
   getDentalClinicStructuredData,
   getBreadcrumbStructuredData,
   getFAQStructuredData,
 } from '@/lib/seo-config';
-
-/**
- * Next.js signals control flow by THROWING: `notFound()`, `redirect()`, and the
- * dynamic-rendering bailout all surface as errors carrying a `digest`. A
- * catch-all in a Server Component must re-throw these or it silently breaks the
- * framework — swallowing DYNAMIC_SERVER_USAGE in particular made this route
- * look statically renderable, so an empty testimonial list risked being baked
- * into the prerendered HTML.
- */
-function isNextControlFlow(err: unknown): boolean {
-  const digest = (err as { digest?: unknown })?.digest;
-  return (
-    typeof digest === 'string' &&
-    (digest === 'DYNAMIC_SERVER_USAGE' ||
-      digest === 'NEXT_NOT_FOUND' ||
-      digest.startsWith('NEXT_REDIRECT'))
-  );
-}
+import { formatDatabaseFailure } from '@/lib/db-errors';
 
 /**
  * Loads approved testimonials.
  *
  * The homepage must render whether or not the database is reachable, so every
- * genuine failure — unreachable host, missing env, RLS rejection, malformed
- * row — collapses to `{ testimonials: [], failed: true }` and the section shows
- * its error state. Previously an unguarded query here took the whole page down
- * with it.
+ * genuine failure — unreachable host, missing env, a malformed row — collapses
+ * to `{ testimonials: [], failed: true }` and the section shows its error
+ * state. Previously an unguarded query here took the whole page down with it.
+ *
+ * Nothing this function calls can throw Next's control-flow errors, so it does
+ * not re-throw them: it reads no cookies and no headers, and `notFound()` is
+ * called by the page, outside the try. That was not true of the Supabase SSR
+ * client this replaces — it read the cookie store, which meant a caught
+ * DYNAMIC_SERVER_USAGE could quietly convert a bailout into a permanently empty
+ * testimonial list.
+ *
+ * The filter and the ordering are exactly what the partial index
+ * `testimonials_public_idx` covers (`ON (submitted_at DESC) WHERE status =
+ * 'approved'`); changing either without changing the index gives the planner a
+ * sequential scan on the one query every visitor triggers.
  */
 async function loadTestimonials(): Promise<{
   testimonials: { name: string; quote: string; location?: string }[];
   failed: boolean;
 }> {
   try {
-    const supabase = await createServerClient();
-    const { data, error } = await supabase
-      .from('testimonials')
-      .select('*')
-      .eq('status', 'approved')
-      .order('submitted_at', { ascending: false });
+    const rows = await db
+      .select({
+        name: testimonialsTable.name,
+        quote: testimonialsTable.quote,
+        location: testimonialsTable.location,
+      })
+      .from(testimonialsTable)
+      .where(eq(testimonialsTable.status, 'approved'))
+      .orderBy(desc(testimonialsTable.submittedAt));
 
-    if (error) {
-      console.error('[home] testimonials query failed:', error.message);
-      return { testimonials: [], failed: true };
-    }
-
-    const rows = (data ?? []) as TestimonialSupabase[];
     return {
       testimonials: rows
-        .filter((t) => t?.name && t?.quote)
-        .map((t) => ({
-          name: t.name,
-          quote: t.quote,
-          location: t.location || undefined,
+        .filter((row) => row.name && row.quote)
+        .map((row) => ({
+          name: row.name,
+          quote: row.quote,
+          location: row.location || undefined,
         })),
       failed: false,
     };
-  } catch (err) {
-    if (isNextControlFlow(err)) throw err;
-    console.error('[home] testimonials unavailable:', err);
+  } catch (error) {
+    console.error('[home] testimonials unavailable: %s', formatDatabaseFailure(error));
     return { testimonials: [], failed: true };
   }
 }
 
 /**
- * This page reads cookies (Supabase SSR client) and live testimonial data, so
- * it is dynamic by nature. Declaring it explicitly stops Next attempting a
- * prerender that can only ever bail out.
+ * Statically rendered, revalidated every five minutes.
+ *
+ * `force-dynamic` used to be set here, and the reason given for it was the
+ * Supabase SSR client reading cookies — a cookie read makes a prerender
+ * impossible, so the page was rendered per request whether or not anything on
+ * it had changed. The Neon read is cookie-free by construction, so the whole
+ * page can go back to being a static file served from the edge.
+ *
+ * Five minutes is the delay between the dentist approving a testimonial and it
+ * appearing. It is also how long a build that happened to run while the
+ * database was unreachable would keep serving the section's error state before
+ * healing itself, which is the more important of the two numbers.
  */
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export default async function HomePage({ params }: { params: Promise<{ lang: Language }> }) {
   const resolved = await params;

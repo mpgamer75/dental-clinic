@@ -209,6 +209,11 @@ function createAppointmentSchema(m: ZodMessages) {
       .trim()
       .min(1, { message: m.phoneInvalid })
       .refine((value) => {
+        // 40 is the column's own CHECK. Seven digits padded with thirty spaces
+        // satisfies both the digit count and the character class, so without
+        // this the value reaches Postgres and comes back as a generic failure
+        // on a number that looked perfectly fine on screen.
+        if (value.length > 40) return false;
         const digits = value.replace(/[^0-9]/g, '');
         return digits.length >= 7 && digits.length <= 15 && /^[0-9+\s()-]*$/.test(value);
       }, { message: m.phoneInvalid }),

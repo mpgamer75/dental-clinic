@@ -1,9 +1,31 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Enhanced security headers
+/**
+ * The auth service's origin, for `connect-src`.
+ *
+ * The browser reaches Neon Auth through the same-origin /api/auth proxy, so
+ * `'self'` already covers the normal path and this is belt-and-braces for any
+ * SDK call that addresses the service directly. Derived from the environment
+ * rather than written out, because a hardcoded backend hostname in this file is
+ * exactly what went wrong last time — see the note on `connect-src` below.
+ */
+function authOrigin(): string {
+  const raw = process.env.NEON_AUTH_BASE_URL;
+  if (!raw) return '';
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return '';
+  }
+}
+
 const SECURITY_HEADERS = {
-  'X-XSS-Protection': '1; mode=block',
+  // 0, not "1; mode=block". The legacy XSS auditor is removed from every
+  // current browser, and where it does still exist its blocking mode is itself
+  // an information-disclosure vector. `0` disables it explicitly; the CSP below
+  // is the actual defence.
+  'X-XSS-Protection': '0',
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
@@ -11,17 +33,28 @@ const SECURITY_HEADERS = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://va.vercel-scripts.com",
+    // 'unsafe-eval' is gone: it was never needed in a production build, and it
+    // is the single directive that most weakens the rest of this policy.
+    // 'unsafe-inline' has to stay until Next's bootstrap script is served with
+    // a nonce — it is a known gap, not an accepted one.
+    "script-src 'self' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://wyospvndshfmkqvwkefn.supabase.co https://vercel.live https://va.vercel-scripts.com wss://wyospvndshfmkqvwkefn.supabase.co",
+    // This used to allow-list a Supabase project host, and kept allow-listing it
+    // after the migration removed every call to it. A stale entry here is worse
+    // than clutter: a released Supabase project ref can be claimed by someone
+    // else, and the policy would still have been authorising any injected script
+    // to send the patient data on /admin straight to it.
+    ['connect-src', "'self'", authOrigin(), 'https://vercel.live', 'https://va.vercel-scripts.com']
+      .filter(Boolean)
+      .join(' '),
     "frame-src 'self' https://www.google.com https://www.youtube.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "upgrade-insecure-requests"
+    'upgrade-insecure-requests',
   ].join('; '),
 };
 

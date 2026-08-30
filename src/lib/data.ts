@@ -478,7 +478,7 @@ export const formCommon: Record<Language, {
  * server action folds the chosen day and time-of-day into the `reason` column
  * using these strings, because `appointments` has no date column yet. See
  * `submitAppointmentForm` in src/app/actions.ts and the OPTIONAL, NOT-APPLIED
- * migration at supabase/migrations/manual/0002_optional_appointment_datetime.sql.
+ * columns preferred_date and time_preference in migrations/0001_init.sql.
  */
 export const appointmentBooking: Record<Language, {
   standfirst: string;
