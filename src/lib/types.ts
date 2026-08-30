@@ -425,6 +425,8 @@ export interface GeneralUIStrings {
   testimonials: string;
   contact: string;
   appointments: string;
+  /** Compact form of `appointments` for the header CTA below 640px. */
+  appointmentsShort: string;
   // End of navigation items
   appointmentTableHeaders: AppointmentTableHeaders;
   statusLabels: StatusLabels;

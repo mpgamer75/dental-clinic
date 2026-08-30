@@ -5,7 +5,6 @@ import '@/app/globals.css';
 import { fontVariables } from '@/app/fonts';
 import { BackToTop } from '@/components/back-to-top';
 import { Footer } from '@/components/layout/footer';
-import { MobileActionBar } from '@/components/layout/mobile-action-bar';
 import { Navbar } from '@/components/layout/navbar';
 import { ScrollProgress } from '@/components/scroll-progress';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -117,18 +116,12 @@ export default async function SiteLayout({
             {/* `tabIndex={-1}` so the skip link actually moves focus. Chrome and
                 Firefox set the sequential-focus starting point from a fragment
                 link to a non-focusable element; Safari does not, so without this
-                the link scrolled and the next Tab went back to the header.
-
-                No bottom padding for the MobileActionBar here: <main> is the
-                footer's SIBLING, so its padding never protected the footer from
-                the fixed bar. The clearance lives in the footer now, where it
-                also accounts for env(safe-area-inset-bottom). */}
+                the link scrolled and the next Tab went back to the header. */}
             <main id="main-content" tabIndex={-1} className="flex-1">
               {children}
             </main>
             <Footer />
             <BackToTop />
-            <MobileActionBar />
           </LanguageProvider>
           <Toaster />
         </ThemeProvider>

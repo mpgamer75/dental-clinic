@@ -60,6 +60,7 @@ import {
   type ContactMessageStatus,
   type SiteSettings,
   type TestimonialStatus,
+  type TimePreference,
 } from '@/lib/schema';
 
 import {
@@ -602,6 +603,352 @@ export function getServiceDemand(): Promise<QueryOutcome<ServiceDemand[]>> {
       .limit(5);
 
     return rows;
+  });
+}
+
+/* ============================================================================
+   Analytics — the bucket list belongs to the query, not to the data
+   ----------------------------------------------------------------------------
+   A GROUP BY returns the categories that OCCURRED. A chart axis needs the
+   categories that EXIST, and those are different lists. A month in which the
+   clinic cancelled nothing returns no 'cancelled' row, so the funnel quietly
+   redraws with three bars instead of four, every series shifts one colour along
+   and the reader sees a change in the shape of the practice where there was
+   only a change in the shape of the result set.
+
+   So each aggregate below is a single row of `count(*) FILTER (WHERE …)` rather
+   than a set of grouped counts. An aggregate with no GROUP BY returns exactly
+   one row even over a table with nothing in it, which makes "every bucket is
+   present and an absent category reads as a real zero" a property of the SQL
+   instead of a fill loop that a later edit can forget. It is also one pass over
+   the table per chart rather than one per bucket, and it keeps the promise made
+   at the top of this file: the aggregation happens in Postgres, and only the
+   handful of numbers a chart draws crosses the wire.
+
+   `::int` on every count for the reason spelled out on `getDashboardCounts`:
+   the driver returns bigint as a STRING, and a string survives `+` as
+   concatenation rather than failing, so an uncast total renders correctly and
+   computes a percentage of "0123".
+
+   None of these exclude demo rows. That is deliberate — demo rows exist so
+   these charts have a shape to draw, and hiding them here would leave the panel
+   looking broken in exactly the situation the seed was run to fix. What the
+   dashboard owes the reader instead is a visible notice that it is showing
+   fabricated data; `getDemoDataPresence` below answers that.
+   ========================================================================== */
+
+/**
+ * One column, slice or bar.
+ *
+ * `key` is stable and machine-readable; `label` is Spanish and for humans. They
+ * are separate so a chart can key its colours and its React children off
+ * something that does not move when the copy is reworded — otherwise renaming
+ * "Pendientes" recolours the series and breaks the reconciliation of the
+ * element it is drawn with.
+ */
+export interface ChartBucket<TKey extends string = string> {
+  key: TKey;
+  label: string;
+  total: number;
+}
+
+/** `count(*) FILTER (WHERE <match>)`, cast to a real number. */
+function bucketCount(match: SQL): SQL<number> {
+  return sql<number>`count(*) filter (where ${match})::int`;
+}
+
+/* ----------------------------------------------------------------------------
+   Appointment status funnel
+   -------------------------------------------------------------------------- */
+
+export type FunnelStage = ChartBucket<AppointmentStatus>;
+
+/**
+ * How many requests are sitting at each stage of the workflow.
+ *
+ * Ordered the way the work actually flows — pending, then confirmed, then
+ * completed — and NOT by size. Sorted by count this is a bar chart of four
+ * unrelated numbers; in workflow order the same four numbers answer "where do
+ * requests stop moving?", which is the question the clinic has. `cancelled`
+ * comes last because it is an exit from the funnel rather than a step along it,
+ * and a reader who sees it between 'confirmed' and 'completed' will read it as
+ * one.
+ */
+export function getAppointmentFunnel(): Promise<QueryOutcome<FunnelStage[]>> {
+  return runQuery('appointment funnel', async () => {
+    const atStatus = (status: AppointmentStatus) =>
+      bucketCount(sql`${appointments.status} = ${status}`);
+
+    const [row] = await db
+      .select({
+        pending: atStatus('pending'),
+        confirmed: atStatus('confirmed'),
+        completed: atStatus('completed'),
+        cancelled: atStatus('cancelled'),
+      })
+      .from(appointments);
+
+    /* The `?? 0` is unreachable — an ungrouped aggregate always yields a row —
+       but writing it keeps the function total, so a future `.where()` that
+       filters everything out degrades to zeros rather than to `undefined`
+       reaching a chart as NaN. */
+    return [
+      { key: 'pending', label: 'Pendientes', total: row?.pending ?? 0 },
+      { key: 'confirmed', label: 'Confirmadas', total: row?.confirmed ?? 0 },
+      { key: 'completed', label: 'Completadas', total: row?.completed ?? 0 },
+      { key: 'cancelled', label: 'Canceladas', total: row?.cancelled ?? 0 },
+    ] satisfies FunnelStage[];
+  });
+}
+
+/* ----------------------------------------------------------------------------
+   Time-of-day preference
+   -------------------------------------------------------------------------- */
+
+export type TimePreferenceKey = TimePreference | 'unstated';
+export type TimePreferenceSlice = ChartBucket<TimePreferenceKey>;
+
+/**
+ * What half of the day patients ask for, for staffing the rota.
+ *
+ * "Sin indicar" is its own slice and is never folded into "Cualquiera". They
+ * look alike and mean opposite things: a patient who chose "cualquier hora"
+ * has told the clinic they are flexible, a patient who left the optional field
+ * empty has told it nothing. Merging them turns silence into consent and
+ * overstates how much of the afternoon the clinic can fill — the one decision
+ * this chart is actually used for.
+ *
+ * The labels are written here rather than taken from
+ * `appointmentBooking.es.reasonPrefix.times`, which holds "por la mañana" and
+ * "cualquier hora": those are sentence fragments the booking action splices
+ * into the `reason` text, and they read as broken English on an axis and wrap
+ * on a phone.
+ */
+export function getTimePreferenceSplit(): Promise<QueryOutcome<TimePreferenceSlice[]>> {
+  return runQuery('time preference split', async () => {
+    const prefers = (value: TimePreference) =>
+      bucketCount(sql`${appointments.timePreference} = ${value}`);
+
+    const [row] = await db
+      .select({
+        morning: prefers('morning'),
+        afternoon: prefers('afternoon'),
+        any: prefers('any'),
+        /* `IS NULL`, not `= null`. The column is nullable by design — the field
+           is optional on the form — and an equality test against NULL is NULL,
+           which a FILTER treats as false, so this bucket would always be 0 and
+           the four slices would not add up to the number of appointments. */
+        unstated: bucketCount(sql`${appointments.timePreference} is null`),
+      })
+      .from(appointments);
+
+    return [
+      { key: 'morning', label: 'Mañana', total: row?.morning ?? 0 },
+      { key: 'afternoon', label: 'Tarde', total: row?.afternoon ?? 0 },
+      { key: 'any', label: 'Cualquiera', total: row?.any ?? 0 },
+      { key: 'unstated', label: 'Sin indicar', total: row?.unstated ?? 0 },
+    ] satisfies TimePreferenceSlice[];
+  });
+}
+
+/* ----------------------------------------------------------------------------
+   How long pending requests have been waiting
+   -------------------------------------------------------------------------- */
+
+export type WaitBucketKey = 'under24h' | 'days1to3' | 'days4to7' | 'over7d';
+
+export interface WaitBucket extends ChartBucket<WaitBucketKey> {
+  /** How many of `total` are flagged urgent. */
+  urgent: number;
+}
+
+/**
+ * The age of the backlog: pending requests grouped by how long they have gone
+ * unanswered, with the urgent ones counted separately inside each bucket.
+ *
+ * This is the most operationally useful chart on the page, and the `urgent`
+ * column is the reason. The headline count of pending appointments says a
+ * number; it cannot say that one of them is a patient who wrote "llevo dos
+ * noches con un dolor punzante" nine days ago and has been pushed off the first
+ * page by eleven routine enquiries since. A bar in "más de 7 días" with urgent
+ * shaded inside it says exactly that, and it is the failure this whole panel
+ * was rebuilt to stop.
+ *
+ * The boundaries partition the line with no gap and no overlap — [0,1), [1,4),
+ * [4,8), [8,∞) days — so the four buckets always sum to the pending total. The
+ * first bucket is written as a bare `< interval '1 day'` rather than
+ * `BETWEEN 0 AND 1` so that a row whose `submitted_at` is slightly in the
+ * future, which clock skew between the app server and Neon can produce, still
+ * lands somewhere instead of vanishing from a chart that claims to be complete.
+ *
+ * `now()` is evaluated by Postgres, once, for all four filters. Passing a
+ * JavaScript timestamp instead would put the app server's clock in charge of
+ * the boundaries and let two of them be computed either side of a tick.
+ */
+export function getPendingWaitBuckets(): Promise<QueryOutcome<WaitBucket[]>> {
+  return runQuery('pending wait buckets', async () => {
+    const waited = sql`(now() - ${appointments.submittedAt})`;
+
+    const within = (lower: SQL | null, upper: SQL | null): SQL => {
+      if (lower === null) return sql`${waited} < ${upper}`;
+      if (upper === null) return sql`${waited} >= ${lower}`;
+      return sql`${waited} >= ${lower} and ${waited} < ${upper}`;
+    };
+
+    const oneDay = sql`interval '1 day'`;
+    const fourDays = sql`interval '4 days'`;
+    const eightDays = sql`interval '8 days'`;
+
+    const urgentIn = (match: SQL) => bucketCount(sql`${appointments.isUrgent} and ${match}`);
+
+    const under24h = within(null, oneDay);
+    const days1to3 = within(oneDay, fourDays);
+    const days4to7 = within(fourDays, eightDays);
+    const over7d = within(eightDays, null);
+
+    const [row] = await db
+      .select({
+        under24hTotal: bucketCount(under24h),
+        under24hUrgent: urgentIn(under24h),
+        days1to3Total: bucketCount(days1to3),
+        days1to3Urgent: urgentIn(days1to3),
+        days4to7Total: bucketCount(days4to7),
+        days4to7Urgent: urgentIn(days4to7),
+        over7dTotal: bucketCount(over7d),
+        over7dUrgent: urgentIn(over7d),
+      })
+      .from(appointments)
+      /* Only what is still waiting. A confirmed or completed request has an
+         answer, so its age is history rather than backlog, and including it
+         would bury the four or five rows this chart exists to make visible
+         under three months of resolved ones. */
+      .where(eq(appointments.status, 'pending'));
+
+    return [
+      {
+        key: 'under24h',
+        label: 'Menos de 24 h',
+        total: row?.under24hTotal ?? 0,
+        urgent: row?.under24hUrgent ?? 0,
+      },
+      {
+        key: 'days1to3',
+        label: '1 a 3 días',
+        total: row?.days1to3Total ?? 0,
+        urgent: row?.days1to3Urgent ?? 0,
+      },
+      {
+        key: 'days4to7',
+        label: '4 a 7 días',
+        total: row?.days4to7Total ?? 0,
+        urgent: row?.days4to7Urgent ?? 0,
+      },
+      {
+        key: 'over7d',
+        label: 'Más de 7 días',
+        total: row?.over7dTotal ?? 0,
+        urgent: row?.over7dUrgent ?? 0,
+      },
+    ] satisfies WaitBucket[];
+  });
+}
+
+/* ----------------------------------------------------------------------------
+   Which weekdays generate requests
+   -------------------------------------------------------------------------- */
+
+export type WeekdayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+export type WeekdayPoint = ChartBucket<WeekdayKey>;
+
+/**
+ * Submissions by day of the week, over the whole history, for staffing.
+ *
+ * The timezone conversion is the same lesson `getSubmissionTrend` records, and
+ * it bites harder here because the error does not average out. `submitted_at`
+ * is a `timestamptz`; reading a weekday out of it directly reads it in UTC, and
+ * at UTC-4 everything a patient sends after 8pm belongs to the next UTC day —
+ * so a fortnight of Sunday-evening toothache reports would land on Monday's
+ * bar, and the clinic would staff a Monday morning for a demand that arrives
+ * on Sunday night. Converting to clinic time before extracting is what keeps a
+ * Tuesday a Tuesday.
+ *
+ * `isodow` rather than `dow` so the week starts on Monday — the working week as
+ * the clinic reads it — instead of putting Sunday in front of it. All seven
+ * days are returned in that order; a genuinely empty Saturday is information
+ * about a clinic that closes at weekends, and dropping it would slide Sunday's
+ * bar into Saturday's place on the axis.
+ */
+export function getWeekdayDemand(): Promise<QueryOutcome<WeekdayPoint[]>> {
+  return runQuery('weekday demand', async () => {
+    const clinicWeekday = sql`extract(isodow from (${appointments.submittedAt} at time zone ${CLINIC_TIME_ZONE}))`;
+    const onDay = (isoDow: number) => bucketCount(sql`${clinicWeekday} = ${isoDow}`);
+
+    const [row] = await db
+      .select({
+        mon: onDay(1),
+        tue: onDay(2),
+        wed: onDay(3),
+        thu: onDay(4),
+        fri: onDay(5),
+        sat: onDay(6),
+        sun: onDay(7),
+      })
+      .from(appointments);
+
+    return [
+      { key: 'mon', label: 'Lun', total: row?.mon ?? 0 },
+      { key: 'tue', label: 'Mar', total: row?.tue ?? 0 },
+      { key: 'wed', label: 'Mié', total: row?.wed ?? 0 },
+      { key: 'thu', label: 'Jue', total: row?.thu ?? 0 },
+      { key: 'fri', label: 'Vie', total: row?.fri ?? 0 },
+      { key: 'sat', label: 'Sáb', total: row?.sat ?? 0 },
+      { key: 'sun', label: 'Dom', total: row?.sun ?? 0 },
+    ] satisfies WeekdayPoint[];
+  });
+}
+
+/* ----------------------------------------------------------------------------
+   Is the panel showing invented data?
+   -------------------------------------------------------------------------- */
+
+export interface DemoDataPresence {
+  appointments: number;
+  messages: number;
+  testimonials: number;
+  /** True if anything on the dashboard is fabricated. */
+  any: boolean;
+}
+
+/**
+ * How many rows in each table came from `npm run db:demo:seed`.
+ *
+ * The charts above are drawn over demo rows and real ones together, which is
+ * what makes them legible on a table holding two appointments — and also what
+ * makes this query necessary. A receptionist reading "34 citas pendientes" has
+ * no way to see that thirty of them were invented by a script, and the concrete
+ * failure is one phone call long: a name and an 809 number in the queue, dialled
+ * on a Monday morning, belonging to nobody. The panel needs to say so on the
+ * page, and this is the number it says it with.
+ *
+ * Each count is answered from the partial `… WHERE is_demo` index added in
+ * migration 0004, so on a purged production database this is three reads of an
+ * empty index rather than three scans of an appointment book that only grows.
+ */
+export function getDemoDataPresence(): Promise<QueryOutcome<DemoDataPresence>> {
+  return runQuery('demo data presence', async () => {
+    const [[appointmentRow], [messageRow], [testimonialRow]] = await Promise.all([
+      db.select({ total: bucketCount(sql`${appointments.isDemo}`) }).from(appointments),
+      db.select({ total: bucketCount(sql`${contactMessages.isDemo}`) }).from(contactMessages),
+      db.select({ total: bucketCount(sql`${testimonials.isDemo}`) }).from(testimonials),
+    ]);
+
+    const counts = {
+      appointments: appointmentRow?.total ?? 0,
+      messages: messageRow?.total ?? 0,
+      testimonials: testimonialRow?.total ?? 0,
+    };
+
+    return { ...counts, any: counts.appointments + counts.messages + counts.testimonials > 0 };
   });
 }
 

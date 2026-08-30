@@ -100,6 +100,16 @@ export const appointments = appSchema.table(
     submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     status: text('status').$type<AppointmentStatus>().notNull().default('pending'),
+
+    /* Fabricated by src/scripts/demo-data.ts so the dashboard's charts have a
+       shape to draw. NOT NULL DEFAULT false is the whole safety property: every
+       row that already exists and every appointment a patient submits from now
+       on is real and unflagged, because nothing on the write path in
+       src/app/actions.ts mentions this column at all. The panel badges a
+       flagged row so nobody rings an invented phone number, and
+       `DELETE ... WHERE is_demo` removes the set exactly. See
+       migrations/0004_demo_flag.sql. */
+    isDemo: boolean('is_demo').notNull().default(false),
   },
   (t) => [
     index('appointments_queue_idx').on(t.isUrgent.desc(), t.submittedAt.desc()),
@@ -107,6 +117,10 @@ export const appointments = appSchema.table(
     index('appointments_preferred_date_idx')
       .on(t.preferredDate)
       .where(sql`${t.preferredDate} IS NOT NULL`),
+    /* Indexed on the demo side, which pays off once the set is purged rather
+       than while it is loaded: the dashboard's "showing demo data" check then
+       reads an empty index instead of scanning the whole appointment book. */
+    index('appointments_demo_idx').on(t.submittedAt.desc()).where(sql`${t.isDemo}`),
 
     check('appointments_name_check', sql`length(${t.name}) BETWEEN 2 AND 100`),
     check('appointments_email_check', sql`length(${t.email}) <= 255`),
@@ -135,9 +149,13 @@ export const contactMessages = appSchema.table(
     submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     status: text('status').$type<ContactMessageStatus>().notNull().default('unread'),
+
+    /** Fabricated demo traffic. See the note on `appointments.isDemo`. */
+    isDemo: boolean('is_demo').notNull().default(false),
   },
   (t) => [
     index('contact_messages_status_idx').on(t.status, t.submittedAt.desc()),
+    index('contact_messages_demo_idx').on(t.submittedAt.desc()).where(sql`${t.isDemo}`),
 
     check('contact_messages_name_check', sql`length(${t.name}) BETWEEN 2 AND 100`),
     check('contact_messages_email_check', sql`length(${t.email}) <= 255`),
@@ -171,6 +189,18 @@ export const testimonials = appSchema.table(
     reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
     reviewedBy: text('reviewed_by'),
     status: text('status').$type<TestimonialStatus>().notNull().default('pending_approval'),
+
+    /* Fabricated demo submissions. Deliberately un-indexed, unlike the other
+       two tables: this one holds a handful of rows by design, so a sequential
+       scan is a single page read and cheaper than making every moderation
+       decision maintain another index.
+
+       A demo testimonial must never be approved. `testimonials_public_idx` and
+       src/app/(site)/[lang]/page.tsx read every approved row straight onto the
+       clinic's public homepage, so approving one publishes an invented patient
+       quote under an invented name. demo-data.ts therefore never writes
+       'approved' on a flagged row. */
+    isDemo: boolean('is_demo').notNull().default(false),
   },
   (t) => [
     index('testimonials_public_idx')

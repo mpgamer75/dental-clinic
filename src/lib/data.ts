@@ -1047,6 +1047,10 @@ export const generalUiStrings: GeneralUIData = {
     testimonials: "Testimonios",
     contact: "Contacto",
     appointments: "Agendar Cita",
+    /* The header CTA below 640px, where the full label pushed the clinic
+       name into an ellipsis ("Ortho…"). Same destination, same meaning,
+       one word. */
+    appointmentsShort: "Cita",
     appointmentTableHeaders: {
       name: "Nombre",
       email: "Correo",
@@ -1103,6 +1107,7 @@ export const generalUiStrings: GeneralUIData = {
     testimonials: "Testimonials",
     contact: "Contact",
     appointments: "Schedule Appointment",
+    appointmentsShort: "Book",
     appointmentTableHeaders: {
       name: "Name",
       email: "Email",

@@ -90,8 +90,21 @@ const guardAdminRoutes = auth.middleware({ loginUrl: '/admin/login' });
 
 /** Copies the security headers onto a response. Redirects need this too — see
  *  the call sites below. */
-function withSecurityHeaders(res: NextResponse): NextResponse {
+function withSecurityHeaders(res: NextResponse, req?: NextRequest): NextResponse {
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    /* HSTS is withheld on plain HTTP, which in practice means localhost.
+       It is a per-host instruction the browser REMEMBERS: send it once over
+       http://localhost:9003 and that browser will force https://localhost:9003
+       for a year, on every project served from that port, with no way for the
+       site to take it back. `npm run dev` then fails to load anything and the
+       developer has to clear the entry by hand in chrome://net-internals.
+       Found by hitting exactly that during mobile testing.
+
+       Withholding it costs nothing where it matters: production is HTTPS, so
+       the header still ships on every response a real visitor sees. */
+    if (key === 'Strict-Transport-Security' && req?.nextUrl.protocol !== 'https:') {
+      continue;
+    }
     res.headers.set(key, value);
   }
   return res;
@@ -108,6 +121,7 @@ export default async function proxy(req: NextRequest) {
 
   const res = withSecurityHeaders(
     NextResponse.next({ request: { headers: requestHeaders } }),
+    req,
   );
 
   // Skip static assets. /api/ included: a sign-in POST rewritten to
@@ -130,7 +144,7 @@ export default async function proxy(req: NextRequest) {
   // returns rather than to `res`. Without that, every admin response — the
   // redirect to the login form included — would ship with no CSP and no HSTS.
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    return withSecurityHeaders(await guardAdminRoutes(req));
+    return withSecurityHeaders(await guardAdminRoutes(req), req);
   }
 
   // Locale handling for public routes.
@@ -146,7 +160,7 @@ export default async function proxy(req: NextRequest) {
   if (pathname === '/') {
     const url = req.nextUrl.clone();
     url.pathname = `/${DEFAULT_LANGUAGE}`;
-    return withSecurityHeaders(NextResponse.redirect(url));
+    return withSecurityHeaders(NextResponse.redirect(url), req);
   }
 
   const hasLangPrefix = SUPPORTED_LANGUAGES.some(
@@ -156,7 +170,7 @@ export default async function proxy(req: NextRequest) {
   if (!hasLangPrefix) {
     const url = req.nextUrl.clone();
     url.pathname = `/${DEFAULT_LANGUAGE}${pathname}`;
-    return withSecurityHeaders(NextResponse.redirect(url));
+    return withSecurityHeaders(NextResponse.redirect(url), req);
   }
 
   return res;

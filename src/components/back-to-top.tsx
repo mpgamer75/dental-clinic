@@ -77,7 +77,13 @@ export function BackToTop() {
          */
         inert={!isVisible}
         className={cn(
-          // Desktop only: on phones the MobileActionBar owns this corner.
+          // Desktop only, still. The fixed MobileActionBar that used to own this
+          // corner is gone, so the space is free — but a floating control on a
+          // phone is `fixed`, which means it sits over the text column wherever
+          // it lands. Enabling it here put a 48px navy disc squarely on top of
+          // the implant legend's second step, mid-sentence. A long page is a
+          // real argument for the button; covering the content the reader came
+          // for is a better argument against it.
           'fixed bottom-8 right-8 z-sticky hidden h-12 w-12 rounded-full shadow-e3 lg:flex',
           'bg-primary text-primary-foreground hover:bg-primary-hover',
           // Every property in this list is compositor- or paint-only. The

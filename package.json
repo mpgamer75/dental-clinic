@@ -14,6 +14,8 @@
     "db:pull": "drizzle-kit pull",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/scripts/seed.ts",
+    "db:demo:seed": "tsx src/scripts/demo-data.ts seed",
+    "db:demo:purge": "tsx src/scripts/demo-data.ts purge",
     "admin:grant": "tsx src/scripts/grant-admin.ts grant",
     "admin:revoke": "tsx src/scripts/grant-admin.ts revoke",
     "admin:list": "tsx src/scripts/grant-admin.ts list"

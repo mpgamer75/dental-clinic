@@ -5,7 +5,6 @@ import { Mail, MapPin, Phone, Lock } from 'lucide-react';
 import { contactDetails, generalUiStrings, formCommon, navStrings } from '@/lib/data';
 import { useLanguage } from '@/contexts/language-context';
 import { Button } from '@/components/ui/button';
-import { MOBILE_ACTION_BAR_HEIGHT } from '@/components/layout/mobile-action-bar';
 
 export function Footer() {
   const { lang } = useLanguage();
@@ -55,8 +54,16 @@ export function Footer() {
 
   const navLabel = lang === 'es' ? 'Navegación' : 'Navigation';
   const headingClass = 'mb-4 font-heading text-base font-medium text-drench-on';
+  /* `inline-block py-1.5` is the tap target, not decoration.
+     Measured at 378px, these links were 20px tall (16px for the phone number),
+     under the 24px WCAG 2.2 SC 2.5.8 minimum and unpleasant to hit with a thumb
+     on the one surface that carries the clinic's address and phone number. The
+     padding lifts them to ~32px. The lists below tighten their `space-y` by the
+     same amount, so the footer's visual rhythm is unchanged — the hit area grew,
+     the layout did not. 44px is iOS guidance rather than a conformance
+     threshold, and reaching it here would have doubled the footer's height. */
   const linkClass =
-    'text-drench-on/70 underline-offset-4 transition-colors duration-fast hover:text-brass hover:underline';
+    'inline-block py-1.5 text-drench-on/70 underline-offset-4 transition-colors duration-fast hover:text-brass hover:underline';
 
   return (
     <footer className="drenched-deep print:hidden">
@@ -88,7 +95,7 @@ export function Footer() {
         {/* Navigation */}
         <nav aria-label={navLabel} className="sm:col-span-6 lg:col-span-3">
           <h2 className={headingClass}>{navLabel}</h2>
-          <ul className="space-y-2.5">
+          <ul className="space-y-1">
             {quickLinks.map((link) => (
               <li key={link.href}>
                 <Link href={link.href} className={linkClass}>
@@ -102,21 +109,21 @@ export function Footer() {
         {/* Contact */}
         <div className="sm:col-span-6 lg:col-span-3">
           <h2 className={headingClass}>{footer.quickContact}</h2>
-          <ul className="space-y-3.5">
+          <ul className="space-y-2">
             <li className="flex items-start gap-3">
-              <MapPin className="mt-1 h-4 w-4 shrink-0 text-brass" aria-hidden="true" />
+              <MapPin className="mt-2.5 h-4 w-4 shrink-0 text-brass" aria-hidden="true" />
               <a href={mapLink} target="_blank" rel="noopener noreferrer" className={linkClass}>
                 {address}
               </a>
             </li>
             <li className="flex items-start gap-3">
-              <Phone className="mt-1 h-4 w-4 shrink-0 text-brass" aria-hidden="true" />
+              <Phone className="mt-2.5 h-4 w-4 shrink-0 text-brass" aria-hidden="true" />
               <a href={telHref} className={`${linkClass} tabular`}>
                 {phone}
               </a>
             </li>
             <li className="flex items-start gap-3">
-              <Mail className="mt-1 h-4 w-4 shrink-0 text-brass" aria-hidden="true" />
+              <Mail className="mt-2.5 h-4 w-4 shrink-0 text-brass" aria-hidden="true" />
               <a href={`mailto:${email}`} className={`${linkClass} break-all`}>
                 {email}
               </a>
@@ -148,7 +155,7 @@ export function Footer() {
                   the panel is for the clinic, not for visitors. */}
               <Link
                 href="/admin"
-                className="inline-flex items-center gap-1.5 text-drench-on/70 transition-colors duration-fast hover:text-brass"
+                className="inline-flex items-center gap-1.5 py-1.5 text-drench-on/70 transition-colors duration-fast hover:text-brass"
               >
                 <Lock className="h-3.5 w-3.5" aria-hidden="true" />
                 {lang === 'es' ? 'Acceso personal' : 'Staff access'}
@@ -158,15 +165,6 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Clearance for the fixed MobileActionBar.
-          The reserve for that bar lived on `<main>` — but `<Footer>` is main's
-          SIBLING, so on every phone the bar sat on top of this last row and
-          the copyright, the privacy policy and the staff-access link were all
-          unreachable behind it. The reserve belongs to the last thing in the
-          document, which is here. Inside the `<footer>` so the drenched band
-          runs continuously under the bar rather than leaving a strip of page
-          background below it. */}
-      <div aria-hidden="true" className="lg:hidden" style={{ height: MOBILE_ACTION_BAR_HEIGHT }} />
     </footer>
   );
 }

@@ -98,9 +98,14 @@ export function Hero({ content, trust, appointmentHref, implantHref, phone }: He
             </Button>
           </div>
 
+          {/* `py-2` with a matching negative margin: on a phone this is a
+              one-tap call to a clinic, and it measured 28px tall — under the
+              44px a thumb actually wants, on the hero's only direct-contact
+              action. The negative margin absorbs the padding so the trust strip
+              below does not shift. */}
           <a
             href={`tel:${phone.replace(/[^\d+]/g, '')}`}
-            className="mt-6 inline-flex items-center gap-2 text-drench-on/75 underline-offset-4 transition-colors duration-fast hover:text-brass hover:underline"
+            className="-my-2 mt-4 inline-flex items-center gap-2 py-2 text-drench-on/75 underline-offset-4 transition-colors duration-fast hover:text-brass hover:underline"
           >
             <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="tabular">{phone}</span>

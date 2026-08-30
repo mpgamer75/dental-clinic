@@ -277,7 +277,15 @@ export function Navbar() {
                   href={appointmentsHref}
                   aria-current={onBooking ? 'page' : undefined}
                   className={cn(
-                    'group/cta ml-2 hidden h-11 shrink-0 items-center gap-2 rounded-lg px-4 sm:inline-flex',
+                    /* Visible at EVERY width. It used to be `hidden sm:inline-flex`,
+                       which was survivable only because a fixed bottom bar carried
+                       the same action on phones. That bar is gone, and without this
+                       change the booking path on a 390px screen would be two taps
+                       behind the hamburger on every page that has no hero — the
+                       booking page itself, the privacy page, all six implant pages.
+                       Narrower padding below `sm` so it still fits beside the
+                       wordmark and the menu button. */
+                    'group/cta ml-2 inline-flex h-11 shrink-0 items-center gap-2 rounded-lg px-3 sm:px-4',
                     'border border-primary/45 text-small uppercase tracking-[0.085em] text-primary',
                     // Colour only. The hover used to raise an `e1` shadow as
                     // well, which put box-shadow in the transition list — a
@@ -290,7 +298,15 @@ export function Navbar() {
                     FOCUS_RING,
                   )}
                 >
-                  {ui.appointments}
+                  {/* Two labels, one control. The full label is ~13 characters of
+                      wide-tracked uppercase; beside the wordmark and the menu
+                      button at 390px it pushed the clinic name into an ellipsis.
+                      English is worse — "Schedule Appointment" is 20. Rendering
+                      both and toggling with a breakpoint keeps a single link in
+                      the accessibility tree, where swapping the whole element
+                      would duplicate it. */}
+                  <span className="sm:hidden">{ui.appointmentsShort}</span>
+                  <span className="hidden sm:inline">{ui.appointments}</span>
                   <ArrowUpRight
                     className="h-3.5 w-3.5 transition-transform duration-base ease-out-quart group-hover/cta:-translate-y-0.5 group-hover/cta:translate-x-0.5"
                     aria-hidden="true"
