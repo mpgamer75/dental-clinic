@@ -155,6 +155,12 @@ export interface AppointmentRow {
   daysWaiting: number;
   preferredDateLabel: string | null;
   timePreferenceLabel: string | null;
+  /* Whether this row came from `npm run db:demo:seed`.
+     Carried all the way to the table so a sample row can be badged: the
+     name in these lists is what somebody is about to dial, and a seeded
+     row that looks like a patient is the one way this data set can cause
+     real harm. */
+  isDemo: boolean;
 }
 
 export interface ListPage<T> {
@@ -191,6 +197,7 @@ function toAppointmentRow(row: typeof appointments.$inferSelect, now: number): A
     daysWaiting: daysWaiting(row.submittedAt, now),
     preferredDateLabel: formatCalendarDate(row.preferredDate),
     timePreferenceLabel: row.timePreference ? timeLabels[row.timePreference] : null,
+    isDemo: row.isDemo,
   };
 }
 
@@ -275,6 +282,9 @@ export interface MessageRow {
   submittedAtIso: string;
   submittedAtLabel: string;
   waitedLabel: string;
+  /* See the note on AppointmentRow.isDemo — a seeded row that looks like a
+     patient is the one way this data set can cause real harm. */
+  isDemo: boolean;
 }
 
 export function listMessages(
@@ -318,6 +328,7 @@ export function listMessages(
         submittedAtIso: row.submittedAt.toISOString(),
         submittedAtLabel: formatDateTime(row.submittedAt),
         waitedLabel: formatWaitedFor(row.submittedAt, now),
+        isDemo: row.isDemo,
       })),
       total: totals?.value ?? 0,
       page: query.page,
@@ -343,6 +354,9 @@ export interface TestimonialRow {
   waitedLabel: string;
   reviewedAtLabel: string | null;
   reviewedBy: string | null;
+  /* See the note on AppointmentRow.isDemo — a seeded row that looks like a
+     patient is the one way this data set can cause real harm. */
+  isDemo: boolean;
 }
 
 /**
@@ -410,6 +424,7 @@ export function listTestimonials(
         waitedLabel: formatWaitedFor(row.submittedAt, now),
         reviewedAtLabel: row.reviewedAt ? formatDateTime(row.reviewedAt) : null,
         reviewedBy: row.reviewedBy,
+        isDemo: row.isDemo,
       })),
       total: totals?.value ?? 0,
       page: query.page,
@@ -525,7 +540,25 @@ const TREND_DAYS = 14;
  */
 export function getSubmissionTrend(): Promise<QueryOutcome<TrendPoint[]>> {
   return runQuery('submission trend', async () => {
-    const clinicDay = sql`((${appointments.submittedAt} at time zone ${CLINIC_TIME_ZONE})::date)`;
+    /* The timezone is INLINED, not bound.
+     *
+     * Written as `${CLINIC_TIME_ZONE}` this renders a bind parameter, and the
+     * fragment is used twice — once in the SELECT inside `to_char`, once in the
+     * GROUP BY. Drizzle numbers those as two different placeholders, so
+     * Postgres compares `to_char(… $1 …)` against `GROUP BY … $2 …`, cannot see
+     * the first as a function of the second, and rejects the whole query with
+     * SQLSTATE 42803 (grouping_error). The chart rendered its error state on
+     * every load.
+     *
+     * `sql.raw` is safe here and only here: the value is a module constant, not
+     * request data. The assertion below is what keeps that true — it fails the
+     * build-time path immediately if anyone ever points this at something
+     * user-supplied or quote-bearing. */
+    if (!/^[A-Za-z][A-Za-z0-9_+/-]*$/.test(CLINIC_TIME_ZONE)) {
+      throw new Error(`CLINIC_TIME_ZONE is not a bare IANA identifier: ${CLINIC_TIME_ZONE}`);
+    }
+    const zone = sql.raw(`'${CLINIC_TIME_ZONE}'`);
+    const clinicDay = sql`((${appointments.submittedAt} at time zone ${zone})::date)`;
     const since = new Date(Date.now() - TREND_DAYS * 24 * 60 * 60 * 1000);
 
     const rows = await db

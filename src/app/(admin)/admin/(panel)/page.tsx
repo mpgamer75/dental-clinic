@@ -1,18 +1,31 @@
 import Link from 'next/link';
-import { CalendarDays, Inbox, MessagesSquare, ShieldAlert, TriangleAlert } from 'lucide-react';
+import { Suspense } from 'react';
+import {
+  CalendarDays,
+  FlaskConical,
+  Inbox,
+  MessagesSquare,
+  ShieldAlert,
+  TriangleAlert,
+} from 'lucide-react';
 
 import { AppointmentsTable } from '@/components/admin/appointments-table';
-import { DashboardCharts } from '@/components/admin/dashboard-charts';
+import { DashboardCharts, DashboardChartsSkeleton } from '@/components/admin/dashboard-charts';
 import { PageHeader } from '@/components/admin/page-header';
 import { StatCard } from '@/components/admin/stat-card';
 import { EmptyState, ErrorPanel, Panel } from '@/components/admin/states';
 import { Button } from '@/components/ui/button';
 
 import {
+  getAppointmentFunnel,
   getAttentionQueue,
   getCachedDashboardCounts,
+  getDemoDataPresence,
+  getPendingWaitBuckets,
   getServiceDemand,
   getSubmissionTrend,
+  getTimePreferenceSplit,
+  getWeekdayDemand,
 } from '../_lib/queries';
 
 /* ============================================================================
@@ -25,20 +38,26 @@ import {
    arrived most recently.
 
    This one leads with what is waiting: pending requests, urgent ones first,
-   oldest first, with the full set of actions attached so they can be dealt with
-   here rather than found again on another page. The counts underneath come from
-   `count(*)` over the whole table, and every card is a link into the filtered
-   list it counts.
+   oldest first, with the full set of actions attached so they can be dealt
+   with here rather than found again on another page. The counts underneath
+   come from `count(*)` over the whole table, and every card is a link into the
+   filtered list it counts.
+
+   The six analytics aggregates are behind their own <Suspense> rather than in
+   the page's own `Promise.all`. They are the slowest reads on the screen and
+   the least urgent thing on it: putting them in the same await as the queue
+   would hold the one list somebody opened this page to work behind six GROUP
+   BY-shaped scans. Streamed separately, the queue paints as soon as its index
+   answers and the charts fill in underneath.
    ========================================================================== */
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboardPage() {
-  const [counts, queue, trend, services] = await Promise.all([
+  const [counts, queue, demo] = await Promise.all([
     getCachedDashboardCounts(),
     getAttentionQueue(),
-    getSubmissionTrend(),
-    getServiceDemand(),
+    getDemoDataPresence(),
   ]);
 
   return (
@@ -53,6 +72,31 @@ export default async function AdminDashboardPage() {
           </Button>
         }
       />
+
+      {/* Said once, at the top, because the charts below deliberately count
+          demo rows alongside real ones — hiding them there would leave the
+          panel looking broken in exactly the situation the seed was run to
+          fix. What the reader is owed instead is the sentence that the numbers
+          they are about to read are partly invented. Only rendered when the
+          seed is actually loaded, so a purged production database never shows
+          it. */}
+      {demo.ok && demo.data.any && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-line bg-muted px-4 py-3">
+          <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" aria-hidden="true" />
+          <p className="text-small text-ink-soft">
+            Este panel incluye{' '}
+            <span className="tabular font-semibold text-ink">
+              {demo.data.appointments + demo.data.messages + demo.data.testimonials}
+            </span>{' '}
+            filas de demostración (<span className="tabular">{demo.data.appointments}</span> citas,{' '}
+            <span className="tabular">{demo.data.messages}</span> mensajes,{' '}
+            <span className="tabular">{demo.data.testimonials}</span> testimonios). Van marcadas con
+            la etiqueta «Demo» en las tablas y cuentan en las cifras y las gráficas. Para retirarlas:{' '}
+            <code className="tabular rounded bg-canvas-sunk px-1 py-0.5">npm run db:demo:purge</code>
+            .
+          </p>
+        </div>
+      )}
 
       {counts.ok ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -130,15 +174,42 @@ export default async function AdminDashboardPage() {
           </div>
         </Panel>
 
-        {trend.ok && services.ok ? (
-          <DashboardCharts trend={trend.data} services={services.data} />
-        ) : (
-          <ErrorPanel
-            title="No se pudieron calcular las gráficas"
-            detail={trend.ok ? services.ok ? undefined : services.detail : trend.detail}
-          />
-        )}
+        <Suspense fallback={<DashboardChartsSkeleton />}>
+          <DemandCharts />
+        </Suspense>
       </div>
     </>
+  );
+}
+
+/**
+ * The six analytics aggregates, each handed to its chart as its own outcome.
+ *
+ * Deliberately NOT collapsed into one "did everything succeed?" guard. The
+ * version before this drew a single error panel in place of the whole chart
+ * area whenever any one query failed, which threw away five working charts to
+ * report one broken one. Each `QueryOutcome` travels intact to the panel that
+ * needs it, so a permission fault on one table costs exactly that table's
+ * chart and the other five still answer.
+ */
+async function DemandCharts() {
+  const [trend, waits, services, timeOfDay, weekdays, funnel] = await Promise.all([
+    getSubmissionTrend(),
+    getPendingWaitBuckets(),
+    getServiceDemand(),
+    getTimePreferenceSplit(),
+    getWeekdayDemand(),
+    getAppointmentFunnel(),
+  ]);
+
+  return (
+    <DashboardCharts
+      trend={trend}
+      waits={waits}
+      services={services}
+      timeOfDay={timeOfDay}
+      weekdays={weekdays}
+      funnel={funnel}
+    />
   );
 }

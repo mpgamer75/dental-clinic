@@ -23,7 +23,13 @@ import {
 import { cn } from '@/lib/utils';
 
 import { ConfirmDialog } from './confirm-dialog';
-import { ModerationScore, StatusBadge, TESTIMONIAL_STATUS_META } from './status';
+import {
+  DemoBadge,
+  isDemoRow,
+  ModerationScore,
+  StatusBadge,
+  TESTIMONIAL_STATUS_META,
+} from './status';
 import { useRowMutation } from './use-row-mutation';
 
 /* ============================================================================
@@ -57,7 +63,7 @@ export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+      <div className="relative overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="w-full border-collapse text-left">
           <caption className="sr-only">
             Testimonios enviados por pacientes. Los que peor puntuación de moderación han obtenido
@@ -96,7 +102,14 @@ export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
                   )}
                 >
                   <th scope="row" className="max-w-0 px-4 py-3 font-normal">
-                    <span className="block truncate font-medium text-ink">{row.name}</span>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate font-medium text-ink">{row.name}</span>
+                      {/* The stake is higher on this table than on the other
+                          two: approving a row here publishes the quote under
+                          the name on the clinic's public homepage, and an
+                          invented patient is not a testimonial. */}
+                      {isDemoRow(row) && <DemoBadge />}
+                    </span>
                     {row.location && (
                       <span className="flex items-center gap-1 truncate text-small text-ink-soft">
                         <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -227,6 +240,7 @@ export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge meta={TESTIMONIAL_STATUS_META[detail.status]} />
                 <ModerationScore score={detail.moderationScore} />
+                {isDemoRow(detail) && <DemoBadge />}
               </div>
 
               {/* The public site sets a quote as a rule above and below it in

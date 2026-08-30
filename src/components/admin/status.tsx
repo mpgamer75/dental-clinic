@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   CheckCircle2,
   Clock3,
+  FlaskConical,
   Inbox,
   MailOpen,
   ShieldCheck,
@@ -120,6 +121,59 @@ export function UrgentBadge({ className }: { className?: string }) {
     >
       <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       Urgente
+    </span>
+  );
+}
+
+/* ============================================================================
+   FABRICATED ROWS, MARKED AS SUCH
+   ----------------------------------------------------------------------------
+   `npm run db:demo:seed` writes rows with `is_demo = true` so the dashboard's
+   charts have a shape to draw on a table holding two appointments. Those rows
+   sit in the same lists as real patients, and the failure that follows is one
+   phone call long: an invented name and an 809 number in the queue, dialled on
+   a Monday morning, belonging to nobody.
+
+   So the chip is QUIET, not loud. It is a label and not an alarm — muted fill,
+   faint ink, hairline border, smaller than the status badge beside it — because
+   the row is not a problem, it just is not a patient. Anything with a warning
+   colour would compete with `UrgentBadge`, which is the one mark on this screen
+   that has to win.
+   ========================================================================== */
+
+/**
+ * Reads the demo flag off a row without requiring it in the row's type.
+ *
+ * The view models in _lib/queries.ts do not carry `isDemo` yet — the column
+ * exists on all three tables and `getDemoDataPresence` counts it, but the row
+ * mappers do not select it through. This signature means the three tables can
+ * mark their rows the moment that one field lands, with no further edit here;
+ * until then it reads false, which is the same answer it gives for a real
+ * patient.
+ *
+ * `id` is in the parameter type only to satisfy TypeScript's weak-type check:
+ * a parameter whose every property is optional accepts nothing that does not
+ * share at least one of them, and today none of the three row types shares
+ * `isDemo`. Every row has an id, so requiring it costs nothing and keeps the
+ * function honest about what it takes — a row, not an arbitrary object.
+ */
+export function isDemoRow(row: { id: string; isDemo?: boolean }): boolean {
+  return row.isDemo === true;
+}
+
+export function DemoBadge({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-md border border-line',
+        'bg-muted px-1.5 py-0.5 text-[0.68rem] font-medium leading-none tracking-wide text-ink-faint',
+        className,
+      )}
+      title="Fila de ejemplo creada por el script de datos de demostración. No corresponde a ningún paciente."
+    >
+      <FlaskConical className="h-3 w-3 shrink-0" aria-hidden="true" />
+      Demo
+      <span className="sr-only"> — fila de ejemplo, no es un paciente real</span>
     </span>
   );
 }

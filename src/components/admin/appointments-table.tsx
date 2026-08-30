@@ -34,7 +34,7 @@ import { cn } from '@/lib/utils';
 import type { AppointmentStatus } from '@/lib/schema';
 
 import { ConfirmDialog } from './confirm-dialog';
-import { APPOINTMENT_STATUS_META, StatusBadge, UrgentBadge } from './status';
+import { APPOINTMENT_STATUS_META, DemoBadge, isDemoRow, StatusBadge, UrgentBadge } from './status';
 import { useRowMutation } from './use-row-mutation';
 
 /* ============================================================================
@@ -74,7 +74,14 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+      {/* `relative` is load-bearing, not cosmetic.
+          Tailwind's `sr-only` is `position: absolute`, so without a positioned
+          ancestor the "Acciones" column header resolved against <body> instead
+          of this scroller. At 360px it landed at x=381 — past the 348px
+          viewport — and dragged the document's scroll width with it, giving the
+          whole admin panel a horizontal scrollbar on phones. One invisible
+          screen-reader label, one page-wide layout bug. */}
+      <div className="relative overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="w-full border-collapse text-left">
           <caption className="sr-only">
             Solicitudes de cita. Las urgentes aparecen primero, después las que llevan más tiempo
@@ -127,7 +134,12 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                         )}
                       />
                       <div className="min-w-0">
-                        <span className="block truncate font-medium text-ink">{row.name}</span>
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate font-medium text-ink">{row.name}</span>
+                          {/* Beside the name, because the name is what someone
+                              is about to dial. */}
+                          {isDemoRow(row) && <DemoBadge />}
+                        </span>
                         <span className="block truncate text-small text-ink-soft">
                           {row.serviceType}
                         </span>
@@ -268,6 +280,9 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge meta={APPOINTMENT_STATUS_META[detail.status]} />
                 {detail.isUrgent && <UrgentBadge />}
+                {/* Repeated in the dialog: this is the view someone opens
+                    immediately before copying an email or tapping a number. */}
+                {isDemoRow(detail) && <DemoBadge />}
               </div>
 
               <dl className="mt-2 space-y-3 text-body">

@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import type { ContactMessageStatus } from '@/lib/schema';
 
 import { ConfirmDialog } from './confirm-dialog';
-import { MESSAGE_STATUS_META, StatusBadge } from './status';
+import { DemoBadge, isDemoRow, MESSAGE_STATUS_META, StatusBadge } from './status';
 import { useRowMutation } from './use-row-mutation';
 
 /* ============================================================================
@@ -56,7 +56,7 @@ export function MessagesTable({ rows }: { rows: MessageRow[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+      <div className="relative overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="w-full border-collapse text-left">
           <caption className="sr-only">Mensajes recibidos desde el formulario de contacto.</caption>
           <thead>
@@ -91,15 +91,18 @@ export function MessagesTable({ rows }: { rows: MessageRow[] }) {
                   )}
                 >
                   <th scope="row" className="max-w-0 px-4 py-3 font-normal">
-                    <span
-                      className={cn(
-                        'block truncate text-ink',
-                        /* Unread is heavier, the way an inbox is. Weight is a
-                           second channel beside the badge's colour and word. */
-                        row.status === 'unread' ? 'font-semibold' : 'font-medium',
-                      )}
-                    >
-                      {row.name}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span
+                        className={cn(
+                          'truncate text-ink',
+                          /* Unread is heavier, the way an inbox is. Weight is a
+                             second channel beside the badge's colour and word. */
+                          row.status === 'unread' ? 'font-semibold' : 'font-medium',
+                        )}
+                      >
+                        {row.name}
+                      </span>
+                      {isDemoRow(row) && <DemoBadge />}
                     </span>
                     <span className="block truncate text-small text-ink-soft">{row.email}</span>
                     <span className="mt-1 block line-clamp-2 text-small text-ink-faint md:hidden">
@@ -197,7 +200,10 @@ export function MessagesTable({ rows }: { rows: MessageRow[] }) {
                 </DialogDescription>
               </DialogHeader>
 
-              <StatusBadge meta={MESSAGE_STATUS_META[detail.status]} />
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge meta={MESSAGE_STATUS_META[detail.status]} />
+                {isDemoRow(detail) && <DemoBadge />}
+              </div>
 
               <p className="whitespace-pre-line rounded-lg bg-canvas-sunk p-4 text-body text-ink">
                 {detail.message}
