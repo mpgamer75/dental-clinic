@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Archive, Inbox, Loader2, MailOpen, MoreVertical, Reply, Trash2 } from 'lucide-react';
+import { Archive, Inbox, Loader2, MailOpen, MoreVertical, Phone, Reply, Trash2 } from 'lucide-react';
 
 import { deleteMessage, setMessageStatus } from '@/app/(admin)/admin/_actions/messages';
 import type { MessageRow } from '@/app/(admin)/admin/_lib/queries';
@@ -26,6 +26,7 @@ import type { ContactMessageStatus } from '@/lib/schema';
 import { ConfirmDialog } from './confirm-dialog';
 import { DemoBadge, isDemoRow, MESSAGE_STATUS_META, StatusBadge } from './status';
 import { useRowMutation } from './use-row-mutation';
+import { WhatsAppIcon } from '@/components/icons/whatsapp';
 
 /* ============================================================================
    CONTACT MESSAGES
@@ -53,6 +54,22 @@ export function MessagesTable({ rows }: { rows: MessageRow[] }) {
 
   const detail = rows.find((row) => row.id === detailId) ?? null;
   const pendingDelete = rows.find((row) => row.id === deleteId) ?? null;
+
+  /* Reading a message marks it read, the way every inbox does. It used to take
+     a separate menu action per message, so "Mensajes sin leer" in the sidebar
+     only went down if someone remembered to clear each one by hand — and a
+     counter that stays at 7 after all seven were read stops being looked at.
+
+     Through the same audited, row-counted action as the menu, quietly: a toast
+     on every open would be noise, but a failure still toasts (see
+     use-row-mutation). The badge in the dialog updates when the refreshed row
+     arrives, so what it shows is the server's answer, not a guess. */
+  const open = (row: MessageRow) => {
+    setDetailId(row.id);
+    if (row.status === 'unread') {
+      run(row.id, setMessageStatus, { status: 'read' }, { quietOnSuccess: true });
+    }
+  };
 
   return (
     <>
@@ -131,7 +148,7 @@ export function MessagesTable({ rows }: { rows: MessageRow[] }) {
                         variant="ghost"
                         size="sm"
                         className="px-2.5"
-                        onClick={() => setDetailId(row.id)}
+                        onClick={() => open(row)}
                       >
                         Leer
                         <span className="sr-only"> el mensaje completo de {row.name}</span>
@@ -193,7 +210,7 @@ export function MessagesTable({ rows }: { rows: MessageRow[] }) {
         <DialogContent className="max-h-[85vh] overflow-y-auto border-line bg-surface sm:max-w-lg">
           {detail && (
             <>
-              <DialogHeader>
+              <DialogHeader className="pr-8">
                 <DialogTitle className="font-heading text-h4 text-ink">{detail.name}</DialogTitle>
                 <DialogDescription className="text-ink-soft">
                   Recibido el {detail.submittedAtLabel} ({detail.waitedLabel}).
@@ -222,11 +239,56 @@ export function MessagesTable({ rows }: { rows: MessageRow[] }) {
                     Responder por correo
                   </a>
                 </Button>
-                {detail.phone && (
+                {detail.phoneHref && (
                   <Button asChild variant="outline" size="sm">
-                    <a href={`tel:${detail.phone.replace(/[^\d+]/g, '')}`} className="tabular">
+                    <a href={detail.phoneHref} className="tabular">
+                      <Phone className="h-4 w-4" aria-hidden="true" />
                       Llamar al {detail.phone}
                     </a>
+                  </Button>
+                )}
+                {detail.whatsappHref && (
+                  <Button asChild variant="outline" size="sm">
+                    <a href={detail.whatsappHref} target="_blank" rel="noopener noreferrer">
+                      <WhatsAppIcon className="h-4 w-4" />
+                      WhatsApp
+                      <span className="sr-only"> (se abre WhatsApp)</span>
+                    </a>
+                  </Button>
+                )}
+              </div>
+
+              {/* Filing it away, from where it was read. Archivar used to live
+                  only in the row's menu, behind a close and a second tap. */}
+              <div className="flex flex-wrap gap-2 border-t border-line pt-4">
+                {detail.status !== 'archived' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pendingId === detail.id}
+                    onClick={() => {
+                      run(detail.id, setMessageStatus, { status: 'archived' });
+                      setDetailId(null);
+                    }}
+                  >
+                    <Archive className="h-4 w-4" aria-hidden="true" />
+                    Archivar
+                  </Button>
+                )}
+                {detail.status !== 'unread' && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={pendingId === detail.id}
+                    onClick={() => {
+                      run(detail.id, setMessageStatus, { status: 'unread' });
+                      setDetailId(null);
+                    }}
+                  >
+                    <Inbox className="h-4 w-4" aria-hidden="true" />
+                    Marcar como sin leer
                   </Button>
                 )}
               </div>

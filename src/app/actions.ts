@@ -12,9 +12,13 @@
 
      1. rate limit   — before parsing, so a flood costs one indexed upsert
                        rather than a Zod parse and a moderation pass per hit
+     1b. settings    — the admin panel's switches (`app.site_settings`). A
+                       page rendered before the clinic closed a channel still
+                       has a live form in somebody's browser, so the switch is
+                       enforced HERE, not only by hiding the form
      2. validate     — per-language Zod, deliberately duplicating the client
      3. verify       — the checks Zod cannot express (disposable-mail domains,
-                       repeated-digit phone numbers)
+                       repeated-digit phone numbers, a service that exists)
      4. moderate     — on the text exactly as typed, before sanitising, because
                        the obfuscation is the signal
      5. sanitise     — then re-validate, so what is stored is provably what the
@@ -60,6 +64,8 @@ import { db } from '@/lib/db';
 import { formatDatabaseFailure } from '@/lib/db-errors';
 import { checkPublicFormLimit } from '@/lib/rate-limit';
 import { getRequestContext } from '@/lib/request-context';
+import { canonicalServiceTitle, serviceKeyOf } from '@/lib/service-catalog';
+import { getPublicSiteSettings } from '@/lib/site-settings';
 import {
   appointments,
   contactMessages,
@@ -114,9 +120,9 @@ function rateLimitedMessage(lang: Language): string {
   const phone = contactDetails.phone[lang];
   return lang === 'es'
     ? `Hemos recibido varios envíos desde esta conexión. Vuelva a intentarlo más tarde. ` +
-        `Si necesita atención hoy, llámenos al ${phone} y le atendemos por teléfono.`
+        `Si necesita atención hoy, llámenos o escríbanos por WhatsApp al ${phone}.`
     : `We have received several submissions from this connection. Please try again later. ` +
-        `If you need care today, call us on ${phone} and we will help you over the phone.`;
+        `If you need care today, call or message us on WhatsApp at ${phone}.`;
 }
 
 const moderationRejection = {
@@ -137,6 +143,27 @@ const moderationRejection = {
 /* ============================================================================
    Shared guards
    ========================================================================== */
+
+/**
+ * Whether the clinic has this intake channel switched on in the admin panel.
+ *
+ * The switches existed for months before anything read them: a clinic that
+ * closed online requests for a holiday kept receiving them, and every patient
+ * who sent one believed they were booked. Maintenance mode closes all three —
+ * the site is showing a notice in place of its content, and a form already
+ * open in someone's tab must not keep accepting submissions behind it.
+ *
+ * `getPublicSiteSettings` fails OPEN (see src/lib/site-settings.ts): a database
+ * the settings cannot be read from is one the insert below will fail against
+ * too, with its own honest error.
+ */
+async function channelOpen(channel: 'appointments' | 'contact' | 'testimonials'): Promise<boolean> {
+  const settings = await getPublicSiteSettings();
+  if (settings.maintenanceMode) return false;
+  if (channel === 'appointments') return settings.allowAppointments;
+  if (channel === 'contact') return settings.allowContactForm;
+  return settings.allowTestimonials;
+}
 
 /** Control characters in a single-line field. A name does not contain a tab. */
 const CONTROL_CHARACTERS = /[\x00-\x1F\x7F]/;
@@ -264,6 +291,10 @@ export async function submitContactForm(
   const limit = await checkPublicFormLimit('contact', ipHash);
   if (!limit.allowed) {
     return { success: false, message: rateLimitedMessage(lang) };
+  }
+
+  if (!(await channelOpen('contact'))) {
+    return { success: false, message: messages.contactClosed };
   }
 
   const contactFormSchema = createContactFormSchema(lang);
@@ -440,7 +471,13 @@ const createAppointmentFormSchema = (lang: Language) => {
       .min(2, { error: zodMsgs.nameMin })
       .max(100, { error: zodMsgs.nameMax })
       .refine(isSingleLine, { error: zodMsgs.invalidCharacters }),
-    email: z.email({ error: zodMsgs.emailInvalid }).max(255, { error: zodMsgs.emailMax }),
+    /* OPTIONAL since migrations/0005. The clinic confirms every request by
+       telephone, and the booking copy promised "su nombre, un teléfono y el
+       motivo" while this refused to accept a request without an address —
+       turning away exactly the older patients who do not use email. Absent is
+       `undefined` here (see `optionalText`) and NULL in the column; a value
+       that IS given is still validated as an address. */
+    email: z.email({ error: zodMsgs.emailInvalid }).max(255, { error: zodMsgs.emailMax }).optional(),
     /* REQUIRED, matching the client.
        This used to be `.optional()` while the form required it, and a server
        action is a public endpoint: anything calling it directly could create an
@@ -505,6 +542,10 @@ export async function submitAppointmentForm(
     return { success: false, message: rateLimitedMessage(lang) };
   }
 
+  if (!(await channelOpen('appointments'))) {
+    return { success: false, message: messages.appointmentsClosed };
+  }
+
   /* Every field named explicitly — no spread.
      A `...formData` spread is what hid the last bug in this function:
      `is_urgent` was absent from the map, the client sent `isUrgent`, and Zod's
@@ -525,7 +566,7 @@ export async function submitAppointmentForm(
   const appointmentFormSchema = createAppointmentFormSchema(lang);
   const validated = appointmentFormSchema.safeParse({
     name: requiredText(formData?.name),
-    email: requiredText(formData?.email),
+    email: optionalText(formData?.email),
     phone: requiredText(formData?.phone),
     serviceType: requiredText(formData?.serviceType),
     preferredDate: requiredText(formData?.preferredDate),
@@ -542,7 +583,7 @@ export async function submitAppointmentForm(
     };
   }
 
-  if (!validateEmail(validated.data.email)) {
+  if (validated.data.email && !validateEmail(validated.data.email)) {
     return {
       success: false,
       errors: { email: [messages.zod.emailUnverifiable] },
@@ -554,6 +595,21 @@ export async function submitAppointmentForm(
     return {
       success: false,
       errors: { phone: [messages.zod.phoneUnverifiable] },
+      message: messages.formCorrection,
+    };
+  }
+
+  /* The service must be one the practice offers. The form sends a key
+     (`implants`); historical titles in either language still resolve, so a tab
+     left open across a deploy keeps working. Anything else is refused on the
+     field rather than stored: this used to accept any string up to 100
+     characters, so a direct POST could put arbitrary text in the column the
+     dashboard's demand chart groups by. */
+  const serviceKey = serviceKeyOf(validated.data.serviceType);
+  if (!serviceKey) {
+    return {
+      success: false,
+      errors: { serviceType: [messages.zod.serviceTypeRequired] },
       message: messages.formCorrection,
     };
   }
@@ -582,7 +638,11 @@ export async function submitAppointmentForm(
     name: sanitizeText(validated.data.name),
     email: validated.data.email,
     phone: validated.data.phone,
-    serviceType: sanitizeText(validated.data.serviceType),
+    /* The canonical Spanish title, whatever language the patient booked in.
+       Storing the title the patient happened to be reading is what split one
+       treatment into "Implantes Dentales" and "Dental Implants" on the admin
+       dashboard. See src/lib/service-catalog.ts. */
+    serviceType: canonicalServiceTitle(serviceKey),
     preferredDate: validated.data.preferredDate,
     timePreference: validated.data.timePreference,
     reason: sanitizeText(validated.data.reason),
@@ -608,7 +668,9 @@ export async function submitAppointmentForm(
       .insert(appointments)
       .values({
         name: stored.data.name,
-        email: stored.data.email,
+        /* NULL, never '': "no email given" is an absence the clinic must be
+           able to find with IS NULL. */
+        email: stored.data.email ?? null,
         phone: stored.data.phone,
         serviceType: stored.data.serviceType,
         /* Only what the patient wrote. The preference is two columns now. */
@@ -645,6 +707,7 @@ export async function submitAppointmentForm(
         serviceType: stored.data.serviceType,
         preferredDate: stored.data.preferredDate,
         timePreference: stored.data.timePreference,
+        hasEmail: stored.data.email !== undefined,
       },
     }),
     notifyClinicOfAppointment({
@@ -840,6 +903,10 @@ export async function submitTestimonialForm(
   const limit = await checkPublicFormLimit('testimonial', ipHash);
   if (!limit.allowed) {
     return { success: false, message: rateLimitedMessage(lang) };
+  }
+
+  if (!(await channelOpen('testimonials'))) {
+    return { success: false, message: messages.testimonialsClosed };
   }
 
   const testimonialFormSchema = createTestimonialFormSchema(lang);

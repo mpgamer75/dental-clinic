@@ -6,6 +6,7 @@ import { ArrowUpRight, Menu, Phone } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { contactDetails, generalUiStrings, navStrings } from '@/lib/data';
+import { TEL_HREF } from '@/lib/contact';
 import { useLanguage } from '@/contexts/language-context';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { cn } from '@/lib/utils';
@@ -30,9 +31,8 @@ const FOCUS_RING =
  *      the bar that can be *active*;
  *   3. the utilities — telephone, theme, language — fenced off behind a
  *      hairline, because none of them is a place you can go. They are demoted
- *      by size, case and position rather than by colour: `ink-faint` measures
- *      3.58:1 here, which is legal for the toggle's glyphs and illegal for
- *      anything with words in it, so only the glyphs take it.
+ *      by size, case and position; only the toggle's glyphs drop to
+ *      `ink-faint`.
  *
  * The call to action sits outside that ramp on colour rather than on weight: an
  * outlined primary control that fills on hover, which stays the loudest
@@ -56,7 +56,6 @@ export function Navbar() {
   const homeHref = `/${lang}`;
   const appointmentsHref = `/${lang}/agendar-cita`;
   const phone = contactDetails.phone[lang];
-  const telHref = `tel:${phone.replace(/[^\d+]/g, '')}`;
 
   const primary = useMemo(() => getPrimaryNav(lang), [lang]);
   const secondary = useMemo(() => getSecondaryNav(lang), [lang]);
@@ -104,9 +103,13 @@ export function Navbar() {
   }, [open]);
 
   // Close the panel when the route changes (e.g. an anchor link was followed).
-  useEffect(() => {
+  // Adjusted during render rather than in an effect: an effect would paint one
+  // frame of the open panel over the new page before closing it.
+  const [routeAtOpen, setRouteAtOpen] = useState(pathname);
+  if (routeAtOpen !== pathname) {
+    setRouteAtOpen(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   // ...and when the viewport grows into the desktop bar, where the overlay is
   // display:none. Leaving it "open" would keep the body scroll-locked against
@@ -233,7 +236,7 @@ export function Navbar() {
                 <span aria-hidden="true" className="mr-2 hidden h-5 w-px bg-line xl:block" />
 
                 <a
-                  href={telHref}
+                  href={TEL_HREF}
                   aria-label={callLabel}
                   className={cn(
                     'hidden h-11 items-center gap-2 rounded-lg px-2.5 lg:inline-flex',
@@ -250,10 +253,7 @@ export function Navbar() {
                   descendant selectors below outrank the utility class on the
                   icon itself (0,1,1 over 0,1,0), which also lets the ghost
                   button's grey hover fill give way to a colour-only hover.
-
-                  This is the one place `ink-faint` is used: measured 3.58:1 on
-                  canvas, which clears the 3:1 that a non-text graphic needs and
-                  falls short of the 4.5:1 that any label would. */}
+                  `ink-faint` is the quietest step that still clears 4.5:1. */}
                 <span className="hidden md:block [&_button:hover]:bg-transparent [&_button:hover_svg]:text-primary [&_svg]:text-ink-faint">
                   <ThemeToggleButton />
                 </span>

@@ -84,7 +84,10 @@ export const appointments = appSchema.table(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    email: citext('email').notNull(),
+    /* Nullable since migrations/0005_optional_appointment_email.sql: the clinic
+       confirms every request by phone, and many patients do not use email.
+       NULL means the patient did not give one — never the empty string. */
+    email: citext('email'),
     phone: text('phone'),
     serviceType: text('service_type').notNull(),
     reason: text('reason').notNull(),

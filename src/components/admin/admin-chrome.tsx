@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ExternalLink, Menu, ShieldCheck } from 'lucide-react';
+import { ExternalLink, Menu } from 'lucide-react';
+
+import { ToothIcon } from '@/components/icons/dental';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -89,8 +91,10 @@ function NavList({ badges, onNavigate }: { badges: NavBadgeCounts; onNavigate?: 
 function Brand({ clinicName }: { clinicName: string }) {
   return (
     <div className="flex items-center gap-3">
+      {/* The clinic's own mark, not a generic shield: a shield-and-check glyph
+          says "security product", and this is a dental practice. */}
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-        <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+        <ToothIcon className="h-5 w-5" strokeWidth={1.75} />
       </span>
       <span className="min-w-0">
         <span className="block truncate font-heading text-[1.05rem] leading-tight text-sidebar-foreground">
@@ -143,14 +147,59 @@ export function AdminChrome({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerPath, setDrawerPath] = useState(pathname);
 
   /* Radix keeps the drawer open across a client-side navigation, which would
      leave the front desk staring at the menu they just used instead of the page
-     they asked for. */
-  useEffect(() => {
+     they asked for. Closed DURING render when the path changes — React's
+     pattern for state that follows a prop — rather than in an effect, which
+     painted one frame of the open drawer over the new page first. */
+  if (drawerPath !== pathname) {
+    setDrawerPath(pathname);
     setDrawerOpen(false);
-  }, [pathname]);
+  }
+
+  /* Keep the queue current without anyone pressing reload.
+
+     The layout that computes the sidebar badges does not re-run on client
+     navigation, and nothing told an open panel that a request had arrived: the
+     front desk could sit on "Citas 2" all afternoon while six more came in. So
+     the server data is refreshed when the tab comes back into view and every
+     90 seconds while it is visible — never while it is hidden, which would
+     wake the database for a screen nobody is looking at. Throttled so the
+     `focus` and `visibilitychange` that both fire on one tab switch cost one
+     refresh, not two. `router.refresh()` keeps client state: an open dialog,
+     a half-typed search and an unsaved settings draft all survive it. */
+  useEffect(() => {
+    let last = Date.now();
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - last < 5_000) return;
+      last = now;
+      router.refresh();
+    };
+
+    const timer = window.setInterval(refresh, 90_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [router]);
+
+  /* The waiting count in the tab title — "(3) Panel · Orthoprotesis" — so a
+     panel left open in a background tab still says when someone is waiting.
+     Re-applied on navigation because each page's metadata resets the title. */
+  const waiting = badges.appointmentsPending ?? 0;
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\)\s+/, '');
+    document.title = waiting > 0 ? `(${waiting}) ${base}` : base;
+  }, [waiting, pathname]);
 
   return (
     <div className="min-h-screen bg-canvas text-ink lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
@@ -193,6 +242,8 @@ export function AdminChrome({
               <SheetContent
                 side="left"
                 className="flex w-[17rem] flex-col gap-6 border-sidebar-border bg-sidebar p-5"
+                closeLabel="Cerrar el menú"
+                closeClassName="text-sidebar-foreground hover:bg-sidebar-accent/60 focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar"
               >
                 <SheetTitle className="sr-only">Menú del panel</SheetTitle>
                 <SheetDescription className="sr-only">
@@ -217,7 +268,15 @@ export function AdminChrome({
           </div>
         </header>
 
-        <main id="admin-main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        {/* `tabIndex={-1}` so the skip link actually moves focus. Safari does
+            not move the sequential-focus starting point to a fragment target
+            that cannot take focus, so the next Tab went back to the header —
+            the same fix the public layout carries. */}
+        <main
+          id="admin-main"
+          tabIndex={-1}
+          className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+        >
           {children}
         </main>
       </div>

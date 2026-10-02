@@ -20,14 +20,21 @@ import { useLanguage } from "@/contexts/language-context";
  * two 17px glyphs, and it ignored `prefers-reduced-motion`. The global
  * reduced-motion rule neutralises the transitions below automatically.
  */
+/** A store that never changes: `useSyncExternalStore` is used here only for
+ *  its server/client snapshot split. */
+const subscribeNothing = () => () => {};
+
 export function ThemeToggleButton() {
   const { theme, setTheme } = useTheme();
   const { lang } = useLanguage();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  /* "Has this hydrated?" without a state-setting effect: false on the server
+     and during hydration (so the markup matches), true afterwards. The theme
+     is only known on the client, so the glyph must not claim one until then. */
+  const mounted = React.useSyncExternalStore(
+    subscribeNothing,
+    () => true,
+    () => false,
+  );
 
   const isDark = mounted && theme === "dark";
 

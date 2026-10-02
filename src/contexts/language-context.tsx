@@ -35,9 +35,14 @@ export const LanguageProvider = ({
 
   // Keep context state in sync when the locale changes by navigation rather
   // than by the toggle (back/forward, a direct /en link, a redirect).
-  useEffect(() => {
+  // Adjusted during render, not in an effect: the effect version rendered the
+  // header in the OLD language for one commit after a back/forward between
+  // /es and /en.
+  const [syncedFrom, setSyncedFrom] = useState<Language>(initialLanguage);
+  if (syncedFrom !== initialLanguage) {
+    setSyncedFrom(initialLanguage);
     setLang(initialLanguage);
-  }, [initialLanguage]);
+  }
 
   // Keep <html lang> honest.
   //

@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+
+import { ToothIcon } from '@/components/icons/dental';
 
 import { LoginForm } from '@/components/admin/login-form';
 import { contactDetails } from '@/lib/data';
@@ -55,7 +57,7 @@ export default async function AdminLoginPage() {
       <aside className="drenched-deep hidden flex-col justify-between p-10 lg:flex xl:p-14">
         <span className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-brass text-brass-on">
-            <ShieldCheck className="h-6 w-6" aria-hidden="true" />
+            <ToothIcon className="h-6 w-6" strokeWidth={1.75} />
           </span>
           <span className="font-heading text-[1.15rem] text-drench-on">{clinicName}</span>
         </span>
@@ -87,7 +89,7 @@ export default async function AdminLoginPage() {
           </Link>
 
           <span className="mt-8 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary lg:hidden">
-            <ShieldCheck className="h-6 w-6" aria-hidden="true" />
+            <ToothIcon className="h-6 w-6" strokeWidth={1.75} />
           </span>
 
           <h1 className="mt-6 font-heading text-h3 text-ink">Acceso al panel</h1>
@@ -100,8 +102,9 @@ export default async function AdminLoginPage() {
           </div>
 
           <p className="mt-8 text-small text-ink-faint">
-            Si no consigue entrar, no reintente indefinidamente: tras varios intentos fallidos el
-            acceso se bloquea temporalmente desde esta conexión.
+            Si no consigue entrar, no reintente indefinidamente: tras varios intentos fallidos con
+            una misma cuenta, el acceso a esa cuenta se bloquea durante unos minutos desde esta
+            conexión.
           </p>
         </div>
       </main>

@@ -42,12 +42,14 @@ export const fontHeading = Newsreader({
 /**
  * Instrument_Sans (Rodrigo Fuenzalida / Jordan Egstad) — body, UI, forms.
  *
- * Paired on the serif↔grotesk axis. Its `wdth` 75–100 axis is genuinely useful
- * for Spanish, which runs 20–25% longer than English.
+ * Paired on the serif↔grotesk axis. Weight axis only: the `wdth` axis was
+ * requested on the theory that Spanish's extra length might want a condensed
+ * cut, but nothing in `src` ever set `font-stretch` or `wdth`, and the axis
+ * doubled the file (57 KB → 30 KB without it) on every page, preloaded, on the
+ * same connection as the hero photograph. Re-add it the day something uses it.
  */
 export const fontBody = Instrument_Sans({
   subsets: ['latin'],
-  axes: ['wdth'],
   variable: '--font-body',
   display: 'swap',
 });

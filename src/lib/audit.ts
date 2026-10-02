@@ -7,11 +7,20 @@
    let alone who removed it, which in a clinic is the difference between a
    mistake and an unanswerable accusation.
 
-   The actor is resolved here, from the session, and never taken from the caller.
-   An `actorId` passed in as an argument records whoever the calling code
-   believed was acting, which is exactly the field an attacker who reached the
-   calling code would set. Read from the session, it records whoever actually
-   held a valid cookie.
+   The actor comes from a VERIFIED session, never from request data. Two ways
+   to supply that, and only two:
+
+     - `verifiedActor` — an admin mutation passes `guard.actor`, the identity
+       `guardAdminMutation` resolved from the session cookie and checked against
+       app.staff moments earlier in the same request. Asking the auth service
+       again here was a second network round trip on every write in the panel,
+       to re-learn something already known.
+     - omitted — the session is read here. Public form submissions (nobody
+       signed in) and session events take this path.
+
+   Never build a `verifiedActor` from form fields or the URL. An actor taken
+   from the request records whoever the request CLAIMS is acting, which is
+   exactly the field someone forging a request would set.
    ========================================================================== */
 
 import 'server-only';
@@ -62,6 +71,9 @@ export interface AuditEntryInput {
   before?: AuditSnapshot | null;
   /** The row after the change. Omit on a delete. */
   after?: AuditSnapshot | null;
+  /** The identity an admin guard already verified for this request — see the
+   *  note at the top of this file. Omit to resolve it from the session. */
+  verifiedActor?: { id: string; email: string } | null;
 }
 
 /**
@@ -84,14 +96,16 @@ export async function recordAudit({
   entityId = null,
   before = null,
   after = null,
+  verifiedActor,
 }: AuditEntryInput): Promise<void> {
   try {
-    const [{ data: session }, { ipHash, userAgent }] = await Promise.all([
-      auth.getSession(),
+    const [actor, { ipHash, userAgent }] = await Promise.all([
+      verifiedActor
+        ? Promise.resolve(verifiedActor)
+        : auth.getSession().then(({ data }) => data?.user ?? null),
       getRequestContext(),
     ]);
 
-    const actor = session?.user;
 
     await db.insert(auditLog).values({
       /* Null actor is meaningful, not missing data: it is how a public form

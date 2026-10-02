@@ -103,6 +103,7 @@ export async function setAppointmentStatus(formData: FormData): Promise<Mutation
   }
 
   await recordAudit({
+    verifiedActor: guard.actor,
     action: 'appointment.status_changed',
     entity: 'appointment',
     entityId: id.data,
@@ -114,7 +115,10 @@ export async function setAppointmentStatus(formData: FormData): Promise<Mutation
 
   return {
     ok: true,
-    message: `Cita marcada como «${STATUS_LABELS[status.data]}».`,
+    message:
+      status.data === 'pending'
+        ? 'Cita devuelta a «Pendiente»: vuelve a la cola de atención.'
+        : `Cita marcada como «${STATUS_LABELS[status.data]}».`,
   };
 }
 
@@ -146,6 +150,7 @@ export async function deleteAppointment(formData: FormData): Promise<MutationRes
   /* `before` and no `after`: the row is gone, and this is now the only record
      that it ever existed or who removed it. */
   await recordAudit({
+    verifiedActor: guard.actor,
     action: 'appointment.deleted',
     entity: 'appointment',
     entityId: id.data,

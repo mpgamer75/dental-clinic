@@ -26,6 +26,10 @@ export const PARAM = {
   search: 'buscar',
   status: 'estado',
   sort: 'orden',
+  /** `urgente=1` — appointments only. The "Urgentes sin atender" card links
+   *  here; it used to land on every pending request and leave the reader to
+   *  find the urgent ones themselves. */
+  urgent: 'urgente',
 } as const;
 
 export type ParamKey = keyof typeof PARAM;

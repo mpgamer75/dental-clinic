@@ -101,17 +101,22 @@ export function formatCalendarDate(value: string | null): string | null {
  *
  * The queue is the reason this exists: a status badge says an appointment is
  * pending, and only the age says whether that is fine or a problem.
+ *
+ * Every unit is FLOORED, to agree with `daysWaiting` below. This used to round,
+ * so a request 2.6 days old read "hace 3 días" while `daysWaiting` said 2 — and
+ * the "Sin responder" flag, which fires at three whole days, stayed off beside
+ * a label that said three. Floor is also what "hace N días" means: N full days.
  */
 export function formatWaitedFor(value: Date, now = Date.now()): string {
   const elapsed = now - value.getTime();
 
   if (elapsed < HOUR_MS) {
-    return relativeFormatter.format(-Math.max(1, Math.round(elapsed / MINUTE_MS)), 'minute');
+    return relativeFormatter.format(-Math.max(1, Math.floor(elapsed / MINUTE_MS)), 'minute');
   }
   if (elapsed < DAY_MS) {
-    return relativeFormatter.format(-Math.round(elapsed / HOUR_MS), 'hour');
+    return relativeFormatter.format(-Math.floor(elapsed / HOUR_MS), 'hour');
   }
-  return relativeFormatter.format(-Math.round(elapsed / DAY_MS), 'day');
+  return relativeFormatter.format(-Math.floor(elapsed / DAY_MS), 'day');
 }
 
 /** Whole days a request has been waiting, for the "needs attention" threshold. */

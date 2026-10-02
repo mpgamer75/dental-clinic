@@ -45,7 +45,12 @@
 
     --ink: 0.22 0.03 255;
     --ink-soft: 0.442 0.028 253;
-    --ink-faint: 0.578 0.022 253;
+    /* Text-safe: >= 4.58:1 on canvas, canvas-sunk, surface and the tint band.
+       It was L 0.578 (3.65:1 at worst) on the theory that the faint step would
+       only ever colour icons — and it ended up on ~30 pieces of small TEXT
+       anyway, from the implant article's disclaimer to every admin label. A
+       step that cannot carry words is a trap; this one now can. */
+    --ink-faint: 0.524 0.022 253;
 
     --primary-base: 0.42 0.13 253;
     --primary-hover: 0.36 0.14 253;
@@ -655,6 +660,84 @@
   .dark .grain::before {
     mix-blend-mode: overlay;
     opacity: 0.55;
+  }
+}
+
+/* ============================================================================
+   Scroll reveal — CSS only, driven by the element's own view timeline
+   ----------------------------------------------------------------------------
+   This replaces a React implementation that gave every revealed element its
+   own IntersectionObserver, state and inline styles. Measured on a throttled
+   phone it cost ~400 ms of style recalculation during load, held 53 elements on
+   `will-change` layers, and — because of a 3-second fail-open timer — revealed
+   everything off-screen three seconds after load whether or not anyone had
+   scrolled, so most visitors never saw the effect it was paying for.
+
+   A view timeline is scrubbed by the compositor from the scroll position: no
+   script, no observer, no state, nothing to hydrate. It is also correct by
+   construction where the old one needed a safety net — an element already in
+   view at load sits at the end of its range, so nothing above the fold is ever
+   hidden, and without support (Firefox today) or under reduced motion the rule
+   simply does not apply and the content is there.
+
+   Opacity and transform only, and short: the range closes before the element
+   is fully on screen, so nothing is half-transparent while it is being read.
+   `--reveal-i` offsets list items so a row of siblings settles left to right
+   instead of popping as one block. */
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 1.25rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-rise linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--reveal-i, 0) * 6%) entry calc(60% + var(--reveal-i, 0) * 6%);
+    }
+  }
+}
+
+/* ============================================================================
+   Native disclosures (<details>)
+   ----------------------------------------------------------------------------
+   The FAQ and the service index use <details>, not a scripted accordion: they
+   need no JavaScript, Ctrl+F finds text inside a closed answer, and the open
+   state is announced by every screen reader. The browser's disclosure triangle
+   is replaced by the component's own chevron, which rotates on open; the
+   content fades in rather than growing, because height is a layout property
+   and this project does not animate layout. */
+.disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.disclosure[open] > summary .disclosure-chevron {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .disclosure-chevron {
+    transition: transform var(--dur-base) var(--ease-out-quart);
+  }
+  .disclosure[open] > .disclosure-body {
+    animation: disclosure-fade var(--dur-base) var(--ease-out-quart) both;
+  }
+}
+@keyframes disclosure-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

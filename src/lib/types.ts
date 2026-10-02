@@ -15,8 +15,6 @@
    definitions the migrations apply, and nothing here should restate one.
    ========================================================================== */
 
-import type { LucideIcon } from 'lucide-react';
-
 export type Language = 'es' | 'en';
 
 export interface InternationalizedString {
@@ -24,34 +22,27 @@ export interface InternationalizedString {
   en: string;
 }
 
-export interface NavItem {
-  label: string;
-  href: string;
-  icon?: LucideIcon;
-}
-export interface NavItemData {
-  es: NavItem[];
-  en: NavItem[];
-}
-
-/**
- * Interface pour les éléments de navigation administrateur.
- * Hérite des propriétés de NavItem et peut être étendue avec des propriétés spécifiques à l'admin.
- */
-export interface AdminNavItem extends NavItem {
-  // Propriétés spécifiques à l'administration
-  isAdminOnly?: boolean;
-  requiresPermission?: string;
-}
-
-export interface AdminNavItemData {
-    es: AdminNavItem[];
-    en: AdminNavItem[];
-}
+/** Stable identity of a service. What an appointment request resolves to;
+ *  see src/lib/service-catalog.ts. Never rendered. */
+export type ServiceKey =
+  | 'implants'
+  | 'prosthetics'
+  | 'orthodontics'
+  | 'checkup'
+  | 'cleaning'
+  | 'fillings'
+  | 'endodontics'
+  | 'whitening';
 
 export interface Service {
-  iconName?: string; 
+  key: ServiceKey;
+  iconName?: string;
+  /** One of the three the practice is built around (implants, prosthetics,
+   *  orthodontics). The homepage weights these above general dentistry. */
+  specialty?: boolean;
   title: string;
+  /** One sentence for the homepage index. */
+  summary: string;
   description: string;
 }
 export interface ServiceData {
@@ -60,16 +51,12 @@ export interface ServiceData {
 }
 
 export interface Testimonial {
-  id?: string; 
+  id?: string;
   quote: string;
   name: string;
   location?: string;
-  submitted_at?: string | Date; 
+  submitted_at?: string | Date;
   status?: 'pending_approval' | 'approved' | 'rejected';
-}
-export interface TestimonialData {
-  es: Testimonial[];
-  en: Testimonial[];
 }
 
 
@@ -121,8 +108,12 @@ export type AppointmentTimePreference = 'morning' | 'afternoon' | 'any';
  */
 export interface AppointmentFormData {
   name: string;
+  /** Optional since migrations/0005: the empty string means "not given", and
+   *  the server stores it as NULL. */
   email: string;
   phone: string;
+  /** A `ServiceKey` from `serviceOptions` — never a display title. The server
+   *  still accepts historical titles through `serviceKeyOf`. */
   serviceType: string;
   reason: string;
   isUrgent: boolean;
@@ -226,6 +217,11 @@ export interface ActionMessages {
     testimonialModerationFailed: string;
     testimonialModerationReasonPrefix: string;
     testimonialModerationApiError: string;
+    /** Returned when the clinic has switched the channel off in the admin
+     *  panel (`app.site_settings`). */
+    appointmentsClosed: string;
+    contactClosed: string;
+    testimonialsClosed: string;
     zod: ZodMessages;
   };
   en: {
@@ -239,6 +235,9 @@ export interface ActionMessages {
     testimonialModerationFailed: string;
     testimonialModerationReasonPrefix: string;
     testimonialModerationApiError: string;
+    appointmentsClosed: string;
+    contactClosed: string;
+    testimonialsClosed: string;
     zod: ZodMessages;
   };
 }
@@ -257,25 +256,17 @@ export interface ContactDetails {
     es: string[];
     en: string[];
   };
-  hero: {
-    es: HeroContent;
-    en: HeroContent;
-  };
-  visitUs: {
-    es: VisitUsContent;
-    en: VisitUsContent;
-  };
   servicesSection: {
-    es: SectionContent;
-    en: SectionContent;
+    es: ServicesSectionContent;
+    en: ServicesSectionContent;
   };
   testimonialsSection: {
     es: TestimonialsSectionContent;
     en: TestimonialsSectionContent;
   };
   faqSection: {
-    es: SectionContent;
-    en: SectionContent;
+    es: FaqSectionContent;
+    en: FaqSectionContent;
   };
   diplomasSection: {
     es: SectionContent;
@@ -295,24 +286,17 @@ export interface ContactDetails {
   };
 }
 
-interface HeroContent {
-  subtitle: string;
-  welcome: string;
-  description: string;
-  ctaAppointment: string;
-  ctaServices: string;
-  qualificationsTitle: string;
-}
-
-interface VisitUsContent {
-  title: string;
-  description: string;
-  ctaButton: string;
-}
-
 interface SectionContent {
   title: string;
   description: string;
+}
+
+interface ServicesSectionContent extends SectionContent {
+  specialtiesTitle: string;
+  generalTitle: string;
+  /** Summary of each service's <details> disclosure. */
+  moreLabel: string;
+  implantGuide: string;
 }
 
 interface TestimonialsSectionContent extends SectionContent {
@@ -321,15 +305,29 @@ interface TestimonialsSectionContent extends SectionContent {
   dialogDescription: string;
 }
 
+interface FaqSectionContent extends SectionContent {
+  /** Link under an answer borrowed from the implant guide. */
+  guideAnswerLink: string;
+  moreLink: string;
+}
+
+/** "Cómo llegar": the visit band and the contact band, merged. */
 interface ContactSectionContent extends SectionContent {
-  formTitle: string;
   detailsTitle: string;
   addressLabel: string;
   phoneLabel: string;
   emailLabel: string;
   scheduleLabel: string;
+  photoCaption: string;
   mapTitle: string;
+  /** Click-to-load map facade: the button, and the line explaining it. */
+  mapLoad: string;
+  mapNote: string;
   viewMapButton: string;
+  /** The folded contact form. */
+  formTitle: string;
+  formLead: string;
+  formToggle: string;
 }
 
 interface AppointmentPageContent {
@@ -349,101 +347,29 @@ interface FooterContent {
   quickContact: string;
   scheduleTitle: string;
   copyright: string;
-  doctorAttribution: string;
+  implantGuide: string;
+  leaveTestimonial: string;
 }
 
-export interface BaseMetadata {
-  es: {
-    titleSuffix: string;
-    description: string;
-    keywords: string[];
-  };
-  en: {
-    titleSuffix: string;
-    description: string;
-    keywords: string[];
-  };
-}
-
-interface AppointmentTableHeaders {
-  name: string;
-  email: string;
-  phone: string;
-  service: string;
-  reason: string;
-  urgent: string;
-  submitted: string;
-  status: string;
-  actions: string;
-}
-
-interface StatusLabels {
-  pending: string;
-  confirmed: string;
-  cancelled: string;
-  completed: string;
-  unread: string;
-  read: string;
-  archived: string;
-  pending_approval: string;
-  approved: string;
-  rejected: string;
-}
-
-interface ActionButtonLabels {
-  confirm: string;
-  cancel: string;
-  complete: string;
-  markRead: string;
-  archive: string;
-  approve: string;
-  reject: string;
-  view: string;
-  delete: string;
-}
-
-interface BooleanTranslations {
-  true: string;
-  false: string;
-}
-
+/* The admin panel's labels used to live here too, in both languages, for a
+   panel that is Spanish-only and keeps its copy beside its components. None of
+   them was read; they are gone. */
 export interface GeneralUIStrings {
   readMore: string;
   readLess: string;
-  adminPanelTitle: string;
-  appointmentsTitle: string;
-  messagesTitle: string;
-  testimonialsTitle: string;
-  settingsTitle: string;
-  logout: string;
-  viewSite: string;
-  noAppointments: string;
-  // Navigation menu items
   home: string;
-  services: string; 
+  services: string;
   faq: string;
   testimonials: string;
   contact: string;
   appointments: string;
   /** Compact form of `appointments` for the header CTA below 640px. */
   appointmentsShort: string;
-  // End of navigation items
-  appointmentTableHeaders: AppointmentTableHeaders;
-  statusLabels: StatusLabels;
-  actionButtons: ActionButtonLabels;
-  boolean: BooleanTranslations;
 }
 
 export interface GeneralUIData {
   es: GeneralUIStrings;
   en: GeneralUIStrings;
-}
-
-export interface CarouselImageItem {
-  src: string;
-  altEs: string;
-  altEn: string;
-  hint: string;
 }
 
 export interface Diploma {

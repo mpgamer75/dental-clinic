@@ -446,14 +446,19 @@ export const OSSEO_STRUT_COUNT = Math.max(1, ...OSSEO_STRUTS.map((s) => s.delay 
 
 /**
  * Where each numbered marker sits, and where its leader line touches the part.
- * Order matches the legend in `implantEducation.parts`: crown, abutment,
- * fixture, osseointegration.
+ *
+ * ORDER IS THE NUMBERING, and it is assembly order — fixture, abutment, crown,
+ * osseointegration — because that is the order of `implantEducation.parts`,
+ * the legend these numbers point at. It used to run crown-first, the legend's
+ * old anatomical order, so once the legend was reordered to follow the
+ * figure's own build sequence the "3" on the plate would have been labelling
+ * the fixture next to a legend row 3 that said "Corona".
  */
 export const MARKERS: { x: number; y: number; tx: number; ty: number }[] = [
-  { x: X(10.4), y: Y(10.6), tx: X(4.6), ty: Y(9.6) }, // crown
-  { x: X(10.4), y: Y(5.2), tx: X(2.1), ty: Y(6.1) }, // abutment
-  { x: X(10.4), y: Y(-4.4), tx: X(2.3), ty: Y(-4.4) }, // fixture
-  { x: X(-10.4), y: Y(-8.2), tx: X(-3.1), ty: Y(-7.4) }, // osseointegration
+  { x: X(10.4), y: Y(-4.4), tx: X(2.3), ty: Y(-4.4) }, // 1 fixture
+  { x: X(10.4), y: Y(5.2), tx: X(2.1), ty: Y(6.1) }, // 2 abutment
+  { x: X(10.4), y: Y(10.6), tx: X(4.6), ty: Y(9.6) }, // 3 crown
+  { x: X(-10.4), y: Y(-8.2), tx: X(-3.1), ty: Y(-7.4) }, // 4 osseointegration
 ];
 
 /** Datum line for the scale annotation, at the crest. */

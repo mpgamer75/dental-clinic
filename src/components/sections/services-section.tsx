@@ -1,123 +1,120 @@
-'use client';
-
-import type { Service } from '@/lib/types';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import { useLanguage } from '@/contexts/language-context';
-import { generalUiStrings } from '@/lib/data';
-import { cn } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
+
 import { DENTAL_ICONS, ToothIcon, type DentalIconName } from '@/components/icons/dental';
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
-import { Reveal, RevealGroup, RevealItem } from '@/components/reveal';
+import { RevealGroup, RevealItem } from '@/components/reveal';
+import type { contactDetails } from '@/lib/data';
+import type { Service } from '@/lib/types';
+
+type ServicesCopy = (typeof contactDetails.servicesSection)['es'];
 
 interface ServicesSectionProps {
   id: string;
-  title: string;
+  copy: ServicesCopy;
+  /** Description with `{{doctorName}}` already filled. */
   description: string;
-  servicesList: Service[];
-  lead?: string;
+  services: Service[];
+  implantGuideHref: string;
 }
 
-const MAX_CHARS_BEFORE_TRUNCATE = 200;
-
 /**
- * Service list.
+ * What the practice does, in two tiers.
  *
- * Demoted from a grid of identical bordered cards to a ruled two-column list:
- * on this page implants and prosthetics are the argument, and the remaining
- * services are supporting detail. Giving all eight equal visual weight was
- * flattening that hierarchy.
+ * Eight services used to sit in one grid at one weight, each truncated to
+ * three lines behind a "Leer Más" toggle — the template every clinic site
+ * ships, and the reason implants (the practice's priority) read as one option
+ * in eight. Now the three specialties are an editorial index with their full
+ * summary, and general dentistry is a compact list under them.
+ *
+ * The long descriptions are behind native <details>, not a scripted toggle:
+ * no JavaScript, Ctrl+F still finds text inside a closed one, and the open
+ * state is announced by every screen reader. A server component — the old one
+ * was a client component only to hold eight booleans of toggle state.
  */
-export function ServicesSection({
-  id,
-  title,
-  description,
-  servicesList,
-  lead,
-}: ServicesSectionProps) {
-  const { lang } = useLanguage();
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const ui = generalUiStrings[lang];
-  const appointmentsHref = `/${lang}/agendar-cita`;
+export function ServicesSection({ id, copy, description, services, implantGuideHref }: ServicesSectionProps) {
+  const specialties = services.filter((service) => service.specialty);
+  const general = services.filter((service) => !service.specialty);
 
   return (
     <Section id={id} tone="canvas" space="normal">
-      <SectionHeading
-        lead={lead}
-        title={title}
-        description={description}
-        align="left"
-        className="lg:col-span-6"
-      />
+      <SectionHeading title={copy.title} description={description} align="left" className="lg:col-span-7" />
 
-      <RevealGroup className="grid gap-x-[5%] sm:grid-cols-2 xl:grid-cols-3">
-        {servicesList.map((service) => {
-          const Icon =
-            DENTAL_ICONS[service.iconName as DentalIconName] ?? ToothIcon;
-          const isOpen = expanded[service.title] ?? false;
-          const isLong = service.description.length > MAX_CHARS_BEFORE_TRUNCATE;
-          const panelId = `svc-${service.title.replace(/\W+/g, '-').toLowerCase()}`;
-
-          return (
-            <RevealItem key={service.title}>
-              <article className="border-t border-line py-7">
-                <div className="flex items-start gap-4">
-                  <Icon className="mt-0.5 h-8 w-8 shrink-0 text-brass-ink" strokeWidth={1.4} />
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-heading text-h4 font-medium text-ink">
-                      {service.title}
-                    </h3>
-
-                    <p
-                      id={panelId}
-                      className={cn(
-                        'mt-2 max-w-measure leading-relaxed text-ink-soft',
-                        isLong && !isOpen && 'line-clamp-3',
-                      )}
-                    >
-                      {service.description}
-                    </p>
-
-                    {isLong && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpanded((p) => ({ ...p, [service.title]: !p[service.title] }))
-                        }
-                        aria-expanded={isOpen}
-                        aria-controls={panelId}
-                        // `-my-3 py-3` grows the hit area to ~45px without
-                        // moving anything: the rendered control was 86×21,
-                        // under the 24px WCAG 2.2 AA minimum, on a site whose
-                        // patients skew older.
-                        className="-my-3 mt-3 inline-flex items-center gap-1.5 rounded py-3 text-small font-medium text-primary underline-offset-4 transition-colors duration-fast hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                      >
-                        {isOpen ? ui.readLess : ui.readMore}
-                        <ChevronDown
-                          className={cn(
-                            'h-4 w-4 transition-transform duration-base ease-out-quart',
-                            isOpen && 'rotate-180',
-                          )}
-                          aria-hidden="true"
-                        />
-                      </button>
-                    )}
-                  </div>
+      <h3 className="font-body text-small font-semibold text-brass-ink">{copy.specialtiesTitle}</h3>
+      <RevealGroup as="ul" className="mt-4 border-t border-line-strong">
+        {specialties.map((service, index) => (
+          <RevealItem key={service.key} as="li" index={index} className="border-b border-line py-7 md:py-8">
+            <div className="grid gap-x-[5%] gap-y-3 md:grid-cols-12 md:items-baseline">
+              <div className="flex items-center gap-4 md:col-span-4">
+                <ServiceIcon service={service} className="h-9 w-9" />
+                <h4 className="font-heading text-h3 font-medium text-ink">{service.title}</h4>
+              </div>
+              <div className="md:col-span-5">
+                <p className="max-w-measure leading-relaxed text-ink-soft">{service.summary}</p>
+                {/* Implants get the guide — six pages of it — instead of a
+                    paragraph: that is where the real answer lives. */}
+                {service.key !== 'implants' && <DetailsBody service={service} label={copy.moreLabel} />}
+              </div>
+              {service.key === 'implants' && (
+                <div className="md:col-span-3 md:justify-self-end">
+                  <Link
+                    href={implantGuideHref}
+                    className="inline-flex min-h-11 items-center gap-2 font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    {copy.implantGuide}
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
                 </div>
-              </article>
-            </RevealItem>
-          );
-        })}
+              )}
+            </div>
+          </RevealItem>
+        ))}
       </RevealGroup>
 
-      <Reveal className="mt-11">
-        <Button asChild size="lg">
-          <Link href={appointmentsHref}>{ui.appointments}</Link>
-        </Button>
-      </Reveal>
+      <h3 className="mt-[clamp(3rem,6vw,4.5rem)] font-body text-small font-semibold text-brass-ink">
+        {copy.generalTitle}
+      </h3>
+      <ul className="mt-4 grid gap-x-[5%] border-t border-line-strong sm:grid-cols-2">
+        {general.map((service) => (
+          <li key={service.key} className="border-b border-line py-5">
+            <details className="disclosure group">
+              <summary className="flex items-start gap-3.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+                <ServiceIcon service={service} className="mt-0.5 h-7 w-7" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-heading text-h4 font-medium text-ink">{service.title}</span>
+                  <span className="mt-1 block leading-relaxed text-ink-soft">{service.summary}</span>
+                </span>
+                <ChevronDown
+                  className="disclosure-chevron mt-1.5 h-5 w-5 shrink-0 text-ink-soft"
+                  aria-hidden="true"
+                />
+              </summary>
+              <p className="disclosure-body mt-3 max-w-measure pl-[2.65rem] text-small leading-relaxed text-ink-soft">
+                {service.description}
+              </p>
+            </details>
+          </li>
+        ))}
+      </ul>
     </Section>
+  );
+}
+
+function ServiceIcon({ service, className }: { service: Service; className: string }) {
+  const Icon = DENTAL_ICONS[service.iconName as DentalIconName] ?? ToothIcon;
+  return <Icon className={`${className} shrink-0 text-brass-ink`} strokeWidth={1.4} aria-hidden="true" />;
+}
+
+function DetailsBody({ service, label }: { service: Service; label: string }) {
+  return (
+    <details className="disclosure mt-2">
+      <summary className="inline-flex min-h-11 items-center gap-1.5 rounded-sm text-small font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+        {label}
+        <span className="sr-only">: {service.title}</span>
+        <ChevronDown className="disclosure-chevron h-4 w-4" aria-hidden="true" />
+      </summary>
+      <p className="disclosure-body mt-2 max-w-measure leading-relaxed text-ink-soft">{service.description}</p>
+    </details>
   );
 }

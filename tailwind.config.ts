@@ -177,12 +177,10 @@ export default {
           from: { opacity: "0" },
           to: { opacity: "1" },
         },
-        /* Ambient drift for the hero light-wash. Long and low-amplitude so it
-           reads as light moving through a room, not as an animation. */
-        drift: {
-          "0%, 100%": { transform: "translate3d(0,0,0) scale(1)" },
-          "50%": { transform: "translate3d(2%, -3%, 0) scale(1.06)" },
-        },
+        /* The hero's `drift` loop is gone: two gradient layers scaling on a
+           26-second infinite loop for as long as the page was open, off screen
+           included, for an effect most visitors could not see. The scroll
+           reveal lives in globals.css (`.reveal`) as a view timeline. */
       },
 
       animation: {
@@ -190,7 +188,6 @@ export default {
         "accordion-up": "accordion-up var(--dur-fast) var(--ease-out-quart)",
         "fade-up": "fade-up var(--dur-slow) var(--ease-out-quint) both",
         "fade-in": "fade-in var(--dur-base) var(--ease-out-quart) both",
-        drift: "drift 26s var(--ease-in-out-quart) infinite",
       },
     },
   },

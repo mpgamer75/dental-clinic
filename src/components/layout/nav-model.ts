@@ -1,4 +1,4 @@
-import { implantClusterPath, IMPLANT_SPOKE_SLUGS, navStrings } from '@/lib/data';
+import { implantClusterPath, navStrings } from '@/lib/data';
 import type { Language } from '@/lib/types';
 
 export interface NavEntry {
@@ -22,22 +22,24 @@ export interface NavEntry {
 export type NavLink = Omit<NavEntry, 'sections'>;
 
 /**
- * The five links in the bar.
+ * The five links in the bar, in the order the homepage tells its story.
  *
- * Six was one too many for a row that also has to carry a wordmark, three
- * utilities and a call to action — "Testimonios" is the item a visitor is least
- * likely to navigate to deliberately, so it moves to the secondary index inside
- * the mobile overlay and stays reachable by scrolling. It is still claimed by
- * "Servicios" for scrollspy purposes (the proof follows the offer), so passing
- * through it does not blank the indicator.
+ * Six was one too many for a row that also carries a wordmark, three utilities
+ * and a call to action, so "Testimonios" and "Diplomas" live in the mobile
+ * overlay's secondary index and the footer, and stay reachable by scrolling.
  *
- * The section→link map is the ordering of the homepage itself:
+ * The section→link map is the ordering of the homepage itself. Every band
+ * belongs to exactly one entry, so the indicator never goes dark mid-page; a
+ * listed id that is absent (testimonials render only when there is one) is
+ * simply skipped by the spy.
  *   por-que · implantes            → Implantes   (why it matters, and how)
- *   servicios · testimonios        → Servicios   (the offer, then the proof)
- *   el-doctor · diplomas ·
- *     la-consulta                  → El doctor   (who treats you, and where)
+ *   el-doctor · testimonios        → El doctor   (who treats you, and the proof)
+ *   servicios                      → Servicios
  *   preguntas-frecuentes           → Preguntas
- *   agendar · contacto             → Contacto    (the ask, then the details)
+ *   contacto · agendar             → Contacto    (where it is, then the ask)
+ *
+ * The last entry must own the last band: at the foot of the page the spy
+ * lights the last entry.
  *
  * "Implantes" is the one entry that is NOT a fragment. Implants are the
  * practice's commercial priority and they now have a pillar page with five
@@ -58,16 +60,16 @@ export function getPrimaryNav(lang: Language): NavEntry[] {
       sections: ['por-que', 'implantes'],
     },
     {
-      key: 'servicios',
-      href: `${base}#servicios`,
-      label: t.links.services,
-      sections: ['servicios', 'testimonios'],
-    },
-    {
       key: 'el-doctor',
       href: `${base}#el-doctor`,
       label: t.links.doctor,
-      sections: ['el-doctor', 'diplomas', 'la-consulta'],
+      sections: ['el-doctor', 'testimonios'],
+    },
+    {
+      key: 'servicios',
+      href: `${base}#servicios`,
+      label: t.links.services,
+      sections: ['servicios'],
     },
     {
       key: 'preguntas',
@@ -79,58 +81,26 @@ export function getPrimaryNav(lang: Language): NavEntry[] {
       key: 'contacto',
       href: `${base}#contacto`,
       label: t.links.contact,
-      sections: ['agendar', 'contacto'],
+      sections: ['contacto', 'agendar'],
     },
   ];
 }
 
-/** Secondary index — mobile overlay only, below the primary list. */
+/** Secondary index — mobile overlay only, below the primary list. "La
+ *  consulta" is gone: the visit band merged into Contacto ("Cómo llegar"). */
 export function getSecondaryNav(lang: Language): NavLink[] {
   const t = navStrings[lang];
   const base = `/${lang}`;
 
   return [
-    {
-      key: 'testimonios',
-      href: `${base}#testimonios`,
-      label: t.secondary.testimonials,
-    },
     { key: 'diplomas', href: `${base}#diplomas`, label: t.secondary.diplomas },
-    {
-      key: 'la-consulta',
-      href: `${base}#la-consulta`,
-      label: t.secondary.clinic,
-    },
+    { key: 'testimonios', href: `${base}#testimonios`, label: t.secondary.testimonials },
   ];
 }
 
-/**
- * Every URL in the implant cluster, pillar first, in reading order.
- *
- * Hrefs only — deliberately no labels, even though a label per link would be
- * the obvious API.
- *
- * This module is in the CLIENT graph: `navbar.tsx` is a client component and
- * imports it. `data.ts` is a single module and is not being tree-shaken here —
- * measured on a production build, the chunk the homepage loads contains the
- * full text of all six clinical articles (~35 KB gzipped of prose nothing in
- * the browser reads). That is a standing problem this file did not create and
- * cannot fix alone; what it can do is not add a second reason for it, so that
- * splitting `data.ts` — or handing the header its strings as props from a
- * server parent — is enough to make the content stop shipping.
- *
- * Labels therefore live where the pages that render them do: server components
- * read `implantCluster[lang]` directly. A client component that needs one
- * should be handed it as a prop.
- *
- * The cluster is reachable without this: the header links the pillar, and the
- * pillar links every spoke. This exists for the footer, which is the right
- * second path — a topic cluster wants more than one internal route into each
- * leaf, and the header cannot carry six links without becoming a mega-menu.
- */
-export function getImplantClusterHrefs(lang: Language): string[] {
-  return [
-    implantClusterPath(lang),
-    ...IMPLANT_SPOKE_SLUGS.map((slug) => implantClusterPath(lang, slug)),
-  ];
-}
+/* This module is in the CLIENT graph (navbar.tsx imports it), which is why it
+   takes only short strings from data.ts. Turbopack tree-shakes data.ts per
+   export — verified on a production build: the implant articles' prose is in
+   no client chunk — but labels a server component can read directly should
+   still be read there and handed down as props, as the footer and the
+   homepage's implant band do. */

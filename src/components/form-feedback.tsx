@@ -2,10 +2,120 @@
 
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
+import { useWatch, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formCommon } from '@/lib/data';
 import type { Language } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+/* ============================================================================
+   Field chrome shared by the three public forms
+   ----------------------------------------------------------------------------
+   The appointment form had been brought onto the design system's own border
+   tokens while the contact and testimonial forms still drew every control with
+   `border-2 border-muted-foreground/20` — a hand-mixed grey at double weight
+   that matched nothing else on the site. A patient who sent a question and then
+   booked saw two different-looking forms from the same clinic.
+
+   The invalid border keys off `aria-invalid`, which <FormControl> sets from the
+   field's error state, so the attribute a screen reader reads and the colour a
+   sighted user sees cannot disagree. Colour is never the only signal: the
+   message under the field carries the same information.
+
+   No ring-offset here: it has to match the ground the form sits on, so each
+   form adds its own (`ring-offset-card` on the booking page's card).
+   ========================================================================== */
+
+const invalidClass =
+  'aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive';
+
+export const fieldClass = cn(
+  'h-12 text-base transition-colors duration-fast focus-visible:border-primary',
+  invalidClass,
+);
+
+export const textareaClass = cn(
+  'min-h-[9rem] resize-y text-base leading-relaxed transition-colors duration-fast focus-visible:border-primary',
+  invalidClass,
+);
+
+export const fieldLabelClass = 'text-base font-medium text-ink';
+
+/**
+ * The visual asterisk on a required field.
+ *
+ * Visual only. Requiredness reaches assistive technology through
+ * `aria-required` on the control; an sr-only "(obligatorio)" here would fold it
+ * into the accessible NAME as well and be announced twice.
+ */
+export function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="text-primary">
+      {' *'}
+    </span>
+  );
+}
+
+/** The line that explains the asterisk, placed BEFORE the fields it governs. */
+export function RequiredFieldsNote({ lang }: { lang: Language }) {
+  return (
+    <p className="text-small text-ink-soft">
+      <span aria-hidden="true" className="font-medium text-primary">
+        *
+      </span>{' '}
+      {formCommon[lang].requiredFields}
+    </p>
+  );
+}
+
+/**
+ * A textarea's character counter, hidden until the last fifth of the allowance.
+ *
+ * A counter sitting at "0 / 1000" from the moment the page loads is not
+ * feedback, it is a target — and the contact form's old one was also the
+ * field's `FormDescription`, so a screen reader read "0 / 1000" as the
+ * description of the message box. It counts DOWN, because remaining budget is
+ * the thing being decided, and it is `aria-hidden`: the limit is stated once,
+ * calmly, by an sr-only note in the field description, and `maxLength` makes an
+ * overrun impossible rather than merely reported.
+ *
+ * Its own component so `useWatch` re-renders this <span> and nothing else.
+ * A `watch()` in the form body re-rendered every control on every keystroke.
+ */
+export function CharacterCounter<TValues extends FieldValues>({
+  control,
+  name,
+  max,
+  remainingLabel,
+  limitLabel,
+}: {
+  control: Control<TValues>;
+  name: FieldPath<TValues>;
+  max: number;
+  /** Carries `{{count}}`. */
+  remainingLabel: string;
+  limitLabel: string;
+}) {
+  const value: unknown = useWatch({ control, name });
+  const length = typeof value === 'string' ? value.length : 0;
+  if (length < Math.floor(max * 0.8)) return null;
+
+  const remaining = max - length;
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'shrink-0 tabular',
+        // Weight and wording carry "you are at the ceiling", not colour:
+        // `text-warning` does not clear 4.5:1 on the light grounds.
+        remaining <= 0 ? 'font-medium text-ink' : 'text-ink-soft',
+      )}
+    >
+      {remaining <= 0 ? limitLabel : remainingLabel.replace('{{count}}', String(remaining))}
+    </span>
+  );
+}
 
 /**
  * Persistent, reassuring success panel shown in place of a form after a
@@ -80,12 +190,15 @@ export function ConsentNotice({ lang, className }: { lang: Language; className?:
     // the worst line length on the site, and on the one piece of text that is
     // a consent statement.
     <p
-      className={`mx-auto max-w-measure-tight text-center text-xs leading-relaxed text-muted-foreground ${className ?? ''}`}
+      className={cn(
+        'mx-auto max-w-measure-tight text-center text-small leading-relaxed text-ink-soft',
+        className,
+      )}
     >
       {c.consentBefore}
       <Link
         href={`/${lang}/privacidad`}
-        className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+        className="font-medium text-primary underline underline-offset-2 hover:text-primary-hover"
       >
         {c.privacyLinkLabel}
       </Link>

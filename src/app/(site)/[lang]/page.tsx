@@ -1,261 +1,240 @@
 import { notFound } from 'next/navigation';
-import {
-  contactDetails,
-  services as allServices,
-  faqItems,
-  visitUsCarouselImages,
-  diplomas,
-  homeContent,
-} from '@/lib/data';
+import { and, desc, eq } from 'drizzle-orm';
+
 import { Hero } from '@/components/sections/hero';
 import { ProblemSection } from '@/components/sections/problem';
 import { ImplantEducation } from '@/components/sections/implant-education';
-import { ServicesSection } from '@/components/sections/services-section';
-import { TestimonialsSection } from '@/components/sections/testimonials-section';
 import { DoctorSection } from '@/components/sections/doctor';
-import { DiplomasSection } from '@/components/sections/diplomas-section';
+import { TestimonialsSection } from '@/components/sections/testimonials-section';
+import { ServicesSection } from '@/components/sections/services-section';
 import { FaqSection } from '@/components/sections/faq-section';
-import { BookingSection } from '@/components/sections/booking';
-import { VisitUsCarousel } from '@/components/sections/visit-us-carousel';
 import { ContactSection } from '@/components/sections/contact-section';
-import type { Language } from '@/lib/types';
-import { db } from '@/lib/db';
-import { testimonials as testimonialsTable } from '@/lib/schema';
-import { desc, eq } from 'drizzle-orm';
+import { BookingSection } from '@/components/sections/booking';
 import {
-  getDentalClinicStructuredData,
+  contactDetails,
+  diplomas,
+  diplomasUi,
+  getHomeFaq,
+  homeContent,
+  implantCluster,
+  implantClusterPath,
+  implantEducation,
+  services,
+} from '@/lib/data';
+import { db } from '@/lib/db';
+import { formatDatabaseFailure } from '@/lib/db-errors';
+import { testimonials as testimonialsTable } from '@/lib/schema';
+import {
   getBreadcrumbStructuredData,
+  getDentalClinicStructuredData,
   getFAQStructuredData,
 } from '@/lib/seo-config';
-import { formatDatabaseFailure } from '@/lib/db-errors';
+import { getPublicSiteSettings } from '@/lib/site-settings';
+import type { Diploma, Language, Testimonial } from '@/lib/types';
+
+const RETRY_DELAYS_MS = [250, 1000];
 
 /**
- * Loads approved testimonials.
+ * Approved, real testimonials, newest first.
  *
- * The homepage must render whether or not the database is reachable, so every
- * genuine failure — unreachable host, missing env, a malformed row — collapses
- * to `{ testimonials: [], failed: true }` and the section shows its error
- * state. Previously an unguarded query here took the whole page down with it.
+ * Two failure modes this is built around, both observed:
  *
- * Nothing this function calls can throw Next's control-flow errors, so it does
- * not re-throw them: it reads no cookies and no headers, and `notFound()` is
- * called by the page, outside the try. That was not true of the Supabase SSR
- * client this replaces — it read the cookie store, which meant a caught
- * DYNAMIC_SERVER_USAGE could quietly convert a bailout into a permanently empty
- * testimonial list.
+ *   - Neon's first connection from a fresh process can fail while the compute
+ *     wakes from suspend. A single attempt turned that blip into a cached
+ *     page: the catch reported success to Next, so the homepage's ISR window
+ *     served "No pudimos cargar los testimonios" for five minutes. Errors with
+ *     no SQLSTATE (transport, not query) are therefore retried with a short
+ *     backoff before anything is decided.
+ *   - When it still fails at RUNTIME (an ISR regeneration), this throws. Next
+ *     then keeps serving the last good page and retries on a later request —
+ *     the right answer, because the last good page has the testimonials in it.
+ *     Only at BUILD time is there no previous page to keep, and there the
+ *     section is simply left out rather than failing the deploy.
  *
- * The filter and the ordering are exactly what the partial index
- * `testimonials_public_idx` covers (`ON (submitted_at DESC) WHERE status =
- * 'approved'`); changing either without changing the index gives the planner a
- * sequential scan on the one query every visitor triggers.
+ * `is_demo = false`: rows invented by the demo-data script must never reach
+ * the public page, whatever their status — approval is refused for them in the
+ * panel, and this makes it impossible here as well.
+ *
+ * The filter and ordering match the partial index `testimonials_public_idx`
+ * (`ON (submitted_at DESC) WHERE status = 'approved'`).
  */
-async function loadTestimonials(): Promise<{
-  testimonials: { name: string; quote: string; location?: string }[];
-  failed: boolean;
-}> {
-  try {
-    const rows = await db
-      .select({
-        name: testimonialsTable.name,
-        quote: testimonialsTable.quote,
-        location: testimonialsTable.location,
-      })
-      .from(testimonialsTable)
-      .where(eq(testimonialsTable.status, 'approved'))
-      .orderBy(desc(testimonialsTable.submittedAt));
+async function loadTestimonials(): Promise<Testimonial[]> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const rows = await db
+        .select({
+          name: testimonialsTable.name,
+          quote: testimonialsTable.quote,
+          location: testimonialsTable.location,
+        })
+        .from(testimonialsTable)
+        .where(and(eq(testimonialsTable.status, 'approved'), eq(testimonialsTable.isDemo, false)))
+        .orderBy(desc(testimonialsTable.submittedAt));
 
-    return {
-      testimonials: rows
+      return rows
         .filter((row) => row.name && row.quote)
-        .map((row) => ({
-          name: row.name,
-          quote: row.quote,
-          location: row.location || undefined,
-        })),
-      failed: false,
-    };
-  } catch (error) {
-    console.error('[home] testimonials unavailable: %s', formatDatabaseFailure(error));
-    return { testimonials: [], failed: true };
+        .map((row) => ({ name: row.name, quote: row.quote, location: row.location || undefined }));
+    } catch (error) {
+      const detail = formatDatabaseFailure(error);
+      const transient = !/sqlstate [0-9A-Z]{5}/i.test(detail);
+      if (transient && attempt < RETRY_DELAYS_MS.length) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      console.error('[home] testimonials unavailable: %s', detail);
+      if (process.env.NEXT_PHASE === 'phase-production-build') return [];
+      throw new Error('Testimonials could not be loaded; keeping the previous page.');
+    }
   }
 }
 
 /**
- * Statically rendered, revalidated every five minutes.
- *
- * `force-dynamic` used to be set here, and the reason given for it was the
- * Supabase SSR client reading cookies — a cookie read makes a prerender
- * impossible, so the page was rendered per request whether or not anything on
- * it had changed. The Neon read is cookie-free by construction, so the whole
- * page can go back to being a static file served from the edge.
- *
- * Five minutes is the delay between the dentist approving a testimonial and it
- * appearing. It is also how long a build that happened to run while the
- * database was unreachable would keep serving the section's error state before
- * healing itself, which is the more important of the two numbers.
+ * Static, regenerated at most every five minutes — and on demand: approving a
+ * testimonial and saving the site settings both revalidate this route, so the
+ * window is only the backstop.
  */
 export const revalidate = 300;
 
 export default async function HomePage({ params }: { params: Promise<{ lang: Language }> }) {
   const resolved = await params;
 
-  // Defence in depth. `dynamicParams = false` in the layout already 404s any
-  // unknown segment at the router level; this guarantees the page can never
-  // index a content dictionary with an unvalidated path segment even if that
-  // routing config is later changed.
+  // Defence in depth: `dynamicParams = false` in the layout already 404s any
+  // other segment; this keeps an unvalidated value from ever indexing content.
   if (resolved?.lang !== 'es' && resolved?.lang !== 'en') notFound();
   const lang: Language = resolved.lang;
 
-  const clinicName = contactDetails.clinicName[lang];
   const doctorName = contactDetails.doctorName[lang];
   const t = homeContent[lang];
-
-  const fill = (s: string) =>
-    s.replace(/\{\{clinicName\}\}/g, clinicName).replace(/\{\{doctorName\}\}/g, doctorName);
-
   const base = `/${lang}`;
   const appointmentHref = `${base}/agendar-cita`;
-  const contactHref = `${base}#contacto`;
-  const implantHref = `${base}#implantes`;
-  const diplomasHref = `${base}#diplomas`;
+  const cluster = implantCluster[lang];
 
-  const servicesList = allServices[lang];
-  const faqItemsList = faqItems[lang];
-  const diplomasList = diplomas[lang];
+  const [testimonials, settings] = await Promise.all([loadTestimonials(), getPublicSiteSettings()]);
 
-  const { testimonials, failed } = await loadTestimonials();
+  const acceptsTestimonials = settings.allowTestimonials;
+  const testimonialsCopy = contactDetails.testimonialsSection[lang];
+  const closeLabel = lang === 'es' ? 'Cerrar' : 'Close';
+  const testimonialDialog = acceptsTestimonials
+    ? {
+        ctaButton: testimonialsCopy.ctaButton,
+        title: testimonialsCopy.dialogTitle,
+        description: testimonialsCopy.dialogDescription,
+        closeLabel,
+      }
+    : null;
 
-  const carouselImages = visitUsCarouselImages.map((img) => ({
-    src: img.src,
-    alt: lang === 'es' ? img.altEs : img.altEn,
-    hint: img.hint,
-  }));
+  // Newest first. A year that does not parse sorts last instead of becoming NaN.
+  const sortedDiplomas: Diploma[] = [...diplomas[lang]].sort((a, b) => {
+    const ay = Number.parseInt(a.year, 10);
+    const by = Number.parseInt(b.year, 10);
+    if (Number.isNaN(ay) && Number.isNaN(by)) return 0;
+    if (Number.isNaN(ay)) return 1;
+    if (Number.isNaN(by)) return -1;
+    return by - ay;
+  });
+
+  const faq = getHomeFaq(lang);
 
   const structuredData = [
     getDentalClinicStructuredData(lang),
     getBreadcrumbStructuredData(lang, ''),
-    getFAQStructuredData(faqItemsList),
+    // Only the homepage's own questions: the borrowed implant answers are
+    // marked up on the guide pages they belong to, and Google asks for a
+    // repeated question to be marked up once.
+    getFAQStructuredData(faq.filter((item) => item.origin === 'home')),
   ];
 
-  // JSON.stringify does not escape `<`, so a `</script>` sequence appearing in
-  // any FAQ answer would terminate the tag early and inject markup. The content
-  // is first-party today, but escaping here makes that class of bug impossible
-  // rather than dependent on nobody ever pasting the wrong thing into data.ts.
+  // JSON.stringify does not escape `<`, so a `</script>` inside any answer
+  // would end the tag early and inject markup.
   const structuredDataJson = JSON.stringify(structuredData).replace(/</g, '\\u003c');
 
   return (
     <>
-      {/* Structured data as a plain <script>, not next/script.
-          In the App Router, next/script with an inline body does not emit a
-          real tag: it rewrites the content into a `self.__next_s.push(...)`
-          bootstrap array, so the server HTML contained no
-          `type="application/ld+json"` element at all and crawlers that read
-          raw HTML saw no structured data. A plain tag is also what Next's own
-          docs recommend for JSON-LD. */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: structuredDataJson }}
-      />
+      {/* A plain <script>, not next/script: in the App Router an inline
+          next/script is rewritten into a JS bootstrap array, so crawlers that
+          read raw HTML saw no structured data at all. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson }} />
 
       {/* 1 — the claim, and one action. */}
-      <Hero
-        content={t.hero}
-        trust={t.trust}
-        appointmentHref={appointmentHref}
-        implantHref={implantHref}
-        phone={contactDetails.phone[lang]}
-      />
+      <Hero lang={lang} content={t.hero} appointmentHref={appointmentHref} implantHref={`${base}#implantes`} />
 
-      {/* 2 — why it matters, before anything is sold. */}
+      {/* 2 — why it matters, before anything is offered. */}
       <ProblemSection id="por-que" content={t.problem} />
 
-      {/* 3 — the mechanism. The page's hero object. */}
-      <ImplantEducation id="implantes" />
-
-      {/* 4 — everything else the practice does, as supporting detail. */}
-      <ServicesSection
-        id="servicios"
-        lead={t.servicesLead}
-        title={contactDetails.servicesSection[lang].title}
-        description={fill(contactDetails.servicesSection[lang].description)}
-        servicesList={servicesList}
+      {/* 3 — the mechanism, and the page's one authored motion. */}
+      <ImplantEducation
+        id="implantes"
+        lang={lang}
+        content={implantEducation[lang]}
+        appointmentHref={appointmentHref}
+        guide={{
+          allHref: implantClusterPath(lang),
+          links: cluster.spokes.map((spoke) => ({
+            href: implantClusterPath(lang, spoke.slug),
+            label: spoke.shortLabel,
+            summary: spoke.cardSummary,
+          })),
+        }}
       />
 
-      {/* 5 — proof from patients. */}
-      <TestimonialsSection
-        id="testimonios"
-        title={t.proof.title}
-        description={t.proof.description}
-        testimonialsList={testimonials}
-        loadError={failed}
-        ctaButtonText={contactDetails.testimonialsSection[lang].ctaButton}
-        dialogTitleText={contactDetails.testimonialsSection[lang].dialogTitle}
-        dialogDescriptionText={contactDetails.testimonialsSection[lang].dialogDescription}
-      />
-
-      {/* 6 — who is actually going to treat you. */}
+      {/* 4 — who will treat you, with the documents directly under the claim. */}
       <DoctorSection
         id="el-doctor"
         content={t.doctor}
         qualifications={contactDetails.qualifications[lang]}
-        diplomaCount={diplomasList.length}
-        diplomasHref={diplomasHref}
-        imageAlt={carouselImages[1]?.alt ?? t.hero.imageAlt}
+        diplomas={{
+          items: sortedDiplomas,
+          ui: diplomasUi[lang],
+          title: contactDetails.diplomasSection[lang].title,
+          description: contactDetails.diplomasSection[lang].description,
+        }}
+        invite={
+          testimonials.length === 0 && testimonialDialog
+            ? {
+                dialogTitle: testimonialDialog.title,
+                dialogDescription: testimonialDialog.description,
+                closeLabel,
+              }
+            : null
+        }
       />
 
-      {/* 7 — the evidence behind the credentials. */}
-      <DiplomasSection
-        id="diplomas"
-        title={fill(contactDetails.diplomasSection[lang].title)}
-        description={fill(contactDetails.diplomasSection[lang].description)}
-        diplomasList={diplomasList}
+      {/* 5 — what patients say, when there is something to show. */}
+      <TestimonialsSection
+        id="testimonios"
+        title={t.proof.title}
+        description={t.proof.description}
+        testimonials={testimonials}
+        dialog={testimonialDialog}
       />
 
-      {/* 8 — the room. */}
-      <VisitUsCarousel
-        id="la-consulta"
-        images={carouselImages}
-        visitUsContent={contactDetails.visitUs[lang]}
-        contactHref={contactHref}
+      {/* 6 — everything else the practice does, weighted. */}
+      <ServicesSection
+        id="servicios"
+        copy={contactDetails.servicesSection[lang]}
+        description={contactDetails.servicesSection[lang].description.replace('{{doctorName}}', doctorName)}
+        services={services[lang]}
+        implantGuideHref={implantClusterPath(lang)}
       />
 
-      {/* 9 — objections, immediately before the ask. */}
+      {/* 7 — the questions, implant questions first. */}
       <FaqSection
         id="preguntas-frecuentes"
-        title={contactDetails.faqSection[lang].title}
-        description={fill(contactDetails.faqSection[lang].description)}
-        faqItemsList={faqItemsList}
+        copy={contactDetails.faqSection[lang]}
+        items={faq}
+        guideHref={implantClusterPath(lang)}
       />
 
-      {/* 10 — the ask, with what happens next spelled out. */}
+      {/* 8 — where it is, and every way to reach it. */}
+      <ContactSection id="contacto" lang={lang} showForm={settings.allowContactForm} />
+
+      {/* 9 — the ask, last. */}
       <BookingSection
         id="agendar"
+        lang={lang}
         content={t.booking}
         appointmentHref={appointmentHref}
-        phone={contactDetails.phone[lang]}
         schedule={contactDetails.schedule[lang]}
-      />
-
-      {/* 11 — form, details and map. */}
-      <ContactSection
-        id="contacto"
-        lang={lang}
-        title={contactDetails.contactSection[lang].title}
-        description={fill(contactDetails.contactSection[lang].description)}
-        formTitleText={contactDetails.contactSection[lang].formTitle}
-        detailsTitleText={contactDetails.contactSection[lang].detailsTitle}
-        addressText={contactDetails.address[lang]}
-        phoneText={contactDetails.phone[lang]}
-        emailText={contactDetails.email[lang]}
-        scheduleText={contactDetails.schedule[lang]}
-        mapTitleText={contactDetails.contactSection[lang].mapTitle}
-        mapLinkUrl={contactDetails.mapLink[lang]}
-        embedMapLinkUrl={contactDetails.embedMapLink[lang]}
-        addressLabel={contactDetails.contactSection[lang].addressLabel}
-        phoneLabel={contactDetails.contactSection[lang].phoneLabel}
-        emailLabel={contactDetails.contactSection[lang].emailLabel}
-        scheduleLabel={contactDetails.contactSection[lang].scheduleLabel}
-        viewMapButtonText={contactDetails.contactSection[lang].viewMapButton}
       />
     </>
   );

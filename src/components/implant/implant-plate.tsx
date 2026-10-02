@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import * as G from './plate-geometry';
+import { PHASE_WINDOWS } from './phases';
 
 /**
  * The implant assembly as a scroll-driven anatomical HALF-SECTION.
@@ -39,14 +40,14 @@ const seg = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
 const easeOutQuint = (t: number) => 1 - Math.pow(1 - t, 5);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-/* Phase windows are IDENTICAL to the WebGL scene's. The scrub rail and the
-   phase caption in <ImplantStage> are shared by both visuals, so if the two
-   disagreed about when the crown seats, the caption would be lying on one of
-   them. */
-const PHASE_FIXTURE = [0.06, 0.46] as const;
-const PHASE_ABUTMENT = [0.42, 0.68] as const;
-const PHASE_CROWN = [0.62, 0.86] as const;
-const PHASE_OSSEO = [0.84, 1] as const;
+/* Phase windows come from ./phases, the one timeline the WebGL scene, this
+   plate and the caption in <ImplantStage> all read. The scrub rail and the
+   caption are shared by both visuals, so if the two disagreed about when the
+   crown seats, the caption would be lying on one of them. */
+const PHASE_FIXTURE = PHASE_WINDOWS.fixture;
+const PHASE_ABUTMENT = PHASE_WINDOWS.abutment;
+const PHASE_CROWN = PHASE_WINDOWS.crown;
+const PHASE_OSSEO = PHASE_WINDOWS.bone;
 
 /** Height each part starts at, in mm above its seated position. */
 const RISE_FIXTURE = 6;
@@ -129,7 +130,8 @@ export function ImplantPlate({ label, handleRef, reduced }: ImplantPlateProps) {
          16% of the sequence, in exchange for a 12% opacity change nobody can
          see. The struts carry the osseointegration story on their own. */
 
-      const markerAt = [tCrown, tAbutment, tFixture, tOsseo];
+      // Same order as G.MARKERS: assembly order, matching the legend.
+      const markerAt = [tFixture, tAbutment, tCrown, tOsseo];
       for (let i = 0; i < markerRefs.current.length; i++) {
         const el = markerRefs.current[i];
         if (el) el.style.opacity = String(clamp01(markerAt[i] * 1.4));

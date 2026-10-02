@@ -29,6 +29,7 @@ import type {
   FunnelStage,
   QueryOutcome,
   ServiceDemand,
+  ServiceDemandSummary,
   TimePreferenceKey,
   TimePreferenceSlice,
   TrendPoint,
@@ -106,9 +107,15 @@ const SERIES = {
   /** Brass. Kept for the bucket that is waiting on a person. */
   warm: 'oklch(var(--chart-2))',
   accent: 'oklch(var(--chart-3))',
-  /** The one genuinely independent series colour in the palette. Used for
-   *  urgency and never for a category that merely happens to be fourth. */
-  urgent: 'oklch(var(--chart-4))',
+  /** Urgency is the DESTRUCTIVE token, the same one the tables paint their
+   *  "Urgente" badge and row rule with. It used to be the rose --chart-4, so
+   *  the one signal this panel exists to protect was red in the queue and pink
+   *  in the chart directly beneath it, and a reader had to learn two codes for
+   *  the same fact. */
+  urgent: 'oklch(var(--destructive))',
+  /** The two terminal states, in the colours their badges carry. */
+  done: 'oklch(var(--success))',
+  stopped: 'oklch(var(--destructive))',
   /** The flattest step, for a slice meaning "nothing was said" or "this left
    *  the funnel". */
   muted: 'oklch(var(--chart-5))',
@@ -124,11 +131,16 @@ const SURFACE = 'oklch(var(--surface))';
  *  animation note above. */
 type Animation = boolean | 'auto';
 
+/* Each stage takes its status badge's colour — brass for pending, primary for
+   confirmed, success for completed, destructive for cancelled — and its icon
+   (see the legend). "Completada" was cyan and "Cancelada" grey here while the
+   table above drew them green and red, so the same row changed colour between
+   the list and the chart that counts it. */
 const FUNNEL_COLOR: Record<AppointmentStatus, string> = {
   pending: SERIES.warm,
   confirmed: SERIES.routine,
-  completed: SERIES.accent,
-  cancelled: SERIES.muted,
+  completed: SERIES.done,
+  cancelled: SERIES.stopped,
 };
 
 const TIME_COLOR: Record<TimePreferenceKey, string> = {
@@ -780,17 +792,20 @@ function ServicesChart({
   outcome,
   animation,
 }: {
-  outcome: QueryOutcome<ServiceDemand[]>;
+  outcome: QueryOutcome<ServiceDemandSummary>;
   animation: Animation;
 }) {
-  const services = outcome.ok ? outcome.data : NO_SERVICES;
+  const services = outcome.ok ? outcome.data.services : NO_SERVICES;
+  /* The share is quoted against every appointment in the book. It used to be
+     taken over the five bars drawn — "de la demanda registrada" — so the top
+     service's share grew whenever a sixth service existed and was left off. */
+  const recorded = outcome.ok ? outcome.data.total : 0;
 
   const data = useMemo(
     () => services.map((entry) => ({ service: entry.service, Solicitudes: entry.total })),
     [services],
   );
 
-  const counted = services.reduce((sum, entry) => sum + entry.total, 0);
   const top = services[0];
 
   return (
@@ -799,10 +814,14 @@ function ServicesChart({
       height={LAYOUT.services.height}
       title="Servicios más solicitados"
       subtitle="Ajuste agenda, material y formación a lo que los pacientes piden de verdad."
-      status={chartStatus(outcome, counted === 0)}
+      status={chartStatus(outcome, recorded === 0)}
       emptyMessage="Todavía no se ha registrado ninguna solicitud, así que no hay servicios que ordenar."
       footnote={
-        top ? `«${top.service}» concentra el ${share(top.total, counted)} de la demanda registrada.` : null
+        top
+          ? `«${top.service}» concentra el ${share(top.total, recorded)} de ${
+              recorded === 1 ? 'la única solicitud registrada' : `las ${recorded} solicitudes registradas`
+            }.`
+          : null
       }
     >
       {({ narrow }) => (
@@ -1108,7 +1127,7 @@ function FunnelChart({
 export interface DashboardChartsProps {
   trend: QueryOutcome<TrendPoint[]>;
   waits: QueryOutcome<WaitBucket[]>;
-  services: QueryOutcome<ServiceDemand[]>;
+  services: QueryOutcome<ServiceDemandSummary>;
   timeOfDay: QueryOutcome<TimePreferenceSlice[]>;
   weekdays: QueryOutcome<WeekdayPoint[]>;
   funnel: QueryOutcome<FunnelStage[]>;

@@ -63,6 +63,25 @@ export function parseSearch(raw: RawSearchParams): string {
   return value.slice(0, SEARCH_MAX_LENGTH);
 }
 
+/** `?urgente=1` and nothing else turns the filter on — any other value, or
+ *  none, is "all requests". */
+export function parseUrgentOnly(raw: RawSearchParams): boolean {
+  return firstValue(raw, PARAM.urgent) === '1';
+}
+
+/**
+ * The last page a list of `total` rows has, for the redirect a page issues when
+ * it is asked for one beyond it.
+ *
+ * Working through `?estado=pending&pagina=2` empties that page as each request
+ * is confirmed, and the page used to answer with "Todavía no hay solicitudes" —
+ * a false empty state over a list that still had twenty rows on page 1, with
+ * no pager to reach them because there were no rows to put one under.
+ */
+export function lastPageFor(total: number): number {
+  return Math.max(1, Math.ceil(total / PAGE_SIZE));
+}
+
 /** Narrows an arbitrary string to one of a table's declared statuses, or null
  *  for "todos". The tuples come from schema.ts, so this list and the CHECK
  *  constraint cannot drift apart. */

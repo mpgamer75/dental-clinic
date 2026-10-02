@@ -7,9 +7,9 @@ import { getSiteSettings } from '../../_lib/queries';
 /* ============================================================================
    /admin/settings
    ----------------------------------------------------------------------------
-   `app.site_settings` is one row of four booleans that has existed since the
-   first migration with nothing reading or writing it. This page is the reading
-   and writing.
+   `app.site_settings` is one row of four booleans. This page reads and writes
+   it; the public site honours it (src/lib/site-settings.ts), and the save
+   action revalidates every public page so a change shows on the next request.
 
    It is deliberately short. A settings screen that grows a tab bar is a
    settings screen where the important switch — the one that takes the public

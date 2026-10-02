@@ -97,6 +97,7 @@ export async function updateSiteSettings(formData: FormData): Promise<MutationRe
      is the one audit entry that can be a complete before-and-after — and it is
      the one where "which flag did they change?" is the whole question. */
   await recordAudit({
+    verifiedActor: guard.actor,
     action: 'site_settings.updated',
     entity: 'site_settings',
     entityId: 'site',
@@ -105,10 +106,18 @@ export async function updateSiteSettings(formData: FormData): Promise<MutationRe
   });
 
   revalidatePath('/admin', 'layout');
-  /* The flags govern the public site, so its cached pages have to be rebuilt
-     the moment one changes — a maintenance banner that appears five minutes
-     from now is not a maintenance banner. */
-  revalidatePath('/[lang]', 'page');
+  /* The flags govern the WHOLE public site, so every page under /[lang] has to
+     be rebuilt the moment one changes — a maintenance notice that appears five
+     minutes from now is not a maintenance notice, and a closed booking form that
+     keeps accepting requests until the next deploy is the bug these switches
+     were inert for.
+
+     'layout', not 'page'. 'page' revalidated only the homepage, while the
+     maintenance notice is rendered by the [lang] layout and the booking form
+     lives on /[lang]/agendar-cita, which is fully static and would have kept
+     its stale copy indefinitely. The server actions re-check the flags on
+     every submission regardless; this is about what the page SHOWS. */
+  revalidatePath('/[lang]', 'layout');
 
   return { ok: true, message: 'Configuración guardada.' };
 }

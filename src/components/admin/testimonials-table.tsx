@@ -92,6 +92,10 @@ export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
             {rows.map((row) => {
               const busy = pendingId === row.id;
               const awaiting = row.status === 'pending_approval';
+              /* An invented quote must never be one click from the homepage.
+                 The server refuses it too (reviewTestimonial); this only stops
+                 the panel from offering a button that cannot work. */
+              const publishable = !isDemoRow(row);
 
               return (
                 <tr
@@ -161,7 +165,7 @@ export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
                         <span className="sr-only"> el testimonio completo de {row.name}</span>
                       </Button>
 
-                      {awaiting && (
+                      {awaiting && publishable && (
                         <Button
                           type="button"
                           size="sm"
@@ -192,7 +196,7 @@ export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-64">
-                          {row.status !== 'approved' && (
+                          {row.status !== 'approved' && publishable && (
                             <DropdownMenuItem onSelect={() => decide(row.id, 'approved')}>
                               <Check className="mr-2 h-4 w-4" aria-hidden="true" />
                               Aprobar y publicar en el sitio
@@ -262,12 +266,13 @@ export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
               )}
 
               <p className="text-small text-ink-soft">
-                Al aprobarlo se publica en la página pública con el nombre y la localidad que se ven
-                arriba.
+                {isDemoRow(detail)
+                  ? 'Es un testimonio de demostración, inventado para probar el panel: no se puede publicar.'
+                  : 'Al aprobarlo se publica en la página pública con el nombre y la localidad que se ven arriba.'}
               </p>
 
               <div className="flex flex-wrap gap-2">
-                {detail.status !== 'approved' && (
+                {detail.status !== 'approved' && !isDemoRow(detail) && (
                   <Button
                     type="button"
                     size="sm"

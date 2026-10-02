@@ -33,6 +33,10 @@ export function LoginForm() {
   const errorId = useId();
 
   const failed = state.status === 'error';
+  /* React 19 resets the form to its DEFAULT values once the action settles, so
+     the email survives a refusal only if the default is what was just typed.
+     The password is deliberately not echoed back. */
+  const typedEmail = state.status === 'error' ? state.email : undefined;
 
   return (
     <form action={formAction} className="space-y-5" noValidate>
@@ -48,6 +52,7 @@ export function LoginForm() {
             name="email"
             type="email"
             autoComplete="username"
+            defaultValue={typedEmail}
             required
             disabled={pending}
             className="pl-10"

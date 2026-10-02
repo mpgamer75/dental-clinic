@@ -36,12 +36,35 @@ export function BackToTop() {
     const el = sentinelRef.current;
     if (!el || typeof IntersectionObserver === 'undefined') return;
 
-    const io = new IntersectionObserver(([entry]) => {
-      setIsVisible(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-    });
+    /* Two facts, combined: scrolled past the sentinel, and the footer NOT on
+       screen. The control used to stay up over the footer, where it sat on top
+       of the "Acceso personal" link and, a band earlier, on the contact
+       details — a floating button covering the thing the visitor scrolled
+       down to read. By the footer the header's links and the page's end are
+       right there anyway. */
+    let pastSentinel = false;
+    let footerInView = false;
+    const sync = () => setIsVisible(pastSentinel && !footerInView);
 
+    const io = new IntersectionObserver(([entry]) => {
+      pastSentinel = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+      sync();
+    });
     io.observe(el);
-    return () => io.disconnect();
+
+    const footer = document.querySelector('footer');
+    const footerIo = footer
+      ? new IntersectionObserver(([entry]) => {
+          footerInView = entry.isIntersecting;
+          sync();
+        })
+      : null;
+    if (footer) footerIo?.observe(footer);
+
+    return () => {
+      io.disconnect();
+      footerIo?.disconnect();
+    };
   }, []);
 
   const scrollToTop = () => {

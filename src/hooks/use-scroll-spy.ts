@@ -65,14 +65,28 @@ const PIN_CEILING = 2400;
 export function useScrollSpy(groups: SpyGroup[], resetKey = '') {
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
-  // The array identity changes every render; the observer must not.
-  const groupsRef = useRef(groups);
-  groupsRef.current = groups;
   // `resetKey` is the route: the observers hold element references, and a
   // client-side navigation replaces every one of them. Without it, arriving at
   // the homepage from another page leaves the spy watching detached nodes and
   // the bar never lights up again.
   const signature = `${resetKey}::${groups.map((g) => `${g.key}:${g.sections.join('|')}`).join(',')}`;
+
+  // A new route clears the indicator, adjusted during render so no page paints
+  // with the previous page's section lit — the booking page must not arrive
+  // with "Contacto" underlined because that is where the homepage was left.
+  const [spiedSignature, setSpiedSignature] = useState(signature);
+  if (spiedSignature !== signature) {
+    setSpiedSignature(signature);
+    setActiveKey(null);
+  }
+
+  // The array identity changes every render; the observer must not. Updated in
+  // an effect (declared before the observer's, so it runs first), never during
+  // render.
+  const groupsRef = useRef(groups);
+  useEffect(() => {
+    groupsRef.current = groups;
+  });
 
   const pinnedUntil = useRef(0);
   const pinCeiling = useRef(0);
@@ -81,13 +95,13 @@ export function useScrollSpy(groups: SpyGroup[], resetKey = '') {
 
   // Re-checks when the pin is due to lift, rescheduling itself if a crossing
   // pushed the deadline out in the meantime.
-  const scheduleRelease = useCallback(() => {
+  const scheduleRelease = useCallback(function reschedule() {
     if (pinTimer.current) clearTimeout(pinTimer.current);
     pinTimer.current = setTimeout(
       () => {
         pinTimer.current = null;
         if (Date.now() < pinnedUntil.current) {
-          scheduleRelease();
+          reschedule();
           return;
         }
         resolveRef.current?.();
@@ -112,11 +126,9 @@ export function useScrollSpy(groups: SpyGroup[], resetKey = '') {
       });
     });
 
-    // Not the homepage (or the sections were renamed): no spy, no active item.
-    if (ordered.length === 0) {
-      setActiveKey(null);
-      return;
-    }
+    // Not the homepage (or the sections were renamed): no spy. The active item
+    // was already cleared when the route changed (see `spiedSignature`).
+    if (ordered.length === 0) return;
 
     const inBand = new Map<string, boolean>();
     let atEnd = false;

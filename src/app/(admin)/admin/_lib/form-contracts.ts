@@ -37,6 +37,14 @@ export const SETTINGS_FIELDS = {
  */
 export type LoginState =
   | { status: 'idle' }
-  | { status: 'error'; message: string; field?: 'email' | 'password' };
+  | {
+      status: 'error';
+      message: string;
+      field?: 'email' | 'password';
+      /** What the person typed, so the form can put it back: React 19 resets
+       *  the form after the action, and a wrong password used to wipe the
+       *  email with it. */
+      email?: string;
+    };
 
 export const LOGIN_INITIAL_STATE: LoginState = { status: 'idle' };

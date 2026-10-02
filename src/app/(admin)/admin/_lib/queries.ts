@@ -33,6 +33,7 @@
 import 'server-only';
 
 import { cache } from 'react';
+import { redirect } from 'next/navigation';
 import {
   and,
   asc,
@@ -50,6 +51,7 @@ import {
 import { appointmentBooking } from '@/lib/data';
 import { db } from '@/lib/db';
 import { formatDatabaseFailure } from '@/lib/db-errors';
+import { serviceLabelEs } from '@/lib/service-catalog';
 import {
   appointments,
   contactMessages,
@@ -77,6 +79,8 @@ import {
   type MessageSort,
   type TestimonialSort,
 } from './list-params';
+import { patientContactLinks } from './patient-contact';
+import { ADMIN_LOGIN_PATH, readAdminSessionOnce } from './session';
 
 /* ============================================================================
    Outcome
@@ -93,8 +97,28 @@ export type QueryOutcome<T> =
  * the bound values as an own `params` key and inlines them in its message, so
  * `console.error('...', error)` on a query filtered by a patient's email prints
  * that email into a log this project does not own.
+ *
+ * Every read is authorised HERE, not only in the panel layout. A layout that
+ * withholds `{children}` does not stop the page beneath it from running: the
+ * router renders segments independently, so a signed-in non-member (or a
+ * revoked member whose Neon Auth session is still valid) received the full
+ * appointment rows in the RSC payload while the screen showed "Esta cuenta no
+ * tiene acceso". On client-side navigation the layout does not re-run at all.
+ * The check sits outside the try so a redirect is not swallowed as a failure.
  */
 async function runQuery<T>(label: string, run: () => Promise<T>): Promise<QueryOutcome<T>> {
+  const check = await readAdminSessionOnce();
+  if (check.status === 'anonymous') redirect(ADMIN_LOGIN_PATH);
+  if (check.status !== 'authenticated') {
+    return {
+      ok: false,
+      detail:
+        check.status === 'forbidden'
+          ? 'Esta cuenta no tiene acceso a los datos del panel.'
+          : check.detail,
+    };
+  }
+
   try {
     return { ok: true, data: await run() };
   } catch (error) {
@@ -142,8 +166,16 @@ function combine(...clauses: (SQL | undefined)[]): SQL | undefined {
 export interface AppointmentRow {
   id: string;
   name: string;
-  email: string;
+  /** Null since migration 0005: email is optional on the booking form, and
+   *  the clinic confirms by phone. */
+  email: string | null;
   phone: string | null;
+  /** `tel:` and wa.me links for calling the patient back, normalised from the
+   *  free-text phone column (see patient-contact.ts). */
+  phoneHref: string | null;
+  whatsappHref: string | null;
+  /** Already folded through `serviceLabelEs`, so a request stored as "Dental
+   *  Implants" or "Implantes Dentales" reads as the current Spanish title. */
   serviceType: string;
   reason: string;
   isUrgent: boolean;
@@ -177,6 +209,8 @@ export interface ListQuery<TStatus extends string, TSort extends string> {
   search: string;
   status: TStatus | null;
   sort: TSort;
+  /** Appointments only: restrict to requests the patient flagged urgent. */
+  urgentOnly?: boolean;
 }
 
 const timeLabels = appointmentBooking.es.reasonPrefix.times;
@@ -187,7 +221,8 @@ function toAppointmentRow(row: typeof appointments.$inferSelect, now: number): A
     name: row.name,
     email: row.email,
     phone: row.phone,
-    serviceType: row.serviceType,
+    ...patientContactLinks(row.phone),
+    serviceType: serviceLabelEs(row.serviceType),
     reason: row.reason,
     isUrgent: row.isUrgent,
     status: row.status,
@@ -233,8 +268,12 @@ export function listAppointments(
   query: ListQuery<AppointmentStatus, AppointmentSort>,
 ): Promise<QueryOutcome<ListPage<AppointmentRow>>> {
   return runQuery('appointment list', async () => {
+    /* `email` and `phone` are both nullable; `ILIKE` on NULL is NULL, which an
+       OR over the other columns absorbs, so a patient who left email empty is
+       still found by name. */
     const where = combine(
       query.status ? eq(appointments.status, query.status) : undefined,
+      query.urgentOnly ? eq(appointments.isUrgent, true) : undefined,
       searchClause(query.search, [
         appointments.name,
         appointments.email,
@@ -277,6 +316,8 @@ export interface MessageRow {
   name: string;
   email: string;
   phone: string | null;
+  phoneHref: string | null;
+  whatsappHref: string | null;
   message: string;
   status: ContactMessageStatus;
   submittedAtIso: string;
@@ -323,6 +364,7 @@ export function listMessages(
         name: row.name,
         email: row.email,
         phone: row.phone,
+        ...patientContactLinks(row.phone),
         message: row.message,
         status: row.status,
         submittedAtIso: row.submittedAt.toISOString(),
@@ -621,9 +663,28 @@ export interface ServiceDemand {
   total: number;
 }
 
-/** The five services patients ask for most, over the whole table — not over
- *  whatever happened to be on the first page. */
-export function getServiceDemand(): Promise<QueryOutcome<ServiceDemand[]>> {
+export interface ServiceDemandSummary {
+  /** The five most requested, after folding spellings together. */
+  services: ServiceDemand[];
+  /** Every appointment in the table — the denominator for any share quoted
+   *  from this chart, so a percentage is "of all requests", not "of the five
+   *  bars that happen to be drawn". */
+  total: number;
+}
+
+/**
+ * The five services patients ask for most, over the whole table — not over
+ * whatever happened to be on the first page.
+ *
+ * Ranked AFTER folding, not in SQL. `service_type` holds whatever title the
+ * patient was shown, so the same treatment appears as "Implantes Dentales",
+ * "Dental Implants" and, from now on, "Implantes dentales". A `GROUP BY …
+ * LIMIT 5` ranked those as three services, drew English names in a
+ * Spanish-only panel, and could push a genuine fifth service off the chart to
+ * make room for a second spelling of the first. There are only a handful of
+ * distinct values, so every group comes back and the merge happens here.
+ */
+export function getServiceDemand(): Promise<QueryOutcome<ServiceDemandSummary>> {
   return runQuery('service demand', async () => {
     const rows = await db
       .select({
@@ -631,11 +692,22 @@ export function getServiceDemand(): Promise<QueryOutcome<ServiceDemand[]>> {
         total: sql<number>`count(*)::int`,
       })
       .from(appointments)
-      .groupBy(appointments.serviceType)
-      .orderBy(desc(sql`count(*)`))
-      .limit(5);
+      .groupBy(appointments.serviceType);
 
-    return rows;
+    const merged = new Map<string, number>();
+    let total = 0;
+    for (const row of rows) {
+      const label = serviceLabelEs(row.service);
+      merged.set(label, (merged.get(label) ?? 0) + row.total);
+      total += row.total;
+    }
+
+    const services = [...merged.entries()]
+      .map(([service, count]) => ({ service, total: count }))
+      .sort((a, b) => b.total - a.total || a.service.localeCompare(b.service, 'es'))
+      .slice(0, 5);
+
+    return { services, total };
   });
 }
 

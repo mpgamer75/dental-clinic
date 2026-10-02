@@ -27,6 +27,7 @@
 
 import 'server-only';
 
+import { cache } from 'react';
 import { redirect } from 'next/navigation';
 
 import { and, eq, isNull } from 'drizzle-orm';
@@ -160,6 +161,18 @@ export async function readAdminSession(): Promise<SessionCheck> {
 }
 
 /**
+ * The same check, memoised for one server render.
+ *
+ * The panel layout and every read in queries.ts ask the question in the same
+ * request, and React's per-request `cache` makes that one auth round trip and
+ * one staff lookup instead of one per query. It is deliberately NOT what
+ * mutations use: a Server Action runs outside a render, where `cache` does not
+ * memoise, and guardAdminMutation calls `readAdminSession` directly so each
+ * write is judged on a fresh answer.
+ */
+export const readAdminSessionOnce = cache(readAdminSession);
+
+/**
  * The page guard. Returns the actor, or does not return at all.
  *
  * `redirect` throws, so an 'unavailable' result cannot fall through to the
@@ -172,7 +185,7 @@ export async function requireAdminPage(): Promise<
   | { ok: true; actor: AdminActor }
   | { ok: false; detail: string; forbidden?: boolean }
 > {
-  const check = await readAdminSession();
+  const check = await readAdminSessionOnce();
 
   if (check.status === 'anonymous') redirect(ADMIN_LOGIN_PATH);
   if (check.status === 'unavailable') return { ok: false, detail: check.detail };

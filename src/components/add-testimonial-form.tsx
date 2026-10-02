@@ -1,8 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from 'zod';
+import { Loader2, Send } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,15 +20,43 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { submitTestimonialForm } from '@/app/actions';
-import type { TestimonialFormSubmitData } from '@/lib/types';
-import { Loader2, Send, User, MessageSquareHeart, MapPin } from 'lucide-react';
+import type { TestimonialFormSubmitData, ZodMessages } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
 import { formTranslations, actionMessages, formCommon } from '@/lib/data';
-import { ConsentNotice } from '@/components/form-feedback';
+import {
+  CharacterCounter,
+  ConsentNotice,
+  RequiredFieldsNote,
+  RequiredMark,
+  fieldClass,
+  fieldLabelClass,
+  textareaClass,
+} from '@/components/form-feedback';
 
-const inputClass =
-  'h-12 border-2 border-muted-foreground/20 bg-background text-base transition-colors focus-visible:border-primary';
-const labelClass = 'flex items-center gap-2 text-base font-medium';
+/** `app.testimonials` CHECKs the quote at 15–500. */
+const QUOTE_MAX = 500;
+
+const FIELD_ORDER = ['name', 'quote', 'location'] as const;
+type TestimonialField = (typeof FIELD_ORDER)[number];
+
+const isTestimonialField = (key: string): key is TestimonialField =>
+  (FIELD_ORDER as readonly string[]).includes(key);
+
+/** Client-side hint; `createTestimonialFormSchema` in src/app/actions.ts is
+ *  authoritative and these rules mirror it. */
+function createTestimonialSchema(m: ZodMessages) {
+  return z.object({
+    name: z.string().trim().min(2, { message: m.nameMin }).max(100, { message: m.nameMax }),
+    quote: z
+      .string()
+      .trim()
+      .min(15, { message: m.quoteMin })
+      .max(QUOTE_MAX, { message: m.quoteMax }),
+    location: z.string().trim().max(100, { message: m.locationMax }).optional(),
+  });
+}
+
+type TestimonialFormValues = z.infer<ReturnType<typeof createTestimonialSchema>>;
 
 interface AddTestimonialFormProps {
   onSuccess?: () => void;
@@ -34,58 +65,58 @@ interface AddTestimonialFormProps {
 export function AddTestimonialForm({ onSuccess }: AddTestimonialFormProps) {
   const { lang } = useLanguage();
   const { toast } = useToast();
-  const currentFormStrings = formTranslations.testimonialForm[lang];
-  const currentActionMessages = actionMessages[lang];
+  const strings = formTranslations.testimonialForm[lang];
+  const messages = actionMessages[lang];
   const c = formCommon[lang];
 
-  const clientSchema = z.object({
-    name: z.string().min(2, { message: currentActionMessages.zod.nameMin }),
-    quote: z
-      .string()
-      .min(15, { message: currentActionMessages.zod.quoteMin })
-      .max(500, { message: currentActionMessages.zod.quoteMax }),
-    location: z.string().optional(),
-  });
+  const schema = useMemo(() => createTestimonialSchema(messages.zod), [messages.zod]);
 
-  const form = useForm<TestimonialFormSubmitData>({
-    resolver: zodResolver(clientSchema),
+  const form = useForm<TestimonialFormValues>({
+    resolver: zodResolver(schema),
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
     defaultValues: { name: '', quote: '', location: '' },
   });
 
   const {
+    control,
     formState: { isSubmitting },
-    watch,
   } = form;
-  const quoteValue = watch('quote');
 
-  async function onSubmit(data: TestimonialFormSubmitData) {
+  async function onValid(values: TestimonialFormValues) {
+    const payload: TestimonialFormSubmitData = {
+      name: values.name,
+      quote: values.quote,
+      location: values.location,
+    };
+
     try {
-      const result = await submitTestimonialForm(data, lang);
+      const result = await submitTestimonialForm(payload, lang);
       if (result.success) {
-        toast({ title: currentFormStrings.successToastTitle, description: result.message });
+        toast({ title: strings.successToastTitle, description: result.message });
         form.reset();
         onSuccess?.();
-      } else {
-        toast({
-          title: currentFormStrings.errorToastTitle,
-          description: result.message || currentActionMessages.testimonialError,
-          variant: 'destructive',
-        });
-        if (result.errors) {
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            if (messages && messages.length > 0) {
-              form.setError(field as keyof TestimonialFormSubmitData, {
-                type: 'manual',
-                message: messages.join(', '),
-              });
-            }
-          });
+        return;
+      }
+
+      toast({
+        title: strings.errorToastTitle,
+        description: result.message || messages.testimonialError,
+        variant: 'destructive',
+      });
+
+      if (result.errors) {
+        for (const [field, fieldMessages] of Object.entries(result.errors)) {
+          if (!fieldMessages?.length || !isTestimonialField(field)) continue;
+          form.setError(field, { type: 'server', message: fieldMessages.join(' ') });
         }
+        const firstBad = FIELD_ORDER.find((field) => result.errors?.[field]?.length);
+        if (firstBad) requestAnimationFrame(() => form.setFocus(firstBad));
       }
     } catch {
       toast({
-        title: currentFormStrings.unexpectedErrorToastTitle,
-        description: currentActionMessages.testimonialError,
+        title: strings.unexpectedErrorToastTitle,
+        description: messages.testimonialError,
         variant: 'destructive',
       });
     }
@@ -93,23 +124,25 @@ export function AddTestimonialForm({ onSuccess }: AddTestimonialFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={(event) => form.handleSubmit(onValid)(event)} noValidate className="space-y-6">
+        <RequiredFieldsNote lang={lang} />
+
         <FormField
-          control={form.control}
+          control={control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className={labelClass}>
-                <User className="h-4 w-4 text-primary" />
-                {currentFormStrings.nameLabel}
-                <span className="text-destructive">*</span>
+              <FormLabel className={fieldLabelClass}>
+                {strings.nameLabel}
+                <RequiredMark />
               </FormLabel>
               <FormControl>
                 <Input
-                  placeholder={currentFormStrings.namePlaceholder}
+                  placeholder={strings.namePlaceholder}
                   autoComplete="name"
                   maxLength={100}
-                  className={inputClass}
+                  aria-required="true"
+                  className={fieldClass}
                   {...field}
                 />
               </FormControl>
@@ -119,25 +152,34 @@ export function AddTestimonialForm({ onSuccess }: AddTestimonialFormProps) {
         />
 
         <FormField
-          control={form.control}
+          control={control}
           name="quote"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className={labelClass}>
-                <MessageSquareHeart className="h-4 w-4 text-primary" />
-                {currentFormStrings.quoteLabel}
-                <span className="text-destructive">*</span>
+              <FormLabel className={fieldLabelClass}>
+                {strings.quoteLabel}
+                <RequiredMark />
               </FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder={currentFormStrings.quotePlaceholder}
-                  maxLength={500}
-                  className="min-h-[120px] resize-none border-2 border-muted-foreground/20 bg-background text-base transition-colors focus-visible:border-primary"
+                  placeholder={strings.quotePlaceholder}
+                  maxLength={QUOTE_MAX}
+                  aria-required="true"
+                  className={textareaClass}
                   {...field}
                 />
               </FormControl>
-              <FormDescription className="text-right text-xs">
-                {quoteValue?.length || 0} / 500
+              <FormDescription className="flex justify-end text-small text-ink-soft">
+                <span className="sr-only">
+                  {c.characterLimitNote.replace('{{max}}', String(QUOTE_MAX))}
+                </span>
+                <CharacterCounter
+                  control={control}
+                  name="quote"
+                  max={QUOTE_MAX}
+                  remainingLabel={c.charactersRemaining}
+                  limitLabel={c.characterLimitReached.replace('{{max}}', String(QUOTE_MAX))}
+                />
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -145,21 +187,19 @@ export function AddTestimonialForm({ onSuccess }: AddTestimonialFormProps) {
         />
 
         <FormField
-          control={form.control}
+          control={control}
           name="location"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className={labelClass}>
-                <MapPin className="h-4 w-4 text-primary" />
-                {currentFormStrings.locationLabel}
-              </FormLabel>
+              <FormLabel className={fieldLabelClass}>{strings.locationLabel}</FormLabel>
               <FormControl>
                 <Input
-                  placeholder={currentFormStrings.locationPlaceholder}
+                  placeholder={strings.locationPlaceholder}
                   autoComplete="address-level2"
                   maxLength={100}
-                  className={inputClass}
+                  className={fieldClass}
                   {...field}
+                  value={field.value ?? ''}
                 />
               </FormControl>
               <FormMessage />
@@ -169,22 +209,20 @@ export function AddTestimonialForm({ onSuccess }: AddTestimonialFormProps) {
 
         <Button
           type="submit"
-          variant="cta"
           size="lg"
           className="w-full"
           disabled={isSubmitting}
+          aria-busy={isSubmitting || undefined}
         >
           {isSubmitting ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           ) : (
-            <Send className="h-5 w-5" />
+            <Send className="h-5 w-5" aria-hidden="true" />
           )}
-          {isSubmitting ? currentFormStrings.submittingButtonText : currentFormStrings.submitButtonText}
+          {isSubmitting ? strings.submittingButtonText : strings.submitButtonText}
         </Button>
 
-        <p className="text-center text-xs leading-relaxed text-muted-foreground">
-          {c.testimonialConsent}
-        </p>
+        <p className="text-center text-small leading-relaxed text-ink-soft">{c.testimonialConsent}</p>
         <ConsentNotice lang={lang} />
       </form>
     </Form>

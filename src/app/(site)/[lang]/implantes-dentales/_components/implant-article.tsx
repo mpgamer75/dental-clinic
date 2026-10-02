@@ -13,6 +13,7 @@ import {
   type ImplantPageContent,
   type ImplantSection,
 } from '@/lib/data';
+import { TEL_HREF } from '@/lib/contact';
 import type { Language } from '@/lib/types';
 
 export interface ArticleCrumb {
@@ -67,8 +68,6 @@ export function ImplantArticle({
 }: ImplantArticleProps) {
   const ui = implantCluster[lang].ui;
   const readMore = generalUiStrings[lang].readMore;
-  const phone = contactDetails.phone[lang];
-  const telHref = `tel:${phone.replace(/[^\d+]/g, '')}`;
   const appointmentHref = `/${lang}/agendar-cita`;
   const homeHref = `/${lang}`;
 
@@ -172,7 +171,7 @@ export function ImplantArticle({
             ))}
 
             <Reveal className="mt-14 border-t border-line pt-6">
-              <p className="text-small leading-relaxed text-ink-faint">
+              <p className="max-w-measure text-small leading-relaxed text-ink-faint">
                 {ui.medicalDisclaimer}
               </p>
               <p className="mt-3 text-small text-ink-faint">
@@ -271,7 +270,7 @@ export function ImplantArticle({
               <Link href={appointmentHref}>{ui.ctaPrimary}</Link>
             </Button>
             <Button asChild size="xl" variant="onDrench">
-              <a href={telHref}>
+              <a href={TEL_HREF}>
                 <Phone className="h-5 w-5" aria-hidden="true" />
                 {ui.ctaCall}
               </a>

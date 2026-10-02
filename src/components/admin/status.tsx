@@ -142,20 +142,18 @@ export function UrgentBadge({ className }: { className?: string }) {
    ========================================================================== */
 
 /**
- * Reads the demo flag off a row without requiring it in the row's type.
+ * Whether a row was invented by the demo-data script.
  *
- * The view models in _lib/queries.ts do not carry `isDemo` yet — the column
- * exists on all three tables and `getDemoDataPresence` counts it, but the row
- * mappers do not select it through. This signature means the three tables can
- * mark their rows the moment that one field lands, with no further edit here;
- * until then it reads false, which is the same answer it gives for a real
- * patient.
+ * All three view models in _lib/queries.ts carry `isDemo` now; the optional
+ * field keeps this usable on any row-shaped object, and an absent flag reads
+ * as false — the same answer it gives for a real patient. The testimonial
+ * table also uses it to withhold "Aprobar" (and reviewTestimonial refuses it
+ * server-side), because approving an invented quote publishes it.
  *
- * `id` is in the parameter type only to satisfy TypeScript's weak-type check:
- * a parameter whose every property is optional accepts nothing that does not
- * share at least one of them, and today none of the three row types shares
- * `isDemo`. Every row has an id, so requiring it costs nothing and keeps the
- * function honest about what it takes — a row, not an arbitrary object.
+ * `id` is in the parameter type to satisfy TypeScript's weak-type check: a
+ * parameter whose every property is optional accepts nothing that does not
+ * share at least one of them. Every row has an id, so requiring it costs
+ * nothing and keeps the function honest about what it takes.
  */
 export function isDemoRow(row: { id: string; isDemo?: boolean }): boolean {
   return row.isDemo === true;

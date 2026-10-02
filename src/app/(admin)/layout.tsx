@@ -37,7 +37,9 @@ export const metadata: Metadata = {
 
 export default function AdminRootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={fontVariables} suppressHydrationWarning>
+    // See the site layout: keeps route changes instant despite the global
+    // `scroll-behavior: smooth`.
+    <html lang="es" className={fontVariables} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
         <ThemeProvider
           attribute="class"

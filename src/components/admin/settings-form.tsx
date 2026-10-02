@@ -17,8 +17,10 @@ import { CsrfInput, useCsrf } from './csrf-provider';
 /* ============================================================================
    SITE SETTINGS
    ----------------------------------------------------------------------------
-   Four booleans that have existed in `app.site_settings` since the first
-   migration and that nothing has ever read or written. These are the controls.
+   Four booleans in `app.site_settings`. These are the controls; the public
+   site reads them through src/lib/site-settings.ts, its pages to decide what
+   to render and its form actions to decide what to accept. For a long time
+   nothing read them at all, and every switch here was a placebo.
 
    Each toggle says what happens to a VISITOR when it is off, not what the
    column is called. "allow_appointments" is a schema name; "los pacientes no
@@ -51,7 +53,7 @@ const TOGGLES: readonly ToggleSpec[] = [
     field: SETTINGS_FIELDS.allowAppointments,
     label: 'Solicitudes de cita',
     offEffect:
-      'Con esta opción desactivada, el formulario de citas deja de aceptar solicitudes y se invita al paciente a llamar por teléfono.',
+      'Con esta opción desactivada, el formulario de citas deja de aceptar solicitudes y en su lugar se invita al paciente a llamar o a escribir por WhatsApp.',
     icon: CalendarDays,
   },
   {
@@ -59,7 +61,7 @@ const TOGGLES: readonly ToggleSpec[] = [
     field: SETTINGS_FIELDS.allowContactForm,
     label: 'Formulario de contacto',
     offEffect:
-      'Con esta opción desactivada, el sitio deja de recibir mensajes escritos y solo se muestran el teléfono y la dirección.',
+      'Con esta opción desactivada, el sitio deja de recibir mensajes escritos y solo se muestran el teléfono, el WhatsApp y la dirección.',
     icon: MailQuestion,
   },
   {
@@ -143,15 +145,18 @@ export function SettingsForm({ settings }: { settings: SiteSettingsView }) {
               Modo mantenimiento
             </label>
             <p className="mt-1 max-w-measure text-body text-ink-soft">
-              Cuando está activo, el sitio público muestra un aviso de mantenimiento en lugar del
-              contenido habitual. Úselo solo mientras se trabaja en el sitio.
+              Cuando está activo, todas las páginas del sitio público muestran un aviso de
+              mantenimiento —con la dirección, el teléfono, el WhatsApp y el horario— en lugar de su
+              contenido habitual, y los formularios dejan de aceptar envíos. Úselo solo mientras se
+              trabaja en el sitio.
             </p>
             {draft.maintenanceMode && (
               <p
                 role="status"
                 className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-small font-medium text-destructive"
               >
-                Al guardar, el sitio público dejará de estar disponible para los pacientes.
+                Al guardar, los pacientes verán el aviso de mantenimiento en lugar del sitio. Podrán
+                seguir llamando o escribiendo por WhatsApp.
               </p>
             )}
           </div>

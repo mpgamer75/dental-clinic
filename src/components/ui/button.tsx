@@ -31,9 +31,11 @@ const buttonVariants = cva(
         /** Alias kept so existing call sites don't break. */
         cta: "bg-primary text-primary-foreground shadow-e1 hover:bg-primary-hover",
         /** Brass — the primary action *on* a drenched band, where the navy
-            primary on a navy ground would disappear. Carries ink, not white (AA). */
+            primary on a navy ground would disappear. Carries ink, not white (AA).
+            No elevation: it only ever sits on navy, where a navy-tinted shadow
+            is invisible — it was a paint cost with nothing to show for it. */
         brass:
-          "bg-brass text-brass-on shadow-e2 hover:bg-brass-ink hover:text-brass-on",
+          "bg-brass text-brass-on hover:bg-brass-ink hover:text-brass-on",
         /** Secondary action on a drenched band. */
         onDrench:
           "border border-drench-on/30 bg-transparent text-drench-on hover:border-drench-on/60 hover:bg-drench-on/10",

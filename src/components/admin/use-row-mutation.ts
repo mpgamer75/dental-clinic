@@ -28,6 +28,16 @@ import { useMutationFormData } from './csrf-provider';
    ends up deleting the wrong thing.
    ========================================================================== */
 
+export interface RowMutationOptions {
+  /**
+   * Skip the toast when the write succeeds. For side effects the person did
+   * not ask for as such — marking a message read because they opened it — a
+   * "Listo" on every open is noise that trains people to ignore the toast.
+   * A FAILURE is always reported: that is the half this hook exists for.
+   */
+  quietOnSuccess?: boolean;
+}
+
 export interface RowMutation {
   /** The row currently being written to, so its controls can go quiet. */
   pendingId: string | null;
@@ -35,6 +45,7 @@ export interface RowMutation {
     id: string,
     action: (formData: FormData) => Promise<MutationResult>,
     fields?: Record<string, string>,
+    options?: RowMutationOptions,
   ) => void;
 }
 
@@ -42,11 +53,19 @@ export function useRowMutation(): RowMutation {
   const router = useRouter();
   const { toast } = useToast();
   const buildFormData = useMutationFormData();
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  /* The row last written to, and whether that write is still in flight.
+     "Busy" is DERIVED from the transition rather than cleared in a `finally`:
+     the finally ran the moment the action returned, while `router.refresh()`
+     was still fetching the new rows, so the row came back to life showing its
+     OLD status for a beat and the confirmation looked as if it had not taken.
+     The refresh is scheduled inside this async transition, so `isPending`
+     stays true until the refreshed row has actually rendered. */
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const pendingId = isPending ? activeId : null;
 
   const run = useCallback<RowMutation['run']>(
-    (id, action, fields = {}) => {
+    (id, action, fields = {}, options = {}) => {
       const formData = buildFormData({ id, ...fields });
 
       /* No token yet — the provider is still minting one. Nothing is sent,
@@ -60,17 +79,19 @@ export function useRowMutation(): RowMutation {
         return;
       }
 
-      setPendingId(id);
+      setActiveId(id);
 
       startTransition(async () => {
         try {
           const result = await action(formData);
 
-          toast({
-            title: result.ok ? 'Listo' : 'No se guardó el cambio',
-            description: result.message,
-            variant: result.ok ? 'success' : 'destructive',
-          });
+          if (!result.ok || !options.quietOnSuccess) {
+            toast({
+              title: result.ok ? 'Listo' : 'No se guardó el cambio',
+              description: result.message,
+              variant: result.ok ? 'success' : 'destructive',
+            });
+          }
 
           if (result.ok) router.refresh();
         } catch {
@@ -83,8 +104,6 @@ export function useRowMutation(): RowMutation {
               'La conexión con el servidor se interrumpió y no se guardó ningún cambio. Inténtelo de nuevo.',
             variant: 'destructive',
           });
-        } finally {
-          setPendingId(null);
         }
       });
     },

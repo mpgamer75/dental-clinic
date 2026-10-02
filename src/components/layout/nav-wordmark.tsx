@@ -58,12 +58,15 @@ export function NavWordmark({
       )}
     >
       <span className="relative h-[1.9rem] w-[1.9rem] shrink-0">
+        {/* Eager, not preloaded: it is in the first paint either way, and a
+            <link rel=preload> for a 34px mark made a 72 KB PNG compete with the
+            hero photograph for the connection on every page. */}
         <Image
           src="/images/logo_valerio.png"
           alt=""
           fill
           className="object-contain dark:brightness-0 dark:invert"
-          priority
+          loading="eager"
           sizes="34px"
         />
       </span>

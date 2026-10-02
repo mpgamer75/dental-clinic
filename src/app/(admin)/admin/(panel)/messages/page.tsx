@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { MailX } from 'lucide-react';
 
 import { ListToolbar } from '@/components/admin/list-toolbar';
@@ -16,6 +17,7 @@ import {
   parseMessageStatus,
   parsePage,
   parseSearch,
+  lastPageFor,
   type RawSearchParams,
 } from '../../_lib/list-params';
 import { listMessages } from '../../_lib/queries';
@@ -55,6 +57,14 @@ export default async function MessagesPage({
   };
 
   const result = await listMessages(query);
+
+  /* Asked for a page past the end — typically after working through a filtered
+     list until its last page emptied. Sent to the real last page with every
+     other parameter intact, instead of a "nothing here" that has no pager to
+     reach the rows that still exist. */
+  if (result.ok && result.data.rows.length === 0 && result.data.total > 0 && query.page > 1) {
+    redirect(buildListHref(PATHNAME, raw, { page: String(lastPageFor(result.data.total)) }));
+  }
   const filtered = query.search !== '' || query.status !== null;
 
   return (

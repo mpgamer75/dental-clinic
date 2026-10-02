@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 import { absoluteUrl, hreflangAlternatesAbsolute, LOCALES, localePath } from '@/lib/site';
-import { IMPLANT_CLUSTER_SEGMENT, IMPLANT_SPOKE_SLUGS } from '@/lib/data';
+import { IMPLANT_CLUSTER_SEGMENT, IMPLANT_CONTENT_REVISED, IMPLANT_SPOKE_SLUGS } from '@/lib/data';
 
 /**
  * One entry per real document, emitted once per locale with its hreflang set.
@@ -11,6 +11,8 @@ import { IMPLANT_CLUSTER_SEGMENT, IMPLANT_SPOKE_SLUGS } from '@/lib/data';
  */
 interface SitemapRoute {
   path: string;
+  /** When the document last changed in substance, if it is known. */
+  lastModified?: string;
   changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'];
   priority: number;
 }
@@ -24,9 +26,10 @@ const ROUTES: SitemapRoute[] = [
   // homepage fragment. The spokes sit just below it, above the booking page,
   // because they are the entry points for the long-tail queries the keyword
   // list has always targeted and nothing on the site answered.
-  { path: IMPLANT_CLUSTER_SEGMENT, changeFrequency: 'monthly', priority: 1.0 },
+  { path: IMPLANT_CLUSTER_SEGMENT, lastModified: IMPLANT_CONTENT_REVISED, changeFrequency: 'monthly', priority: 1.0 },
   ...IMPLANT_SPOKE_SLUGS.map((slug) => ({
     path: `${IMPLANT_CLUSTER_SEGMENT}/${slug}`,
+    lastModified: IMPLANT_CONTENT_REVISED,
     changeFrequency: 'monthly' as const,
     priority: 0.9,
   })),
@@ -36,8 +39,6 @@ const ROUTES: SitemapRoute[] = [
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const currentDate = new Date();
-
   // NOTE: homepage section anchors (#servicios, #implantes, …) are deliberately
   // NOT listed.
   //
@@ -51,7 +52,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return LOCALES.flatMap((lang) =>
     ROUTES.map((route) => ({
       url: absoluteUrl(localePath(lang, route.path)),
-      lastModified: currentDate,
+      // Only where the date is real. It used to be `new Date()` for every URL,
+      // so every build announced every page as freshly changed — a signal
+      // crawlers learn to ignore. The implant pages carry the date their
+      // clinical copy was last revised; the rest omit it rather than guess.
+      ...(route.lastModified ? { lastModified: route.lastModified } : {}),
       changeFrequency: route.changeFrequency,
       priority: route.priority,
       alternates: { languages: hreflangAlternatesAbsolute(route.path) },

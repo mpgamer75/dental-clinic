@@ -5,7 +5,9 @@ import { ArrowRight, Clock, Languages, MapPin, Phone, X } from 'lucide-react';
 import { useEffect, useRef, type CSSProperties, type RefObject } from 'react';
 
 import { contactDetails, generalUiStrings, navStrings } from '@/lib/data';
+import { TEL_HREF, contactLinkLabels, whatsappHref } from '@/lib/contact';
 import { useLanguage } from '@/contexts/language-context';
+import { WhatsAppIcon } from '@/components/icons/whatsapp';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 import { useFocusTrap } from '@/hooks/use-focus-trap';
@@ -71,8 +73,7 @@ export function MobileNavOverlay({
 
   const homeHref = `/${lang}`;
   const appointmentsHref = `/${lang}/agendar-cita`;
-  const phone = contactDetails.phone[lang];
-  const telHref = `tel:${phone.replace(/[^\d+]/g, '')}`;
+  const links = contactLinkLabels(lang);
   const address = contactDetails.address[lang];
   const mapLink = contactDetails.mapLink[lang];
   const schedule = contactDetails.schedule[lang];
@@ -198,12 +199,25 @@ export function MobileNavOverlay({
           <div>
             <p className={rowLabel}>{t.callLabel}</p>
             <a
-              href={telHref}
-              aria-label={t.callAria.replace('{{phone}}', phone)}
+              href={TEL_HREF}
+              aria-label={links.callAria}
               className={`mt-1.5 inline-flex min-h-11 items-center gap-2.5 py-1 font-heading text-h4 leading-[1.18] text-ink transition-colors duration-fast hover:text-primary ${focusRing}`}
             >
               <Phone className="h-4 w-4 shrink-0 text-brass-ink" aria-hidden="true" />
-              <span className="tabular">{phone}</span>
+              <span className="tabular">{links.phone}</span>
+            </a>
+            {/* WhatsApp beside the number: for most Dominican patients it is
+                the way they would rather ask, and on a phone it is one tap. */}
+            <a
+              href={whatsappHref(lang)}
+              aria-label={links.whatsappAria}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className={`mt-1 inline-flex h-11 items-center gap-2 rounded-lg border border-line-strong px-4 text-small font-medium text-ink transition-colors duration-fast hover:border-primary/50 hover:text-primary ${focusRing}`}
+            >
+              <WhatsAppIcon className="h-4 w-4 shrink-0" />
+              {links.whatsapp}
             </a>
           </div>
 

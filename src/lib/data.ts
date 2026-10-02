@@ -1,43 +1,61 @@
-import type { Language, ContactDetails, ServiceData, TestimonialData, FAQData, NavItemData, BaseMetadata, FormTranslations, ActionMessages, GeneralUIData, AdminNavItemData, CarouselImageItem, DiplomaData } from './types';
-import { Home, ShieldCheck, MessageCircleQuestion, BadgeInfo, Phone, CalendarDays, LayoutDashboard, MessagesSquare, ShieldAlert, Settings } from 'lucide-react'; 
+import type { Language, ContactDetails, ServiceData, FAQData, FAQItem, FormTranslations, ActionMessages, GeneralUIData, DiplomaData } from './types';
 
-export const navItems: NavItemData = {
-  es: [
-    { label: 'Inicio', href: '/', icon: Home },
-    { label: 'Servicios', href: '/#servicios', icon: ShieldCheck },
-    { label: 'Diplomas', href: '/#diplomas', icon: BadgeInfo },
-    { label: 'Testimonios', href: '/#testimonios', icon: MessageCircleQuestion },
-    { label: 'Preguntas Frecuentes', href: '/#preguntas-frecuentes', icon: BadgeInfo },
-    { label: 'Contacto', href: '/#contacto', icon: Phone },
-    { label: 'Agendar Cita', href: '/agendar-cita', icon: CalendarDays },
-  ],
-  en: [
-    { label: 'Home', href: '/', icon: Home },
-    { label: 'Services', href: '/#servicios', icon: ShieldCheck },
-    { label: 'Diplomas', href: '/#diplomas', icon: BadgeInfo },
-    { label: 'Testimonials', href: '/#testimonios', icon: MessageCircleQuestion },
-    { label: 'FAQ', href: '/#preguntas-frecuentes', icon: BadgeInfo },
-    { label: 'Contact', href: '/#contacto', icon: Phone },
-    { label: 'Schedule Appointment', href: '/agendar-cita', icon: CalendarDays },
-  ]
-};
+/* ============================================================================
+   HOUSE STYLE FOR THE SPANISH COPY
+   ----------------------------------------------------------------------------
+   Two rules, both enforced by reading rather than by tooling, so they are
+   written down here where every edit to this file starts:
 
-export const adminNavItems: AdminNavItemData = {
-  es: [
-    { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { label: 'Citas', href: '/admin/appointments', icon: CalendarDays },
-    { label: 'Mensajes', href: '/admin/messages', icon: MessagesSquare },
-    { label: 'Testimonios', href: '/admin/testimonials', icon: ShieldAlert },
-    { label: 'Configuración', href: '/admin/settings', icon: Settings }, // Cog or Settings
-  ],
-  en: [ 
-    { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { label: 'Appointments', href: '/admin/appointments', icon: CalendarDays },
-    { label: 'Messages', href: '/admin/messages', icon: MessagesSquare },
-    { label: 'Testimonials', href: '/admin/testimonials', icon: ShieldAlert },
-    { label: 'Settings', href: '/admin/settings', icon: Settings },
-  ]
-};
+     - USTED, everywhere. A medical practice whose patients skew past fifty
+       does not address them as "tú". The site used to switch register between
+       bands — the hero said "le atiende", the services said "tu sonrisa", and
+       the appointment form's own urgency toggle said "Marca… si necesitas"
+       under fields that said "Escriba".
+     - Sentence case. "Leer más", "Enviar mensaje", "Política de privacidad".
+       Capitalising every word is an English convention; in Spanish it reads as
+       a translation.
+   ========================================================================== */
+
+/**
+ * How a patient reaches the clinic, in machine form.
+ *
+ * `contactDetails.phone` is the number as Dominicans write it (809-581-7059).
+ * Every `tel:` link used to be built by stripping that string to digits, which
+ * produced `tel:8095817059` — dialable inside the North American numbering plan
+ * and nowhere else, so a visitor reading the dental-tourism page from Spain or
+ * Venezuela tapped "Llamar" and got a dead line. The E.164 form works from any
+ * phone in any country, and it is the same number the structured data already
+ * published.
+ *
+ * WhatsApp is how most Dominican patients actually contact a practice; the
+ * clinic confirmed it answers on the same number.
+ */
+export const clinicContact = {
+  phoneE164: '+18095817059',
+  /** wa.me wants digits only, country code first, no plus sign. */
+  whatsappNumber: '18095817059',
+  /** Pre-filled so the first message is never a blank chat the clinic has to
+   *  decode. Short, and editable by the patient before it is sent. */
+  whatsappMessage: {
+    es: 'Hola, quisiera información para una cita con el Dr. Valerio.',
+    en: 'Hello, I would like information about an appointment with Dr. Valerio.',
+  },
+  labels: {
+    es: {
+      call: 'Llamar',
+      whatsapp: 'WhatsApp',
+      /** Accessible names: the visible labels are one word each. */
+      callAria: 'Llamar a la clínica al {{phone}}',
+      whatsappAria: 'Escribir a la clínica por WhatsApp al {{phone}} (se abre WhatsApp)',
+    },
+    en: {
+      call: 'Call',
+      whatsapp: 'WhatsApp',
+      callAria: 'Call the clinic on {{phone}}',
+      whatsappAria: 'Message the clinic on WhatsApp at {{phone}} (opens WhatsApp)',
+    },
+  },
+} as const;
 
 /**
  * Header / mobile-menu copy.
@@ -127,302 +145,338 @@ export const navStrings: Record<Language, {
   },
 };
 
+/**
+ * The practice's services.
+ *
+ * `key` is the stable identity, and it is what an appointment request is
+ * resolved to on the server (see `src/lib/service-catalog.ts`). Titles are
+ * display text in two languages and they are allowed to change. The column used
+ * to hold whichever title the patient happened to be looking at, so "Implantes
+ * Dentales" and "Dental Implants" were two different bars on the dashboard's
+ * demand chart — and correcting the capitalisation of one word would have split
+ * the history a third time.
+ *
+ * `specialty` marks the three the clinic is built around. The homepage gives
+ * those the weight and lists the rest as general dentistry: eight items at one
+ * weight is what made implants, the commercial priority, read as one option in
+ * eight.
+ *
+ * `summary` is the one sentence the homepage index shows; `description` is the
+ * full text behind "Más información". Neither promises an outcome.
+ */
 export const services: ServiceData = {
   es: [
     {
-      iconName: 'Users', // Prótesis - personnes/multiple dents
-      title: 'Prótesis Dentales',
-      description: 'Restauramos la función y estética de tu sonrisa con prótesis fijas y removibles de alta calidad. Esto incluye coronas individuales para proteger dientes dañados, puentes para reemplazar uno o más dientes ausentes utilizando dientes adyacentes como soporte, y dentaduras completas o parciales para una restauración extensa. Cada solución es personalizada para asegurar comodidad, durabilidad y una apariencia natural.',
+      key: 'implants',
+      iconName: 'Implant',
+      specialty: true,
+      title: 'Implantes dentales',
+      summary: 'Una raíz de titanio que reemplaza el diente perdido y sostiene una corona fija.',
+      description:
+        'Los implantes dentales son la solución más avanzada y duradera para reemplazar dientes perdidos. Consisten en un tornillo de titanio biocompatible que se integra con el hueso maxilar y actúa como una raíz artificial. Sobre el implante se coloca una corona de porcelana o zirconio con el aspecto de un diente natural. Ofrecen una base estable, previenen la pérdida de hueso y devuelven la capacidad de masticar.',
     },
     {
-      iconName: 'Scan', // Implantes - scan/technologie précise
-      title: 'Implantes Dentales',
-      description: 'Los implantes dentales son la solución más avanzada y duradera para reemplazar dientes perdidos. Consisten en un tornillo de titanio biocompatible que se integra con el hueso maxilar, actuando como una raíz artificial. Sobre este implante se coloca una corona de porcelana o zirconio, indistinguible de un diente natural. Los implantes ofrecen una base estable, previenen la pérdida ósea, mejoran la capacidad de masticación y restauran la estética de manera excepcional.',
+      key: 'prosthetics',
+      iconName: 'Denture',
+      specialty: true,
+      title: 'Prótesis dentales',
+      summary: 'Coronas, puentes y dentaduras, fijas o removibles, hechas a medida.',
+      description:
+        'Restauramos la función y la estética de su boca con prótesis fijas y removibles de alta calidad: coronas individuales para proteger dientes dañados, puentes que reemplazan uno o más dientes ausentes apoyándose en los vecinos, y dentaduras completas o parciales cuando la restauración es extensa. Cada solución se hace a medida para que sea cómoda, duradera y de aspecto natural.',
     },
     {
-      iconName: 'Smile', // Represents a beautiful, aligned smile
+      key: 'orthodontics',
+      iconName: 'Braces',
+      specialty: true,
       title: 'Ortodoncia',
-      description: 'Corregimos dientes desalineados y problemas de mordida (maloclusiones) para mejorar tanto la estética de tu sonrisa como tu salud oral general. Ofrecemos opciones como brackets metálicos tradicionales, brackets cerámicos más discretos, y los modernos alineadores transparentes (ortodoncia invisible). Los tratamientos son adaptados para niños, adolescentes y adultos, buscando una sonrisa alineada, funcional y saludable.',
+      summary: 'Corrige dientes desalineados y problemas de mordida, en niños y en adultos.',
+      description:
+        'Corregimos dientes desalineados y problemas de mordida (maloclusiones) para mejorar tanto la estética de su sonrisa como su salud oral. Ofrecemos brackets metálicos tradicionales, brackets cerámicos más discretos y alineadores transparentes. Los tratamientos se adaptan a niños, adolescentes y adultos.',
     },
     {
-      iconName: 'Sparkles', // Limpieza - brillance/propreté
-      title: 'Limpieza Dental Profesional',
-      description: 'La profilaxis dental es fundamental para mantener una boca sana. Este procedimiento elimina la placa bacteriana y el sarro (cálculo dental) que el cepillado diario no puede remover, especialmente en zonas de difícil acceso. Ayuda a prevenir caries, gingivitis, periodontitis y mal aliento. Recomendamos una limpieza cada seis meses para una sonrisa radiante y encías saludables.',
+      key: 'checkup',
+      iconName: 'Checkup',
+      title: 'Consulta general / revisión',
+      summary: 'Un examen completo de dientes y encías para detectar los problemas a tiempo.',
+      description:
+        'Las consultas generales y las revisiones periódicas son la base de una buena salud bucodental. El Dr. Francis Valerio examina sus dientes, encías y tejidos orales, con radiografías digitales si hacen falta, para detectar los problemas en sus primeras etapas. Le explica lo que encuentre y, si es preciso, le propone un plan de tratamiento.',
     },
     {
-      iconName: 'Activity', // Blanqueamiento - résultats actifs
-      title: 'Blanqueamiento Dental',
-      description: 'Devuelve el brillo y un tono más blanco a tu sonrisa con nuestros tratamientos de blanqueamiento dental seguros y efectivos. Utilizamos geles blanqueadores de última generación, aplicados profesionalmente en la clínica para resultados rápidos y notables, o mediante kits personalizados para usar en casa bajo supervisión odontológica. Elimina manchas y rejuvenece tu apariencia.',
+      key: 'cleaning',
+      iconName: 'Scaler',
+      title: 'Limpieza dental profesional',
+      summary: 'Retira la placa y el sarro que el cepillado diario no alcanza.',
+      description:
+        'La profilaxis dental es fundamental para mantener la boca sana. Elimina la placa bacteriana y el sarro que el cepillado diario no puede retirar, sobre todo en las zonas de difícil acceso, y ayuda a prevenir caries, gingivitis, periodontitis y mal aliento. Recomendamos una limpieza cada seis meses.',
     },
     {
-      iconName: 'ShieldCheck', // Empastes - protection réparation
-      title: 'Empastes (Restauraciones)',
-      description: 'Reparamos dientes dañados por caries, devolviéndoles su forma, función e integridad. Tras eliminar el tejido carioso, rellenamos la cavidad con resinas compuestas del color del diente (estéticas) que se mimetizan perfectamente con tu sonrisa. Este tratamiento detiene el avance de la caries y alivia la sensibilidad dental.',
+      key: 'fillings',
+      iconName: 'Filling',
+      title: 'Empastes (restauraciones)',
+      summary: 'Repara dientes dañados por caries con resina del color del diente.',
+      description:
+        'Reparamos los dientes dañados por caries y les devolvemos su forma, su función y su integridad. Tras eliminar el tejido cariado, se rellena la cavidad con resinas compuestas del color del diente. El tratamiento detiene el avance de la caries y alivia la sensibilidad.',
     },
     {
-      iconName: 'HeartPulse', // Represents saving a tooth/health
-      title: 'Endodoncia (Tratamiento de Canal)',
-      description: 'Este procedimiento salva un diente cuya pulpa (nervio) está infectada o inflamada debido a caries profundas o traumatismos. Se elimina la pulpa dañada, se limpian y desinfectan los conductos radiculares, y luego se sellan herméticamente. La endodoncia alivia el dolor intenso y permite conservar el diente natural, evitando su extracción.',
+      key: 'endodontics',
+      iconName: 'RootCanal',
+      title: 'Endodoncia (tratamiento de canal)',
+      summary: 'Salva un diente con el nervio infectado o inflamado, en lugar de extraerlo.',
+      description:
+        'Este procedimiento salva un diente cuya pulpa (el nervio) está infectada o inflamada por una caries profunda o un golpe. Se retira la pulpa dañada, se limpian y desinfectan los conductos y se sellan herméticamente. La endodoncia alivia el dolor intenso y permite conservar el diente natural, evitando la extracción.',
     },
     {
-      iconName: 'Stethoscope', // Consulta - examen médical
-      title: 'Consulta General/Revisión',
-      description: 'Las consultas generales y revisiones periódicas son la base de una buena salud bucodental. El Dr. Francis Valerio realizará un examen completo de tus dientes, encías y tejidos orales, utilizando radiografías digitales si es necesario, para detectar problemas en etapas tempranas. Se discutirá cualquier hallazgo y se elaborará un plan de tratamiento personalizado si es preciso.',
-    }
+      key: 'whitening',
+      iconName: 'Whitening',
+      title: 'Blanqueamiento dental',
+      summary: 'Aclara el tono de los dientes con un tratamiento supervisado por el dentista.',
+      description:
+        'Devolvemos el brillo y un tono más blanco a sus dientes con tratamientos de blanqueamiento seguros: geles aplicados en la consulta para un resultado rápido, o férulas a medida para usar en casa bajo supervisión. Elimina manchas y rejuvenece la sonrisa.',
+    },
   ],
   en: [
     {
-      iconName: 'Users', // Prosthetics - multiple teeth/people
-      title: 'Dental Prosthetics',
-      description: 'We restore the function and aesthetics of your smile with high-quality fixed and removable prosthetics. This includes individual crowns to protect damaged teeth, bridges to replace one or more missing teeth using adjacent teeth as support, and full or partial dentures for extensive restoration. Each solution is customized to ensure comfort, durability, and a natural appearance.',
+      key: 'implants',
+      iconName: 'Implant',
+      specialty: true,
+      title: 'Dental implants',
+      summary: 'A titanium root that replaces a lost tooth and holds a fixed crown.',
+      description:
+        'Dental implants are the most advanced and durable way to replace missing teeth. A biocompatible titanium screw integrates with the jawbone and acts as an artificial root, and a porcelain or zirconia crown that looks like a natural tooth is fitted on top. Implants give a stable base, prevent bone loss and restore the ability to chew.',
     },
     {
-      iconName: 'Scan', // Implants - scan/precision technology
-      title: 'Dental Implants',
-      description: 'Dental implants are the most advanced and durable solution for replacing missing teeth. They consist of a biocompatible titanium screw that integrates with the jawbone, acting as an artificial root. A porcelain or zirconia crown, indistinguishable from a natural tooth, is placed on this implant. Implants offer a stable base, prevent bone loss, improve chewing ability, and exceptionally restore aesthetics.',
+      key: 'prosthetics',
+      iconName: 'Denture',
+      specialty: true,
+      title: 'Dental prosthetics',
+      summary: 'Crowns, bridges and dentures, fixed or removable, made to measure.',
+      description:
+        'We restore function and appearance with high-quality fixed and removable prosthetics: single crowns to protect damaged teeth, bridges that replace one or more missing teeth using the neighbouring teeth as support, and full or partial dentures where the restoration is extensive. Each one is made to measure so it is comfortable, durable and natural-looking.',
     },
     {
-      iconName: 'Smile', 
+      key: 'orthodontics',
+      iconName: 'Braces',
+      specialty: true,
       title: 'Orthodontics',
-      description: 'We correct misaligned teeth and bite problems (malocclusions) to improve both the aesthetics of your smile and your overall oral health. We offer options such as traditional metal braces, more discreet ceramic braces, and modern clear aligners (invisible orthodontics). Treatments are tailored for children, adolescents, and adults, aiming for a straight, functional, and healthy smile.',
+      summary: 'Straightens misaligned teeth and corrects bite problems, for children and adults.',
+      description:
+        'We correct misaligned teeth and bite problems (malocclusions) to improve both the look of your smile and your oral health. We offer traditional metal braces, more discreet ceramic braces and clear aligners. Treatment is tailored to children, teenagers and adults.',
     },
     {
-      iconName: 'Sparkles', // Cleaning - shine/brightness
-      title: 'Professional Dental Cleaning',
-      description: 'Dental prophylaxis is essential for maintaining a healthy mouth. This procedure removes bacterial plaque and tartar (dental calculus) that daily brushing cannot, especially in hard-to-reach areas. It helps prevent cavities, gingivitis, periodontitis, and bad breath. We recommend a cleaning every six months for a radiant smile and healthy gums.',
+      key: 'checkup',
+      iconName: 'Checkup',
+      title: 'General consultation / check-up',
+      summary: 'A full examination of teeth and gums to catch problems early.',
+      description:
+        'General consultations and regular check-ups are the foundation of good oral health. Dr. Francis Valerio examines your teeth, gums and oral tissues, with digital X-rays where needed, to catch problems at an early stage. He explains whatever he finds and, if necessary, proposes a treatment plan.',
     },
     {
-      iconName: 'Activity', // Whitening - active results
-      title: 'Teeth Whitening',
-      description: 'Restore brightness and a whiter shade to your smile with our safe and effective teeth whitening treatments. We use latest-generation whitening gels, professionally applied in the clinic for quick and noticeable results, or through custom take-home kits under dental supervision. It removes stains and rejuvenates your appearance.',
+      key: 'cleaning',
+      iconName: 'Scaler',
+      title: 'Professional dental cleaning',
+      summary: 'Removes the plaque and tartar that daily brushing cannot reach.',
+      description:
+        'Professional cleaning is essential to keeping the mouth healthy. It removes the plaque and tartar that daily brushing cannot, especially in hard-to-reach areas, and helps prevent cavities, gingivitis, periodontitis and bad breath. We recommend a cleaning every six months.',
     },
     {
-      iconName: 'ShieldCheck', 
-      title: 'Fillings (Restorations)',
-      description: 'We repair teeth damaged by decay, restoring their shape, function, and integrity. After removing carious tissue, we fill the cavity with tooth-colored composite resins (aesthetic) that blend perfectly with your smile. This treatment stops decay progression and relieves dental sensitivity.',
+      key: 'fillings',
+      iconName: 'Filling',
+      title: 'Fillings (restorations)',
+      summary: 'Repairs teeth damaged by decay with tooth-coloured resin.',
+      description:
+        'We repair teeth damaged by decay and restore their shape, function and integrity. After the decayed tissue is removed, the cavity is filled with tooth-coloured composite resin. The treatment stops the decay from progressing and relieves sensitivity.',
     },
     {
-      iconName: 'HeartPulse', 
-      title: 'Endodontics (Root Canal Treatment)',
-      description: 'This procedure saves a tooth whose pulp (nerve) is infected or inflamed due to deep cavities or trauma. The damaged pulp is removed, root canals are cleaned and disinfected, and then hermetically sealed. Endodontics relieves severe pain and allows the natural tooth to be preserved, avoiding extraction.',
+      key: 'endodontics',
+      iconName: 'RootCanal',
+      title: 'Root canal treatment',
+      summary: 'Saves a tooth with an infected or inflamed nerve instead of extracting it.',
+      description:
+        'This procedure saves a tooth whose pulp (the nerve) is infected or inflamed because of deep decay or an injury. The damaged pulp is removed, the canals are cleaned and disinfected, and then sealed. Root canal treatment relieves severe pain and keeps the natural tooth, avoiding an extraction.',
     },
     {
-      iconName: 'Stethoscope', // Consultation - medical exam
-      title: 'General Consultation/Check-up',
-      description: 'General consultations and periodic check-ups are the foundation of good oral health. Dr. Francis Valerio will perform a comprehensive examination of your teeth, gums, and oral tissues, using digital X-rays if necessary, to detect problems in early stages. Any findings will be discussed, and a personalized treatment plan will be developed if needed.',
-    }
-  ]
-};
-
-export const testimonials: TestimonialData = {
-  es: [
-    {
-      quote: 'El Dr. Valerio y su equipo en Orthoprotesis Dental Clinic son increíbles. Me sentí muy cómodo y los resultados de mi tratamiento fueron fantásticos. ¡Totalmente recomendado!',
-      name: 'Ana Pérez',
-      location: 'Santiago de los Caballeros',
-    },
-    {
-      quote: 'Desde que llegué a Orthoprotesis Dental Clinic, supe que estaba en buenas manos. Muy profesionales y atentos. Mi sonrisa nunca se ha visto mejor.',
-      name: 'Carlos Rodríguez',
-      location: 'Santiago de los Caballeros',
-    },
-    {
-      quote: 'Tenía mucho miedo de ir al dentista, pero en Orthoprotesis Dental Clinic, especialmente el Dr. Francis Valerio, me trataron con mucha paciencia y delicadeza. ¡Gracias por todo!',
-      name: 'Sofía Gómez',
-      location: 'La Romana',
+      key: 'whitening',
+      iconName: 'Whitening',
+      title: 'Teeth whitening',
+      summary: "Lightens the shade of your teeth under a dentist's supervision.",
+      description:
+        'We bring back a brighter, whiter shade with safe whitening treatments: gels applied at the practice for a quick result, or custom trays to use at home under supervision. It removes stains and refreshes the smile.',
     },
   ],
-  en: [
-    {
-      quote: 'Dr. Valerio and his team at Orthoprotesis Dental Clinic are incredible. I felt very comfortable and the results of my treatment were fantastic. Highly recommended!',
-      name: 'Ana Perez',
-      location: 'Santiago de los Caballeros',
-    },
-    {
-      quote: 'From the moment I arrived at Orthoprotesis Dental Clinic, I knew I was in good hands. Very professional and attentive. My smile has never looked better.',
-      name: 'Carlos Rodriguez',
-      location: 'Santiago de los Caballeros',
-    },
-    {
-      quote: 'I was very afraid of going to the dentist, but at Orthoprotesis Dental Clinic, especially Dr. Francis Valerio, they treated me with a lot of patience and gentleness. Thank you for everything!',
-      name: 'Sofia Gomez',
-      location: 'La Romana',
-    },
-  ]
 };
 
+/**
+ * Questions that belong to the homepage.
+ *
+ * The implant questions the homepage shows beside these are NOT copied in here.
+ * `getHomeFaq` (below the implant guide) reads them from `implantCluster`, so
+ * the whole site has exactly one answer to "¿Duele colocar un implante?", and
+ * only the items in THIS list go into the homepage's FAQPage structured data:
+ * Google asks for a question that appears on several pages to be marked up on
+ * one of them, and that page is the guide.
+ */
 export const faqItems: FAQData = {
   es: [
     {
-      id: 'faq1',
-      question: '¿Con qué frecuencia debo visitar al dentista?',
-      answer: 'Recomendamos una visita de control y limpieza dental profesional en Orthoprotesis Dental Clinic cada seis meses. Sin embargo, el Dr. Francis Valerio puede sugerir una frecuencia diferente según tus necesidades individuales.',
-    },
-    {
-      id: 'faq2',
-      question: '¿El blanqueamiento dental daña los dientes?',
-      answer: 'Cuando es realizado por un profesional como el Dr. Francis Valerio, el blanqueamiento dental es un procedimiento seguro que no daña el esmalte de tus dientes. Utilizamos productos de calidad y técnicas probadas.',
-    },
-    {
-      id: 'faq3',
-      question: '¿Qué debo hacer si tengo una emergencia dental?',
-      answer: 'Si tienes una emergencia dental, como dolor severo, un diente roto o una infección, contacta a Orthoprotesis Dental Clinic de inmediato al 809-581-7059. Haremos lo posible por atenderte lo antes posible.',
-    },
-    {
-      id: 'faq4',
-      question: '¿Aceptan seguro dental?',
-      answer: 'En Orthoprotesis Dental Clinic trabajamos con varios planes de seguros dentales. Por favor, contáctanos con la información de tu seguro para verificar la cobertura.',
-    },
-    {
-      id: 'faq5',
-      question: '¿Qué tipo de prótesis dentales ofrecen?',
-      answer: 'El Dr. Francis Valerio se especializa en una amplia gama de prótesis, incluyendo coronas individuales, puentes fijos para reemplazar varios dientes, y dentaduras parciales o completas, tanto convencionales como sobre implantes, adaptadas a tus necesidades.',
-    },
-    {
-      id: 'faq6',
+      id: 'candidato',
       question: '¿Soy candidato para implantes dentales?',
-      answer: 'Una evaluación detallada por el Dr. Francis Valerio es necesaria. Generalmente, buenos candidatos tienen encías sanas y suficiente hueso maxilar para soportar el implante. Incluso si hay pérdida ósea, existen técnicas de regeneración. Ofrecemos consultas para determinar la mejor opción para ti.',
-    }
+      answer:
+        'Para saberlo hace falta una evaluación del Dr. Francis Valerio. En general, los buenos candidatos tienen las encías sanas y hueso suficiente para sostener el implante, y aun cuando se ha perdido hueso existen técnicas para regenerarlo. En la primera visita se estudia su caso y se le explica qué opción le conviene.',
+    },
+    {
+      id: 'protesis',
+      question: '¿Qué tipo de prótesis dentales ofrecen?',
+      answer:
+        'El Dr. Francis Valerio trabaja una amplia gama de prótesis: coronas individuales, puentes fijos para reemplazar varios dientes y dentaduras parciales o completas, tanto convencionales como sobre implantes, adaptadas a cada caso.',
+    },
+    {
+      id: 'seguro',
+      question: '¿Aceptan seguro dental?',
+      answer:
+        'Trabajamos con varios planes de seguro dental. Llámenos o escríbanos con los datos de su seguro y le confirmamos la cobertura.',
+    },
+    {
+      id: 'urgencia',
+      question: '¿Qué hago si tengo una urgencia dental?',
+      answer:
+        'Si tiene dolor fuerte, un diente roto o una infección, llame a la clínica de inmediato al 809-581-7059 en horario de consulta. Haremos lo posible por atenderle cuanto antes.',
+    },
   ],
   en: [
-     {
-      id: 'faq1',
-      question: 'How often should I visit the dentist?',
-      answer: 'We recommend a check-up and professional dental cleaning at Orthoprotesis Dental Clinic every six months. However, Dr. Francis Valerio may suggest a different frequency based on your individual needs.',
-    },
     {
-      id: 'faq2',
-      question: 'Does teeth whitening damage teeth?',
-      answer: 'When performed by a professional like Dr. Francis Valerio, teeth whitening is a safe procedure that does not damage your tooth enamel. We use quality products and proven techniques.',
-    },
-    {
-      id: 'faq3',
-      question: 'What should I do if I have a dental emergency?',
-      answer: 'If you have a dental emergency, such as severe pain, a broken tooth, or an infection, contact Orthoprotesis Dental Clinic immediately at 809-581-7059. We will do our best to see you as soon as possible.',
-    },
-    {
-      id: 'faq4',
-      question: 'Do you accept dental insurance?',
-      answer: 'At Orthoprotesis Dental Clinic, we work with various dental insurance plans. Please contact us with your insurance information to verify coverage.',
-    },
-    {
-      id: 'faq5',
-      question: 'What types of dental prosthetics do you offer?',
-      answer: 'Dr. Francis Valerio specializes in a wide range of prosthetics, including individual crowns, fixed bridges to replace multiple teeth, and partial or complete dentures, both conventional and implant-supported, tailored to your needs.',
-    },
-    {
-      id: 'faq6',
+      id: 'candidato',
       question: 'Am I a candidate for dental implants?',
-      answer: 'A detailed evaluation by Dr. Francis Valerio is necessary. Generally, good candidates have healthy gums and sufficient jawbone to support the implant. Even if there is bone loss, bone regeneration techniques exist. We offer consultations to determine the best option for you.',
-    }
-  ]
+      answer:
+        'An assessment by Dr. Francis Valerio is needed to know. In general, good candidates have healthy gums and enough bone to support the implant, and even where bone has been lost there are techniques to regenerate it. At the first visit your case is studied and you are told which option suits you.',
+    },
+    {
+      id: 'protesis',
+      question: 'What types of dental prosthetics do you offer?',
+      answer:
+        'Dr. Francis Valerio works with a wide range of prosthetics: single crowns, fixed bridges to replace several teeth, and partial or full dentures, both conventional and implant-supported, adapted to each case.',
+    },
+    {
+      id: 'seguro',
+      question: 'Do you accept dental insurance?',
+      answer:
+        'We work with several dental insurance plans. Call or message us with your insurance details and we will confirm your coverage.',
+    },
+    {
+      id: 'urgencia',
+      question: 'What should I do in a dental emergency?',
+      answer:
+        'If you have severe pain, a broken tooth or an infection, call the clinic straight away on 809-581-7059 during opening hours. We will do our best to see you as soon as possible.',
+    },
+  ],
 };
 
 export const formTranslations: FormTranslations = {
   contactForm: {
     es: {
-      nameLabel: "Nombre Completo",
-      namePlaceholder: "Ej: Juan Pérez",
-      emailLabel: "Correo Electrónico",
-      emailPlaceholder: "Ej: juan.perez@correo.com",
-      phoneLabel: "Teléfono (Opcional)",
-      phonePlaceholder: "Ej: (809) 555-1234",
+      nameLabel: "Nombre completo",
+      namePlaceholder: "Ej.: Juan Pérez",
+      emailLabel: "Correo electrónico",
+      emailPlaceholder: "Ej.: juan.perez@correo.com",
+      phoneLabel: "Teléfono (opcional)",
+      phonePlaceholder: "Ej.: (809) 555-1234",
       messageLabel: "Mensaje",
-      messagePlaceholder: "Escriba su consulta o mensaje aquí...",
-      submitButtonText: "Enviar Mensaje",
-      submittingButtonText: "Enviando...",
-      successToastTitle: "Mensaje Enviado",
-      errorToastTitle: "Error",
-      unexpectedErrorToastTitle: "Error Inesperado",
+      messagePlaceholder: "Escriba su consulta o mensaje aquí…",
+      submitButtonText: "Enviar mensaje",
+      submittingButtonText: "Enviando…",
+      successToastTitle: "Mensaje enviado",
+      errorToastTitle: "No se pudo enviar",
+      unexpectedErrorToastTitle: "Error inesperado",
     },
     en: {
-      nameLabel: "Full Name",
-      namePlaceholder: "E.g.: John Doe",
-      emailLabel: "Email Address",
-      emailPlaceholder: "E.g.: john.doe@email.com",
-      phoneLabel: "Phone (Optional)",
-      phonePlaceholder: "E.g.: (555) 123-4567",
+      nameLabel: "Full name",
+      namePlaceholder: "E.g. John Doe",
+      emailLabel: "Email address",
+      emailPlaceholder: "E.g. john.doe@email.com",
+      phoneLabel: "Phone (optional)",
+      phonePlaceholder: "E.g. (555) 123-4567",
       messageLabel: "Message",
-      messagePlaceholder: "Write your inquiry or message here...",
-      submitButtonText: "Send Message",
-      submittingButtonText: "Sending...",
-      successToastTitle: "Message Sent",
-      errorToastTitle: "Error",
-      unexpectedErrorToastTitle: "Unexpected Error",
+      messagePlaceholder: "Write your question or message here…",
+      submitButtonText: "Send message",
+      submittingButtonText: "Sending…",
+      successToastTitle: "Message sent",
+      errorToastTitle: "Could not send",
+      unexpectedErrorToastTitle: "Unexpected error",
     }
   },
   appointmentForm: {
     es: {
-      nameLabel: "Nombre Completo",
-      namePlaceholder: "Ej: María González",
-      emailLabel: "Correo Electrónico",
-      emailPlaceholder: "Ej: maria.gonzalez@correo.com",
+      nameLabel: "Nombre completo",
+      namePlaceholder: "Ej.: María González",
+      /* Optional since migration 0005. Many patients in this age group do not
+         use email, and the clinic confirms every request by phone anyway. */
+      emailLabel: "Correo electrónico (opcional)",
+      emailPlaceholder: "Ej.: maria.gonzalez@correo.com",
       phoneLabel: "Teléfono",
-      phonePlaceholder: "Ej: (829) 123-4567",
-      serviceTypeLabel: "Tipo de Servicio Requerido",
+      phonePlaceholder: "Ej.: (829) 123-4567",
+      serviceTypeLabel: "Tipo de servicio",
       serviceTypePlaceholder: "Seleccione el servicio que necesita",
-      reasonLabel: "Motivo de la Cita",
-      reasonPlaceholder: "Describa brevemente el motivo de su visita o cualquier síntoma...",
-      urgencyLabel: "¿Es una Urgencia?",
-      submitButtonText: "Solicitar Cita",
-      submittingButtonText: "Enviando Solicitud...",
-      successToastTitle: "Solicitud Enviada",
-      errorToastTitle: "Error en la Solicitud",
-      unexpectedErrorToastTitle: "Error Inesperado",
+      reasonLabel: "Motivo de la cita",
+      reasonPlaceholder: "Describa brevemente el motivo de su visita o cualquier síntoma…",
+      urgencyLabel: "¿Es una urgencia?",
+      submitButtonText: "Solicitar cita",
+      submittingButtonText: "Enviando solicitud…",
+      successToastTitle: "Solicitud enviada",
+      errorToastTitle: "No se pudo enviar la solicitud",
+      unexpectedErrorToastTitle: "Error inesperado",
     },
     en: {
-      nameLabel: "Full Name",
-      namePlaceholder: "E.g.: Mary Smith",
-      emailLabel: "Email Address",
-      emailPlaceholder: "E.g.: mary.smith@email.com",
+      nameLabel: "Full name",
+      namePlaceholder: "E.g. Mary Smith",
+      emailLabel: "Email address (optional)",
+      emailPlaceholder: "E.g. mary.smith@email.com",
       phoneLabel: "Phone",
-      phonePlaceholder: "E.g.: (555) 987-6543",
-      serviceTypeLabel: "Type of Service Required",
+      phonePlaceholder: "E.g. (555) 987-6543",
+      serviceTypeLabel: "Type of service",
       serviceTypePlaceholder: "Select the service you need",
-      reasonLabel: "Reason for Appointment",
-      reasonPlaceholder: "Briefly describe the reason for your visit or any symptoms...",
-      urgencyLabel: "Is it Urgent?",
-      submitButtonText: "Request Appointment",
-      submittingButtonText: "Sending Request...",
-      successToastTitle: "Request Sent",
-      errorToastTitle: "Error in Request",
-      unexpectedErrorToastTitle: "Unexpected Error",
+      reasonLabel: "Reason for the appointment",
+      reasonPlaceholder: "Briefly describe the reason for your visit or any symptoms…",
+      urgencyLabel: "Is it urgent?",
+      submitButtonText: "Request appointment",
+      submittingButtonText: "Sending request…",
+      successToastTitle: "Request sent",
+      errorToastTitle: "Could not send the request",
+      unexpectedErrorToastTitle: "Unexpected error",
     }
   },
   testimonialForm: {
     es: {
-      nameLabel: "Su Nombre",
-      namePlaceholder: "Ej: Juan Pérez",
-      emailLabel: "Correo Electrónico",
-      emailPlaceholder: "Ej: juan.perez@correo.com",
-      phoneLabel: "Teléfono (Opcional)",
-      phonePlaceholder: "Ej: (809) 555-1234",
-      quoteLabel: "Su Testimonio",
-      quotePlaceholder: "Comparta su experiencia con nosotros...",
-      locationLabel: "Su Ubicación (Opcional)",
-      locationPlaceholder: "Ej: Santiago de los Caballeros",
-      submitButtonText: "Enviar Testimonio",
-      submittingButtonText: "Enviando Testimonio...",
-      successToastTitle: "Testimonio Enviado",
-      errorToastTitle: "Error al Enviar",
-      unexpectedErrorToastTitle: "Error Inesperado",
+      nameLabel: "Su nombre",
+      namePlaceholder: "Ej.: Juan Pérez",
+      emailLabel: "Correo electrónico",
+      emailPlaceholder: "Ej.: juan.perez@correo.com",
+      phoneLabel: "Teléfono (opcional)",
+      phonePlaceholder: "Ej.: (809) 555-1234",
+      quoteLabel: "Su testimonio",
+      quotePlaceholder: "Cuéntenos cómo fue su experiencia en la consulta…",
+      locationLabel: "Localidad (opcional)",
+      locationPlaceholder: "Ej.: Santiago de los Caballeros",
+      submitButtonText: "Enviar testimonio",
+      submittingButtonText: "Enviando testimonio…",
+      successToastTitle: "Testimonio enviado",
+      errorToastTitle: "No se pudo enviar",
+      unexpectedErrorToastTitle: "Error inesperado",
     },
     en: {
-      nameLabel: "Your Name",
-      namePlaceholder: "E.g.: John Doe",
-      emailLabel: "Email Address",
-      emailPlaceholder: "E.g.: john.doe@email.com",
-      phoneLabel: "Phone (Optional)",
-      phonePlaceholder: "E.g.: (555) 123-4567",
-      quoteLabel: "Your Testimonial",
-      quotePlaceholder: "Share your experience with us...",
-      locationLabel: "Your Location (Optional)",
-      locationPlaceholder: "E.g.: Santiago de los Caballeros",
-      submitButtonText: "Submit Testimonial",
-      submittingButtonText: "Submitting Testimonial...",
-      successToastTitle: "Testimonial Submitted",
-      errorToastTitle: "Submission Error",
-      unexpectedErrorToastTitle: "Unexpected Error",
+      nameLabel: "Your name",
+      namePlaceholder: "E.g. John Doe",
+      emailLabel: "Email address",
+      emailPlaceholder: "E.g. john.doe@email.com",
+      phoneLabel: "Phone (optional)",
+      phonePlaceholder: "E.g. (555) 123-4567",
+      quoteLabel: "Your testimonial",
+      quotePlaceholder: "Tell us about your experience at the practice…",
+      locationLabel: "Town or city (optional)",
+      locationPlaceholder: "E.g. Santiago de los Caballeros",
+      submitButtonText: "Submit testimonial",
+      submittingButtonText: "Submitting testimonial…",
+      successToastTitle: "Testimonial submitted",
+      errorToastTitle: "Could not submit",
+      unexpectedErrorToastTitle: "Unexpected error",
     }
   }
 };
@@ -431,7 +485,14 @@ export const formTranslations: FormTranslations = {
 // persistent success-panel strings. Kept here (content-as-data) so it stays in
 // sync across the appointment, contact and testimonial forms.
 export const formCommon: Record<Language, {
-  charactersWord: string;
+  /** Character counters on the contact and testimonial textareas, shown only
+   *  in the last fifth of the allowance. `{{count}}` / `{{max}}` are filled at
+   *  render time. */
+  charactersRemaining: string;
+  characterLimitReached: string;
+  /** sr-only, read once as part of the field description on focus — instead
+   *  of a live counter announcing on every keystroke. */
+  characterLimitNote: string;
   requiredFields: string;
   responseTime: string;
   consentBefore: string;
@@ -440,48 +501,64 @@ export const formCommon: Record<Language, {
   testimonialConsent: string;
   successTitle: string;
   successAnother: string;
+  /** The contact form's own success panel. It used to reuse the appointment
+   *  strings and told someone who had sent a question "¡Solicitud recibida!". */
+  messageSuccessTitle: string;
+  messageSuccessAnother: string;
   urgencyHelpOn: string;
   urgencyHelpOff: string;
 }> = {
   es: {
-    charactersWord: "caracteres",
+    charactersRemaining: "Quedan {{count}} caracteres",
+    characterLimitReached: "Ha llegado al límite de {{max}} caracteres.",
+    characterLimitNote: "Puede escribir hasta {{max}} caracteres.",
     requiredFields: "Campos obligatorios",
-    responseTime: "Te responderemos en menos de 24 horas.",
-    consentBefore: "Tus datos solo se usan para gestionar tu solicitud y nunca se comparten. Consulta nuestra ",
-    privacyLinkLabel: "Política de Privacidad",
+    responseTime: "Le respondemos en menos de 24 horas laborables.",
+    consentBefore: "Sus datos solo se usan para gestionar su solicitud y nunca se comparten. Consulte nuestra ",
+    privacyLinkLabel: "Política de privacidad",
     consentAfter: ".",
-    testimonialConsent: "Al enviar, autorizas a la clínica a publicar tu testimonio (nombre y ubicación) en este sitio. Puedes pedir que lo retiremos cuando quieras.",
+    testimonialConsent: "Al enviarlo, autoriza a la clínica a publicar su testimonio (nombre y localidad) en este sitio. Puede pedir que lo retiremos cuando quiera.",
     successTitle: "¡Solicitud recibida!",
     successAnother: "Enviar otra solicitud",
+    messageSuccessTitle: "¡Mensaje recibido!",
+    messageSuccessAnother: "Enviar otro mensaje",
     urgencyHelpOn: "Atención prioritaria activada",
-    urgencyHelpOff: "Marca esta casilla si necesitas atención inmediata",
+    urgencyHelpOff: "Marque esta casilla si necesita atención inmediata",
   },
   en: {
-    charactersWord: "characters",
+    charactersRemaining: "{{count}} characters left",
+    characterLimitReached: "You have reached the {{max}}-character limit.",
+    characterLimitNote: "You can write up to {{max}} characters.",
     requiredFields: "Required fields",
-    responseTime: "We'll reply within 24 hours.",
+    responseTime: "We reply within 24 working hours.",
     consentBefore: "Your information is used only to manage your request and is never shared. See our ",
-    privacyLinkLabel: "Privacy Policy",
+    privacyLinkLabel: "Privacy policy",
     consentAfter: ".",
-    testimonialConsent: "By submitting, you authorize the clinic to publish your testimonial (name and location) on this site. You can ask us to remove it at any time.",
+    testimonialConsent: "By submitting, you authorize the clinic to publish your testimonial (name and town) on this site. You can ask us to remove it at any time.",
     successTitle: "Request received!",
     successAnother: "Send another request",
+    messageSuccessTitle: "Message received!",
+    messageSuccessAnother: "Send another message",
     urgencyHelpOn: "Priority attention enabled",
-    urgencyHelpOff: "Check this box if you need immediate attention",
+    urgencyHelpOff: "Tick this box if you need immediate attention",
   },
 };
 
 /**
  * Booking page + appointment form copy.
  *
- * `reasonPrefix` is the only entry here that is not shown on the page: the
- * server action folds the chosen day and time-of-day into the `reason` column
- * using these strings, because `appointments` has no date column yet. See
- * `submitAppointmentForm` in src/app/actions.ts and the OPTIONAL, NOT-APPLIED
- * columns preferred_date and time_preference in migrations/0001_init.sql.
+ * `reasonPrefix` is the only entry here that is not shown on the page. Its
+ * `times` are the Spanish names of the time-of-day options, used by the clinic
+ * notification email (src/app/actions.ts) and the admin panel's queue; the
+ * preference itself has its own `time_preference` column.
  */
 export const appointmentBooking: Record<Language, {
+  /** ONE sentence. The booking page's intro used to be two sentences above a
+   *  form intro that said it again, and on a phone that pushed the first field
+   *  below the fold. */
   standfirst: string;
+  /** What the first visit is, for the "Qué pasa después" column. */
+  assessmentNote: string;
   requiredMark: string;
   /** sr-only prefix on each fieldset legend: "Paso {{step}} de {{total}}". */
   stepOf: string;
@@ -514,7 +591,9 @@ export const appointmentBooking: Record<Language, {
   timePreferenceHelp: string;
   timeOptions: { value: 'morning' | 'afternoon' | 'any'; label: string; hint: string }[];
   liveSubmitting: string;
-  errorSummary: string;
+  /** Error summary above the form. Two forms because "Faltan 1 campo(s)" is
+   *  not Spanish; `{{count}}` is substituted into `other` only. */
+  errorSummary: { one: string; other: string };
   /** Shown directly above the submit button — the commitment moment. `key`
    *  selects the icon in appointment-form.tsx, so the set is closed. */
   submitReassurance: { key: 'call' | 'reply' | 'cost'; text: string }[];
@@ -526,7 +605,14 @@ export const appointmentBooking: Record<Language, {
   asideAddressLabel: string;
   urgentTitle: string;
   urgentBody: string;
+  /** The same warning in one line, for the intro on a phone, where the full
+   *  urgent panel would push the form below the fold. */
+  urgentShort: string;
   urgentCta: string;
+  /** Shown in place of the form when the clinic has switched online requests
+   *  off in the admin panel (`site_settings.allow_appointments`). */
+  closedTitle: string;
+  closedBody: string;
   reasonPrefix: {
     label: string;
     times: { morning: string; afternoon: string; any: string };
@@ -534,7 +620,9 @@ export const appointmentBooking: Record<Language, {
 }> = {
   es: {
     standfirst:
-      "Rellene el formulario y le llamamos para acordar el día y la hora definitivos. La primera visita es una evaluación: revisamos su caso, le explicamos las opciones y le damos el presupuesto antes de empezar nada.",
+      "Rellene el formulario y le llamamos para acordar el día y la hora definitivos.",
+    assessmentNote:
+      "La primera visita es una evaluación: revisamos su caso, le explicamos las opciones y le damos el presupuesto antes de empezar nada.",
     requiredMark: "obligatorio",
     stepOf: "Paso {{step}} de {{total}}",
     stepComplete: "Completado",
@@ -545,13 +633,15 @@ export const appointmentBooking: Record<Language, {
     groupWhen: "Cuándo le conviene",
     groupWhenHint: "Es una preferencia, no una reserva en firme: la confirmamos por teléfono.",
     phoneHelp: "Es por donde le llamamos para confirmar.",
-    emailHelp: "Le enviamos el resguardo de la solicitud.",
+    /* It used to read "Le enviamos el resguardo de la solicitud" — and nothing
+       in the code has ever emailed a patient. */
+    emailHelp: "Solo lo usamos si necesitamos escribirle.",
     reasonHelp: "Molestia, pieza afectada, desde cuándo…",
     reasonLimitNote: "Puede escribir hasta 500 caracteres.",
     reasonRemaining: "Quedan {{count}} caracteres",
     reasonLimitReached: "Ha llegado al límite de 500 caracteres.",
     preferredDateLabel: "Día que prefiere",
-    preferredDateHelp: "Atendemos de lunes a viernes, de 9:00 a 18:00.",
+    preferredDateHelp: "Atendemos de lunes a viernes, de 9:00 a. m. a 6:00 p. m.",
     preferredDatePicked: "Ha elegido:",
     preferredDateFix: "Elegir el {{date}}",
     preferredDatePlaceholder: "Elija un día",
@@ -564,23 +654,30 @@ export const appointmentBooking: Record<Language, {
       { value: 'any', label: "Cualquier hora", hint: "Me adapto a la clínica" },
     ],
     liveSubmitting: "Enviando su solicitud…",
-    errorSummary:
-      "Faltan {{count}} campo(s) por corregir. Los hemos señalado más abajo y hemos llevado el cursor al primero.",
+    errorSummary: {
+      one: "Falta 1 campo por corregir. Lo hemos señalado más abajo y hemos llevado el cursor hasta él.",
+      other:
+        "Faltan {{count}} campos por corregir. Los hemos señalado más abajo y hemos llevado el cursor al primero.",
+    },
     submitReassurance: [
       { key: 'call', text: "Le confirmamos la cita por teléfono: al enviar no queda reservada todavía." },
       { key: 'reply', text: "Le respondemos en menos de 24 horas laborables." },
       { key: 'cost', text: "Enviar la solicitud no tiene ningún costo ni compromiso." },
     ],
     asideStepsTitle: "Qué pasa después",
-    asideHoursNote: "Fuera de ese horario puede enviar el formulario igualmente: le contestamos al día siguiente laborable.",
-    asideCallTitle: "¿Prefiere llamar?",
-    asideCallBody: "También puede pedir la cita por teléfono en horario de consulta.",
+    asideHoursNote: "Fuera de ese horario puede enviar el formulario igualmente: le contestamos el siguiente día laborable.",
+    asideCallTitle: "¿Prefiere llamar o escribir?",
+    asideCallBody: "También puede pedir la cita por teléfono o por WhatsApp en horario de consulta.",
     asidePhoneLabel: "Teléfono",
     asideAddressLabel: "Dirección",
     urgentTitle: "¿Necesita que le vean hoy?",
     urgentBody:
       "Si tiene dolor fuerte, un golpe o una infección, llame directamente a la clínica en horario de consulta en lugar de esperar a que le contestemos el formulario.",
+    urgentShort: "¿Dolor fuerte, un golpe o una infección? Llame directamente a la clínica.",
     urgentCta: "Llamar a la clínica",
+    closedTitle: "Ahora mismo las citas se piden por teléfono",
+    closedBody:
+      "La clínica ha pausado las solicitudes en línea. Llámenos o escríbanos por WhatsApp en horario de consulta y le damos cita.",
     reasonPrefix: {
       label: "Preferencia de cita",
       times: {
@@ -592,7 +689,9 @@ export const appointmentBooking: Record<Language, {
   },
   en: {
     standfirst:
-      "Fill in the form and we will call you to agree the final day and time. The first visit is an assessment: we review your case, explain the options, and give you a quote before anything begins.",
+      "Fill in the form and we will call you to agree the final day and time.",
+    assessmentNote:
+      "The first visit is an assessment: we review your case, explain the options, and give you a quote before anything begins.",
     requiredMark: "required",
     stepOf: "Step {{step}} of {{total}}",
     stepComplete: "Completed",
@@ -603,13 +702,13 @@ export const appointmentBooking: Record<Language, {
     groupWhen: "When it suits you",
     groupWhenHint: "A preference, not a firm booking — we confirm it by phone.",
     phoneHelp: "This is the number we call to confirm.",
-    emailHelp: "We send you a copy of the request.",
+    emailHelp: "We only use it if we need to write to you.",
     reasonHelp: "Discomfort, which tooth, how long it has been going on…",
     reasonLimitNote: "You can write up to 500 characters.",
     reasonRemaining: "{{count}} characters left",
     reasonLimitReached: "You have reached the 500-character limit.",
     preferredDateLabel: "Preferred day",
-    preferredDateHelp: "We are open Monday to Friday, 9:00 to 18:00.",
+    preferredDateHelp: "We are open Monday to Friday, 9:00 a.m. to 6:00 p.m.",
     preferredDatePicked: "You chose:",
     preferredDateFix: "Use {{date}} instead",
     preferredDatePlaceholder: "Choose a day",
@@ -622,8 +721,11 @@ export const appointmentBooking: Record<Language, {
       { value: 'any', label: "Any time", hint: "I'll fit around the clinic" },
     ],
     liveSubmitting: "Sending your request…",
-    errorSummary:
-      "{{count}} field(s) still need fixing. They are marked below and we have moved the cursor to the first one.",
+    errorSummary: {
+      one: "1 field still needs fixing. It is marked below and we have moved the cursor to it.",
+      other:
+        "{{count}} fields still need fixing. They are marked below and we have moved the cursor to the first one.",
+    },
     submitReassurance: [
       { key: 'call', text: "We confirm the appointment by phone — sending this does not reserve a slot yet." },
       { key: 'reply', text: "We reply within 24 working hours." },
@@ -631,14 +733,18 @@ export const appointmentBooking: Record<Language, {
     ],
     asideStepsTitle: "What happens next",
     asideHoursNote: "Outside those hours you can still send the form — we reply on the next working day.",
-    asideCallTitle: "Prefer to call?",
-    asideCallBody: "You can also book by phone during opening hours.",
+    asideCallTitle: "Prefer to call or message?",
+    asideCallBody: "You can also book by phone or WhatsApp during opening hours.",
     asidePhoneLabel: "Phone",
     asideAddressLabel: "Address",
     urgentTitle: "Need to be seen today?",
     urgentBody:
       "If you have severe pain, an injury or an infection, call the clinic directly during opening hours rather than waiting for a reply to the form.",
+    urgentShort: "Severe pain, an injury or an infection? Call the clinic directly.",
     urgentCta: "Call the clinic",
+    closedTitle: "Appointments are being booked by phone for now",
+    closedBody:
+      "The clinic has paused online requests. Call or message us on WhatsApp during opening hours and we will book you in.",
     reasonPrefix: {
       label: "Appointment preference",
       times: {
@@ -661,23 +767,23 @@ export const privacyPolicy: Record<Language, {
   contactBody: string;
 }> = {
   es: {
-    title: "Política de Privacidad",
-    intro: "En Orthoprotesis Dental Clinic respetamos tu privacidad. Esta política explica qué datos recogemos a través de este sitio y cómo los usamos.",
+    title: "Política de privacidad",
+    intro: "En Orthoprotesis Dental Clinic respetamos su privacidad. Esta política explica qué datos recogemos a través de este sitio y cómo los usamos.",
     sections: [
-      { heading: "Qué datos recogemos", body: "Cuando completas el formulario de cita, de contacto o de testimonio, recogemos los datos que nos facilitas: nombre, correo electrónico, teléfono y el motivo o mensaje de tu consulta." },
-      { heading: "Para qué los usamos", body: "Usamos tus datos únicamente para responder a tu solicitud y coordinar tu atención. No los vendemos ni los compartimos con terceros con fines comerciales." },
-      { heading: "Conservación", body: "Conservamos tus datos solo durante el tiempo necesario para atender tu solicitud y cumplir con nuestras obligaciones legales." },
-      { heading: "Tus derechos", body: "Puedes solicitar el acceso, la corrección o la eliminación de tus datos en cualquier momento contactándonos. Tratamos tus datos conforme a la Ley 172-13 sobre protección de datos personales de la República Dominicana." },
-      { heading: "Seguridad", body: "Aplicamos medidas técnicas razonables para proteger tu información. Las comunicaciones con este sitio se realizan mediante conexión cifrada (HTTPS)." },
+      { heading: "Qué datos recogemos", body: "Cuando completa el formulario de cita, de contacto o de testimonio, recogemos los datos que nos facilita: nombre, teléfono, correo electrónico si lo indica, y el motivo o mensaje de su consulta." },
+      { heading: "Para qué los usamos", body: "Usamos sus datos únicamente para responder a su solicitud y coordinar su atención. No los vendemos ni los compartimos con terceros con fines comerciales." },
+      { heading: "Conservación", body: "Conservamos sus datos solo durante el tiempo necesario para atender su solicitud y cumplir con nuestras obligaciones legales." },
+      { heading: "Sus derechos", body: "Puede solicitar el acceso, la corrección o la eliminación de sus datos en cualquier momento contactándonos. Tratamos sus datos conforme a la Ley 172-13 sobre protección de datos personales de la República Dominicana." },
+      { heading: "Seguridad", body: "Aplicamos medidas técnicas razonables para proteger su información. Las comunicaciones con este sitio se realizan mediante conexión cifrada (HTTPS)." },
     ],
     contactHeading: "Cómo contactarnos",
-    contactBody: "Para ejercer tus derechos o resolver dudas sobre tu privacidad, escríbenos a info@orthoprotesisdental.com o llámanos al 809-581-7059.",
+    contactBody: "Para ejercer sus derechos o resolver dudas sobre su privacidad, escríbanos a info@orthoprotesisdental.com o llámenos al 809-581-7059.",
   },
   en: {
-    title: "Privacy Policy",
+    title: "Privacy policy",
     intro: "At Orthoprotesis Dental Clinic we respect your privacy. This policy explains what data we collect through this website and how we use it.",
     sections: [
-      { heading: "What we collect", body: "When you complete the appointment, contact or testimonial form, we collect the details you provide: name, email, phone, and the reason or message of your inquiry." },
+      { heading: "What we collect", body: "When you complete the appointment, contact or testimonial form, we collect the details you provide: name, phone, email if you give one, and the reason or message of your inquiry." },
       { heading: "How we use it", body: "We use your data only to respond to your request and coordinate your care. We do not sell it or share it with third parties for commercial purposes." },
       { heading: "Retention", body: "We keep your data only for as long as necessary to handle your request and meet our legal obligations." },
       { heading: "Your rights", body: "You can request access to, correction of, or deletion of your data at any time by contacting us. We handle your data in accordance with Dominican Republic Law 172-13 on personal data protection." },
@@ -689,28 +795,41 @@ export const privacyPolicy: Record<Language, {
 };
 
 // General, factual patient education for the implants section (no clinic-specific
-// claims, statistics or guarantees). Rendered with a calm, accessible SVG
-// cross-section in src/components/sections/implant-education.tsx.
+// claims, statistics or guarantees). Rendered beside the scroll-driven implant
+// figure in src/components/sections/implant-education.tsx.
 export const implantEducation: Record<Language, {
   eyebrow: string;
   title: string;
   description: string;
   svgAlt: string;
-  parts: { label: string; desc: string }[];
+  /**
+   * In ASSEMBLY order — the order the figure builds itself in as the reader
+   * scrolls: fixture, abutment, crown, then the bone it integrates with.
+   *
+   * It used to run anatomically, crown first, while the figure assembled from
+   * the bottom up, so the caption under the figure named one part while the
+   * legend beside it was still describing another. `key` is the contract with
+   * the figure (src/components/implant/): the phase it is showing lights the
+   * row with the same key.
+   */
+  parts: { key: 'fixture' | 'abutment' | 'crown' | 'bone'; label: string; desc: string }[];
   stepsTitle: string;
   steps: { title: string; desc: string }[];
   ctaLabel: string;
+  /** Heading over the links into the implant guide's pages. */
+  guideTitle: string;
+  guideAll: string;
 }> = {
   es: {
     eyebrow: "Educación para el paciente",
     title: "¿Cómo funciona un implante dental?",
     description: "Un implante reemplaza la raíz de un diente perdido y sostiene una corona que luce y funciona como un diente natural.",
-    svgAlt: "Diagrama en corte de un implante dental: corona, pilar, poste de titanio integrado en el hueso.",
+    svgAlt: "Diagrama en corte de un implante dental: el implante de titanio integrado en el hueso, el pilar y la corona.",
     parts: [
-      { label: "Corona", desc: "La parte visible, hecha a medida para imitar su diente natural." },
-      { label: "Pilar", desc: "Conecta la corona con el implante de forma segura." },
-      { label: "Implante de titanio", desc: "Un poste de titanio biocompatible que reemplaza la raíz." },
-      { label: "Hueso", desc: "El implante se integra con el hueso para dar firmeza (osteointegración)." },
+      { key: 'fixture', label: "Implante de titanio", desc: "Un poste de titanio biocompatible que reemplaza la raíz." },
+      { key: 'abutment', label: "Pilar", desc: "Conecta la corona con el implante de forma segura." },
+      { key: 'crown', label: "Corona", desc: "La parte visible, hecha a medida para imitar su diente natural." },
+      { key: 'bone', label: "Hueso", desc: "El implante se integra con el hueso para dar firmeza (osteointegración)." },
     ],
     stepsTitle: "El proceso, paso a paso",
     steps: [
@@ -718,18 +837,20 @@ export const implantEducation: Record<Language, {
       { title: "Colocación", desc: "Se coloca el implante de titanio en el hueso con cuidado." },
       { title: "Corona definitiva", desc: "Tras la cicatrización, se coloca su corona personalizada." },
     ],
-    ctaLabel: "Consultar sobre implantes",
+    ctaLabel: "Agendar una cita",
+    guideTitle: "Para leer con calma",
+    guideAll: "Toda la guía de implantes",
   },
   en: {
     eyebrow: "Patient education",
     title: "How does a dental implant work?",
     description: "An implant replaces the root of a missing tooth and supports a crown that looks and works like a natural tooth.",
-    svgAlt: "Cross-section diagram of a dental implant: crown, abutment and a titanium post fused into the bone.",
+    svgAlt: "Cross-section diagram of a dental implant: the titanium implant fused into the bone, the abutment and the crown.",
     parts: [
-      { label: "Crown", desc: "The visible part, custom-made to match your natural tooth." },
-      { label: "Abutment", desc: "Securely connects the crown to the implant." },
-      { label: "Titanium implant", desc: "A biocompatible titanium post that replaces the root." },
-      { label: "Bone", desc: "The implant fuses with the bone for stability (osseointegration)." },
+      { key: 'fixture', label: "Titanium implant", desc: "A biocompatible titanium post that replaces the root." },
+      { key: 'abutment', label: "Abutment", desc: "Securely connects the crown to the implant." },
+      { key: 'crown', label: "Crown", desc: "The visible part, custom-made to match your natural tooth." },
+      { key: 'bone', label: "Bone", desc: "The implant fuses with the bone for stability (osseointegration)." },
     ],
     stepsTitle: "The process, step by step",
     steps: [
@@ -737,7 +858,9 @@ export const implantEducation: Record<Language, {
       { title: "Placement", desc: "The titanium implant is carefully placed in the bone." },
       { title: "Final crown", desc: "After healing, your custom crown is fitted." },
     ],
-    ctaLabel: "Ask about implants",
+    ctaLabel: "Book an appointment",
+    guideTitle: "Read at your own pace",
+    guideAll: "The full implant guide",
   },
 };
 
@@ -753,6 +876,11 @@ export const actionMessages: ActionMessages = {
     testimonialModerationFailed: "El contenido del testimonio no es apropiado y no puede ser enviado.",
     testimonialModerationReasonPrefix: "Motivo: ",
     testimonialModerationApiError: "Error durante la moderación del contenido. Por favor, revise su texto e intente de nuevo.",
+    /* What a submission is told when the clinic has switched that channel off
+       in the admin panel. Each one names the channel that still works. */
+    appointmentsClosed: "En este momento la clínica no recibe solicitudes en línea. Llámenos o escríbanos por WhatsApp al 809-581-7059.",
+    contactClosed: "En este momento no recibimos mensajes por el sitio. Llámenos o escríbanos por WhatsApp al 809-581-7059.",
+    testimonialsClosed: "En este momento no estamos recibiendo testimonios nuevos. Gracias por su interés.",
     // Every message names the PROBLEM and the RECOVERY. "Número inválido" tells
     // a patient nothing they can act on; "escríbalo con 7 a 15 dígitos" does.
     zod: {
@@ -761,7 +889,7 @@ export const actionMessages: ActionMessages = {
       phoneInvalid: "Ese teléfono no parece válido. Escríbalo con 7 a 15 dígitos, por ejemplo (829) 123-4567.",
       messageMin: "El mensaje debe tener al menos 10 caracteres.",
       messageMax: "El mensaje no debe exceder los 1000 caracteres.",
-      serviceTypeRequired: "Seleccione un servicio de la lista. Si no está seguro, elija «Consulta General/Revisión».",
+      serviceTypeRequired: "Seleccione un servicio de la lista. Si no está seguro, elija «Consulta general / revisión».",
       reasonMin: "Cuéntenos algo más: al menos 10 caracteres para que podamos preparar su consulta.",
       reasonMax: "El motivo no debe exceder los 500 caracteres. Resuma lo esencial; lo demás lo vemos en consulta.",
       quoteMin: "El testimonio debe tener al menos 15 caracteres.",
@@ -770,7 +898,7 @@ export const actionMessages: ActionMessages = {
       invalidCharacters: "El texto contiene caracteres no válidos. Borre símbolos raros o texto pegado de otra aplicación.",
       nameMax: "El nombre es demasiado largo.",
       emailMax: "El correo electrónico es demasiado largo.",
-      locationMax: "La ubicación es demasiado larga.",
+      locationMax: "La localidad es demasiado larga.",
       emailUnverifiable: "No podemos usar esa dirección de correo. Escriba un correo personal o de trabajo (no uno temporal o desechable).",
       phoneUnverifiable: "No podemos usar ese número. Revise que sean 7 a 15 dígitos reales, por ejemplo (829) 123-4567.",
       preferredDateRequired: "Elija el día que prefiere. Es solo una preferencia: le llamamos para confirmarla.",
@@ -792,6 +920,9 @@ export const actionMessages: ActionMessages = {
     testimonialModerationFailed: "The content of the testimonial is not appropriate and cannot be submitted.",
     testimonialModerationReasonPrefix: "Reason: ",
     testimonialModerationApiError: "Error during content moderation. Please review your text and try again.",
+    appointmentsClosed: "The clinic is not taking online requests right now. Please call or message us on WhatsApp at 809-581-7059.",
+    contactClosed: "We are not taking messages through the site right now. Please call or message us on WhatsApp at 809-581-7059.",
+    testimonialsClosed: "We are not taking new testimonials right now. Thank you for your interest.",
     // Every message names the PROBLEM and the RECOVERY. "Invalid phone number"
     // tells a patient nothing they can act on; "use 7 to 15 digits" does.
     zod: {
@@ -800,7 +931,7 @@ export const actionMessages: ActionMessages = {
       phoneInvalid: "That phone number doesn't look right. Use 7 to 15 digits, e.g. (555) 987-6543.",
       messageMin: "Message must be at least 10 characters long.",
       messageMax: "Message must not exceed 1000 characters.",
-      serviceTypeRequired: "Pick a service from the list. If you're not sure, choose “General Consultation/Check-up”.",
+      serviceTypeRequired: "Pick a service from the list. If you're not sure, choose “General consultation / check-up”.",
       reasonMin: "Tell us a little more — at least 10 characters, so we can prepare for your visit.",
       reasonMax: "The reason must not exceed 500 characters. Summarise the essentials; we'll cover the rest in the chair.",
       quoteMin: "Testimonial must be at least 15 characters long.",
@@ -809,7 +940,7 @@ export const actionMessages: ActionMessages = {
       invalidCharacters: "The text contains invalid characters. Remove any odd symbols or text pasted from another app.",
       nameMax: "The name is too long.",
       emailMax: "The email address is too long.",
-      locationMax: "The location is too long.",
+      locationMax: "The town or city is too long.",
       emailUnverifiable: "We can't use that email address. Please use a personal or work address (not a temporary or disposable one).",
       phoneUnverifiable: "We can't use that number. Check it is 7 to 15 real digits, e.g. (555) 987-6543.",
       preferredDateRequired: "Pick the day you'd prefer. It's only a preference — we call you to confirm it.",
@@ -821,7 +952,6 @@ export const actionMessages: ActionMessages = {
     }
   }
 };
-
 
 export const contactDetails: ContactDetails = {
   clinicName: {
@@ -836,325 +966,229 @@ export const contactDetails: ContactDetails = {
     es: 'Plaza Las Ramblas, Módulo 101, Santiago de los Caballeros, República Dominicana',
     en: 'Plaza Las Ramblas, Module 101, Santiago de los Caballeros, Dominican Republic'
   },
+  /** Display form only. Links are built from `clinicContact.phoneE164`. */
   phone: {
-    es: '809-581-7059', 
-    en: '809-581-7059'  
+    es: '809-581-7059',
+    en: '809-581-7059'
   },
   email: {
-    es: 'info@orthoprotesisdental.com', 
-    en: 'info@orthoprotesisdental.com'  
+    es: 'info@orthoprotesisdental.com',
+    en: 'info@orthoprotesisdental.com'
   },
+  /* One format, everywhere, with no-break spaces binding each time to its
+     a. m./p. m. so a narrow column never strands "p. m." on a line of its own.
+     The site used to print "9:00 AM - 6:00 PM" here and
+     "de 9:00 a 18:00" in the appointment form — the same hours in two notations,
+     one of them English. */
   schedule: {
-    es: 'Lunes a Viernes: 9:00 AM - 6:00 PM',
-    en: 'Monday to Friday: 9:00 AM - 6:00 PM'
+    es: 'Lunes a viernes, de 9:00 a. m. a 6:00 p. m.',
+    en: 'Monday to Friday, 9:00 a.m. to 6:00 p.m.'
   },
   mapLink: {
-    es: 'https://maps.google.com/?q=Plaza+Las+Ramblas+Santiago+de+los+Caballeros', 
+    es: 'https://maps.google.com/?q=Plaza+Las+Ramblas+Santiago+de+los+Caballeros',
     en: 'https://maps.google.com/?q=Plaza+Las+Ramblas+Santiago+de+los+Caballeros'
   },
+  /* `!5e0` (road map), not `!5e1` (satellite): a rooftop photograph does not
+     tell a patient which street to turn into. */
   embedMapLink: {
-    es: `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4060.840856210959!2d-70.69729749999999!3d19.4541221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eb1cf5f2201f147%3A0xf5965af18d5482e2!2sPlaza%20las%20Ramblas!5e1!3m2!1ses!2sdo!4v1749698637474!5m2!1ses!2sdo`,
-    en: `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4060.840856210959!2d-70.69729749999999!3d19.4541221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eb1cf5f2201f147%3A0xf5965af18d5482e2!2sPlaza%20las%20Ramblas!5e1!3m2!1sen!2sdo!4v1749698637474!5m2!1sen!2sdo`
+    es: `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4060.840856210959!2d-70.69729749999999!3d19.4541221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eb1cf5f2201f147%3A0xf5965af18d5482e2!2sPlaza%20las%20Ramblas!5e0!3m2!1ses!2sdo!4v1749698637474!5m2!1ses!2sdo`,
+    en: `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4060.840856210959!2d-70.69729749999999!3d19.4541221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eb1cf5f2201f147%3A0xf5965af18d5482e2!2sPlaza%20las%20Ramblas!5e0!3m2!1sen!2sdo!4v1749698637474!5m2!1sen!2sdo`
   },
   qualifications: {
     es: [
-      "Especialista en Prótesis, Implantes y Ortodoncia",
-      "Odontología General y Estética Avanzada",
+      "Especialista en prótesis, implantes y ortodoncia",
+      "Odontología general y estética avanzada",
       "Miembro de la Asociación Odontológica Dominicana",
       "Más de 30 años de experiencia",
       "Compromiso con la última tecnología dental"
     ],
     en: [
-      "Specialist in Prosthetics, Implants, and Orthodontics",
-      "General and Advanced Aesthetic Dentistry",
+      "Specialist in prosthetics, implants and orthodontics",
+      "General and advanced aesthetic dentistry",
       "Member of the Dominican Dental Association",
       "Over 30 years of experience",
       "Commitment to the latest dental technology"
     ]
   },
-  hero: {
-    es: {
-      subtitle: "En {{clinicName}}",
-      welcome: "¡Bienvenido! Su sonrisa es nuestra prioridad. Le ofrecemos atención dental personalizada y de la más alta calidad en un ambiente cálido y profesional, con especialización en prótesis, implantes y ortodoncia.",
-      description: "Con una trayectoria dedicada a la excelencia y al bienestar de nuestros pacientes, el {{doctorName}} combina experiencia, tecnología de vanguardia y un trato humano para asegurar los mejores resultados para su salud oral en nuestra clínica ubicada en Plaza Las Ramblas, Santiago de los Caballeros.",
-      ctaAppointment: "Agendar Cita",
-      ctaServices: "Nuestros Servicios",
-      qualificationsTitle: "Calificaciones y Compromiso del {{doctorName}}"
-    },
-    en: {
-      subtitle: "At {{clinicName}}",
-      welcome: "Welcome! Your smile is our priority. We offer personalized, high-quality dental care in a warm and professional environment, specializing in prosthetics, implants, and orthodontics.",
-      description: "With a track record dedicated to excellence and patient well-being, {{doctorName}} combines experience, cutting-edge technology, and a human touch to ensure the best results for your oral health at our clinic located in Plaza Las Ramblas, Santiago de los Caballeros.",
-      ctaAppointment: "Schedule Appointment",
-      ctaServices: "Our Services",
-      qualificationsTitle: "Qualifications and Commitment of {{doctorName}}"
-    }
-  },
-  visitUs: {
-    es: {
-      title: "Visítenos en Plaza Las Ramblas",
-      description: "Nuestra moderna clínica está convenientemente ubicada en Plaza Las Ramblas, Santiago de los Caballeros, un lugar accesible y agradable.",
-      ctaButton: "Ver Ubicación y Contacto"
-    },
-    en: {
-      title: "Visit Us at Plaza Las Ramblas",
-      description: "Our modern clinic is conveniently located at Plaza Las Ramblas, Santiago de los Caballeros, an accessible and pleasant place.",
-      ctaButton: "View Location and Contact"
-    }
-  },
   servicesSection: {
     es: {
-      title: "Nuestros Servicios Dentales",
-      description: "En {{clinicName}}, el {{doctorName}} ofrece una amplia gama de servicios dentales para cubrir todas sus necesidades de salud oral, con especialización en prótesis, implantes y ortodoncia. Utilizamos la última tecnología y técnicas avanzadas."
+      title: "Servicios dentales",
+      description:
+        "El {{doctorName}} está especializado en prótesis, implantes y ortodoncia, y en la consulta también se atiende la odontología general.",
+      specialtiesTitle: "Especialidades",
+      generalTitle: "Odontología general",
+      moreLabel: "Más información",
+      implantGuide: "Guía de implantes",
     },
     en: {
-      title: "Our Dental Services",
-      description: "At {{clinicName}}, {{doctorName}} offers a wide range of dental services to cover all your oral health needs, specializing in prosthetics, implants, and orthodontics. We use the latest technology and advanced techniques."
+      title: "Dental services",
+      description:
+        "{{doctorName}} specializes in prosthetics, implants and orthodontics, and the practice also provides general dentistry.",
+      specialtiesTitle: "Specialties",
+      generalTitle: "General dentistry",
+      moreLabel: "More information",
+      implantGuide: "Implant guide",
     }
   },
   testimonialsSection: {
     es: {
-      title: "Lo Que Dicen Nuestros Pacientes",
-      description: "Estamos orgullosos de las sonrisas que el {{doctorName}} ha ayudado a transformar en {{clinicName}}. Vea lo que algunos de nuestros pacientes satisfechos tienen que decir.",
-      ctaButton: "Dejar un Testimonio",
-      dialogTitle: "Comparta su Experiencia",
-      dialogDescription: "Su opinión es muy valiosa para nosotros y para futuros pacientes."
+      title: "Lo que dicen los pacientes",
+      description: "Testimonios enviados por pacientes de la consulta. Se publican tras revisarse.",
+      ctaButton: "Dejar un testimonio",
+      dialogTitle: "Comparta su experiencia",
+      dialogDescription: "Su opinión es valiosa para nosotros y para quien está decidiendo. La leemos antes de publicarla."
     },
     en: {
-      title: "What Our Patients Say",
-      description: "We are proud of the smiles that {{doctorName}} has helped transform at {{clinicName}}. See what some of our satisfied patients have to say.",
-      ctaButton: "Leave a Testimonial",
-      dialogTitle: "Share Your Experience",
-      dialogDescription: "Your opinion is very valuable to us and to future patients."
+      title: "What patients say",
+      description: "Testimonials submitted by patients of the practice. Published after review.",
+      ctaButton: "Leave a testimonial",
+      dialogTitle: "Share your experience",
+      dialogDescription: "Your opinion matters to us and to whoever is deciding. We read it before publishing it."
     }
   },
   faqSection: {
     es: {
-      title: "Preguntas Frecuentes",
-      description: "Encuentre respuestas a las preguntas más comunes sobre nuestros servicios y el cuidado dental que ofrecemos en {{clinicName}} con el {{doctorName}}."
+      title: "Preguntas frecuentes",
+      description: "Lo que más nos preguntan antes de la primera visita.",
+      guideAnswerLink: "Seguir leyendo en la guía",
+      moreLink: "Más preguntas sobre implantes",
     },
     en: {
-      title: "Frequently Asked Questions",
-      description: "Find answers to the most common questions about our services and the dental care we offer at {{clinicName}} with {{doctorName}}."
+      title: "Frequently asked questions",
+      description: "What people ask us most before the first visit.",
+      guideAnswerLink: "Read more in the guide",
+      moreLink: "More questions about implants",
     }
   },
   diplomasSection: {
     es: {
-      title: "Certificaciones y Diplomas",
-      description: "Conozca las credenciales académicas y profesionales del {{doctorName}}, que respaldan su experiencia y compromiso con la excelencia en el cuidado dental en {{clinicName}}."
+      title: "Diplomas y certificados",
+      description: "Los documentos originales, fotografiados, del más reciente al más antiguo. Toque cualquiera para leerlo a tamaño completo."
     },
     en: {
-      title: "Certifications and Diplomas",
-      description: "Learn about the academic and professional credentials of {{doctorName}}, which support his experience and commitment to excellence in dental care at {{clinicName}}."
+      title: "Diplomas and certificates",
+      description: "Photographs of the original documents, newest first. Tap any of them to read it at full size."
     }
   },
+  /* "Cómo llegar" — the visit band and the contact band, merged. They used to
+     be two sections: a carousel of the same storefront three times, and a
+     contact form with a map. */
   contactSection: {
     es: {
-      title: "Contáctanos",
-      description: "¿Listo para mejorar tu sonrisa con el {{doctorName}}? Contáctanos hoy en {{clinicName}} para agendar tu cita o para cualquier consulta.",
-      formTitle: "Envíanos un Mensaje",
-      detailsTitle: "Información de Contacto",
+      title: "Cómo llegar",
+      description: "La consulta está en Plaza Las Ramblas, Módulo 101, en Santiago de los Caballeros.",
+      detailsTitle: "Datos de contacto",
       addressLabel: "Dirección",
-      phoneLabel: "Teléfono",
-      emailLabel: "Correo Electrónico",
-      scheduleLabel: "Horario de Atención",
-      mapTitle: "Nuestra Ubicación en Plaza Las Ramblas",
-      viewMapButton: "Ver en Google Maps"
+      phoneLabel: "Teléfono y WhatsApp",
+      emailLabel: "Correo electrónico",
+      scheduleLabel: "Horario",
+      photoCaption: "La entrada de la consulta, vista desde el pasillo de la plaza.",
+      mapTitle: "Mapa de Plaza Las Ramblas",
+      mapLoad: "Mostrar el mapa",
+      mapNote: "El mapa interactivo se carga desde Google al pulsar.",
+      viewMapButton: "Abrir en Google Maps",
+      formTitle: "¿Tiene una pregunta?",
+      formLead: "Escríbanos y le respondemos. Para pedir cita, el formulario de cita es más rápido.",
+      formToggle: "Escribir un mensaje",
     },
     en: {
-      title: "Contact Us",
-      description: "Ready to improve your smile with {{doctorName}}? Contact us today at {{clinicName}} to schedule your appointment or for any inquiries.",
-      formTitle: "Send Us a Message",
-      detailsTitle: "Contact Information",
+      title: "Finding us",
+      description: "The practice is at Plaza Las Ramblas, Module 101, in Santiago de los Caballeros.",
+      detailsTitle: "Contact details",
       addressLabel: "Address",
-      phoneLabel: "Phone",
+      phoneLabel: "Phone and WhatsApp",
       emailLabel: "Email",
-      scheduleLabel: "Office Hours",
-      mapTitle: "Our Location at Plaza Las Ramblas",
-      viewMapButton: "View on Google Maps"
+      scheduleLabel: "Hours",
+      photoCaption: "The entrance to the practice, seen from the plaza walkway.",
+      mapTitle: "Map of Plaza Las Ramblas",
+      mapLoad: "Show the map",
+      mapNote: "The interactive map loads from Google when you press.",
+      viewMapButton: "Open in Google Maps",
+      formTitle: "Have a question?",
+      formLead: "Write to us and we will reply. To book, the appointment form is quicker.",
+      formToggle: "Write a message",
     }
   },
   appointmentPage: {
     es: {
-      title: "Agendar Cita",
-      description: "Agende su cita con el {{doctorName}} en {{clinicName}}. Complete el formulario para solicitar su cita.",
-      cardTitle: "Agendar Cita",
+      title: "Agendar una cita",
+      description: "Solicite su cita con el {{doctorName}} en {{clinicName}}. Le llamamos para confirmar el día y la hora.",
+      cardTitle: "Agendar una cita",
       cardDescription: "Con el {{doctorName}} en {{clinicName}}",
-      formIntro: "Complete el siguiente formulario para solicitar una cita. Nos pondremos en contacto con usted a la brevedad para confirmar los detalles y disponibilidad.",
-      openingHoursTitle: "Horario de Atención Regular:",
+      formIntro: "Complete el siguiente formulario para solicitar una cita. Nos pondremos en contacto con usted a la brevedad para confirmar los detalles y la disponibilidad.",
+      openingHoursTitle: "Horario de atención",
       serviceOptions: {
-        generalConsultation: "Consulta General/Revisión"
+        generalConsultation: "Consulta general / revisión"
       }
     },
     en: {
-      title: "Schedule Appointment",
-      description: "Schedule your appointment with {{doctorName}} at {{clinicName}}. Complete the form to request your appointment.",
-      cardTitle: "Schedule Appointment",
+      title: "Book an appointment",
+      description: "Request an appointment with {{doctorName}} at {{clinicName}}. We call you to confirm the day and time.",
+      cardTitle: "Book an appointment",
       cardDescription: "With {{doctorName}} at {{clinicName}}",
-      formIntro: "Complete the following form to request an appointment. We will contact you shortly to confirm the details and availability.",
-      openingHoursTitle: "Regular Opening Hours:",
+      formIntro: "Complete the form below to request an appointment. We will contact you shortly to confirm the details and availability.",
+      openingHoursTitle: "Opening hours",
       serviceOptions: {
-        generalConsultation: "General Consultation/Check-up"
+        generalConsultation: "General consultation / check-up"
       }
     }
   },
   footer: {
     es: {
-      tagline: "Dirigida por el {{doctorName}}. Cuidando tu sonrisa con pasión y profesionalismo en Santiago de los Caballeros, República Dominicana.",
-      quickContact: "Contacto Rápido",
+      tagline: "Dirigida por el {{doctorName}}. Prótesis, implantes y ortodoncia en Santiago de los Caballeros, República Dominicana.",
+      quickContact: "Contacto",
       scheduleTitle: "Horario",
       copyright: "© {{year}} {{clinicName}}. Todos los derechos reservados.",
-      doctorAttribution: "Una clínica del {{doctorName}}."
+      implantGuide: "Guía de implantes",
+      leaveTestimonial: "Dejar un testimonio",
     },
     en: {
-      tagline: "Led by {{doctorName}}. Caring for your smile with passion and professionalism in Santiago de los Caballeros, Dominican Republic.",
-      quickContact: "Quick Contact",
+      tagline: "Led by {{doctorName}}. Prosthetics, implants and orthodontics in Santiago de los Caballeros, Dominican Republic.",
+      quickContact: "Contact",
       scheduleTitle: "Hours",
       copyright: "© {{year}} {{clinicName}}. All rights reserved.",
-      doctorAttribution: "A clinic of {{doctorName}}."
+      implantGuide: "Implant guide",
+      leaveTestimonial: "Leave a testimonial",
     }
-  }
-};
-
-export const baseMetadata: BaseMetadata = {
-  es: {
-    titleSuffix: "Cuidado Dental Especializado en Santiago de los Caballeros",
-    description: "{{clinicName}}, dirigida por el {{doctorName}} en Santiago de los Caballeros, República Dominicana. Especialistas en prótesis, implantes y ortodoncia. Ofrecemos servicios dentales de alta calidad. Contáctanos para agendar tu cita.",
-    keywords: ['dentista', 'clínica dental', 'Santiago de los Caballeros', 'República Dominicana', 'Francis Valerio', 'Orthoprotesis Dental Clinic', 'salud dental', 'odontología', 'prótesis dental', 'implantes dentales', 'ortodoncia', 'agendar cita dental'],
-  },
-  en: {
-    titleSuffix: "Specialized Dental Care in Santiago de los Caballeros",
-    description: "{{clinicName}}, led by {{doctorName}} in Santiago de los Caballeros, Dominican Republic. Specialists in prosthetics, implants, and orthodontics. We offer high-quality dental services. Contact us to schedule your appointment.",
-    keywords: ['dentist', 'dental clinic', 'Santiago de los Caballeros', 'Dominican Republic', 'Francis Valerio', 'Orthoprotesis Dental Clinic', 'dental health', 'odontology', 'dental prosthetics', 'dental implants', 'orthodontics', 'schedule dental appointment'],
   }
 };
 
 export const generalUiStrings: GeneralUIData = {
   es: {
-    readMore: "Leer Más",
-    readLess: "Leer Menos",
-    adminPanelTitle: "Panel de Administración",
-    appointmentsTitle: "Gestión de Citas",
-    messagesTitle: "Gestión de Mensajes",
-    testimonialsTitle: "Gestión de Testimonios",
-    settingsTitle: "Configuración",
-    logout: "Cerrar Sesión",
-    viewSite: "Ver Sitio Público",
-    noAppointments: "No hay citas pendientes.",
+    readMore: "Leer más",
+    readLess: "Leer menos",
     home: "Inicio",
     services: "Servicios",
-    faq: "Preguntas Frecuentes",
+    faq: "Preguntas frecuentes",
     testimonials: "Testimonios",
     contact: "Contacto",
-    appointments: "Agendar Cita",
+    appointments: "Agendar una cita",
     /* The header CTA below 640px, where the full label pushed the clinic
        name into an ellipsis ("Ortho…"). Same destination, same meaning,
        one word. */
     appointmentsShort: "Cita",
-    appointmentTableHeaders: {
-      name: "Nombre",
-      email: "Correo",
-      phone: "Teléfono",
-      service: "Servicio",
-      reason: "Motivo",
-      urgent: "Urgente",
-      submitted: "Enviado",
-      status: "Estado",
-      actions: "Acciones",
-    },
-    statusLabels: {
-      pending: "Pendiente",
-      confirmed: "Confirmada",
-      cancelled: "Cancelada",
-      completed: "Completada",
-      unread: "No leído",
-      read: "Leído",
-      archived: "Archivado",
-      pending_approval: "Pendiente",
-      approved: "Aprobado",
-      rejected: "Rechazado",
-    },
-     actionButtons: {
-      confirm: "Confirmar",
-      cancel: "Cancelar Cita",
-      complete: "Marcar Completada",
-      markRead: "Marcar como Leído",
-      archive: "Archivar",
-      approve: "Aprobar",
-      reject: "Rechazar",
-      view: "Ver Detalles",
-      delete: "Eliminar",
-    },
-    boolean: {
-      true: "Sí",
-      false: "No",
-    }
   },
-  en: { // Provided for completeness, admin UI is primarily Spanish
-    readMore: "Read More",
-    readLess: "Read Less",
-    adminPanelTitle: "Admin Panel",
-    appointmentsTitle: "Appointment Management",
-    messagesTitle: "Message Management",
-    testimonialsTitle: "Testimonial Management",
-    settingsTitle: "Settings",
-    logout: "Logout",
-    viewSite: "View Public Site",
-    noAppointments: "No pending appointments.",
+  en: {
+    readMore: "Read more",
+    readLess: "Read less",
     home: "Home",
     services: "Services",
     faq: "FAQ",
     testimonials: "Testimonials",
     contact: "Contact",
-    appointments: "Schedule Appointment",
+    appointments: "Book an appointment",
     appointmentsShort: "Book",
-    appointmentTableHeaders: {
-      name: "Name",
-      email: "Email",
-      phone: "Phone",
-      service: "Service",
-      reason: "Reason",
-      urgent: "Urgent",
-      submitted: "Submitted",
-      status: "Status",
-      actions: "Actions",
-    },
-     statusLabels: {
-      pending: "Pending",
-      confirmed: "Confirmed",
-      cancelled: "Cancelled",
-      completed: "Completed",
-      unread: "Unread",
-      read: "Read",
-      archived: "Archived",
-      pending_approval: "Pending",
-      approved: "Approved",
-      rejected: "Rejected",
-    },
-    actionButtons: {
-      confirm: "Confirm",
-      cancel: "Cancel Appointment",
-      complete: "Mark Completed",
-      markRead: "Mark as Read",
-      archive: "Archive",
-      approve: "Approve",
-      reject: "Reject",
-      view: "View Details",
-      delete: "Delete",
-    },
-    boolean: {
-      true: "Yes",
-      false: "No",
-    }
   },
 };
 
 /**
  * Homepage narrative copy.
  *
- * The homepage is structured as an argument rather than a feature list:
- * claim → proof → problem → mechanism → options → evidence → who → book.
- * These strings back the sections that didn't exist in the old layout.
+ * The homepage is an argument, in this order: the claim (hero), why it matters
+ * (problem), how an implant works, who will treat you and the documents behind
+ * that, what patients say, what else the practice does, the questions people
+ * ask, where it is — and then the ask, last, so the page ends on the reassuring
+ * band rather than on a form.
  *
  * Clinical statements here are limited to well-established, non-promissory
  * facts about tooth loss and osseointegration. Nothing claims an outcome,
@@ -1164,14 +1198,16 @@ export const homeContent: Record<
   Language,
   {
     hero: {
+      /** Names the subject the headline gives up: implants, and where. */
+      eyebrow: string;
       title: string;
       standfirst: string;
       ctaPrimary: string;
       ctaSecondary: string;
-      imageAlt: string;
-      locationNote: string;
+      /** Caption plate on the photograph — the proof that sits with the place. */
+      photoLead: string;
+      photoPlace: string;
     };
-    trust: { value: string; label: string }[];
     problem: {
       title: string;
       description: string;
@@ -1182,7 +1218,10 @@ export const homeContent: Record<
       lead: string;
       body: string[];
       credentialsTitle: string;
-      viewDiplomas: string;
+      /** The quiet invitation that replaced the empty testimonials band. */
+      inviteQuestion: string;
+      inviteBody: string;
+      inviteCta: string;
     };
     booking: {
       title: string;
@@ -1190,14 +1229,15 @@ export const homeContent: Record<
       steps: { title: string; desc: string }[];
       ctaPrimary: string;
       ctaCall: string;
+      ctaWhatsapp: string;
       reassurance: string;
     };
     proof: { title: string; description: string };
-    servicesLead: string;
   }
 > = {
   es: {
     hero: {
+      eyebrow: 'Implantes dentales · Santiago de los Caballeros',
       // Noun phrase, so no terminal period — the house rule elsewhere in this
       // layer (`Cuando falta una pieza, cambia todo lo demás.` takes one;
       // `Agende su consulta` does not). The claim is not new: it is
@@ -1206,27 +1246,13 @@ export const homeContent: Record<
       // position where it does the most work. Nothing here is promissory: it
       // describes who staffs the appointment, not what happens to your bone.
       title: 'El mismo dentista, de principio a fin',
-      // Sentence one restores the subject matter the headline gives up, and
-      // matches the trust strip. Sentence two unpacks the headline in plain
-      // terms instead of repeating it. `reconstruyendo dentaduras` was dropped
-      // deliberately: in Dominican usage *dentadura* reads first as the
-      // appliance, so the old line could be parsed as "rebuilding dentures",
-      // which is not what the practice does — and the English said something
-      // different again ("rebuilding teeth"). The place is not repeated here;
-      // `locationNote` already prints it directly above.
       standfirst:
         'Prótesis, implantes y ortodoncia con el Dr. Francis Valerio. Quien le atiende en la primera visita es quien le hace el tratamiento.',
       ctaPrimary: 'Agendar una cita',
       ctaSecondary: 'Cómo funciona un implante',
-      imageAlt:
-        'Recepción de la clínica Orthoprotesis en Plaza Las Ramblas, Santiago de los Caballeros',
-      locationNote: 'Plaza Las Ramblas, Módulo 101 · Santiago de los Caballeros',
+      photoLead: 'Más de 30 años ejerciendo en Santiago',
+      photoPlace: 'Plaza Las Ramblas, Módulo 101',
     },
-    trust: [
-      { value: '30+', label: 'años ejerciendo' },
-      { value: '3', label: 'especialidades: prótesis, implantes, ortodoncia' },
-      { value: 'AOD', label: 'miembro de la Asociación Odontológica Dominicana' },
-    ],
     problem: {
       title: 'Cuando falta una pieza, cambia todo lo demás.',
       description:
@@ -1254,8 +1280,14 @@ export const homeContent: Record<
         'Es miembro de la Asociación Odontológica Dominicana y ha seguido formándose de forma continuada a lo largo de toda su carrera: cada diploma de abajo corresponde a un curso o certificación concreta.',
         'En la práctica esto significa que el mismo profesional le evalúa, le planifica el tratamiento y se lo realiza, de principio a fin.',
       ],
-      credentialsTitle: 'Formación acreditada',
-      viewDiplomas: 'Ver diplomas y certificaciones',
+      /* Was "Formación acreditada" over all nine documents, several of which
+         are certificates of attendance at a congress. A heading that describes
+         the set accurately is a stronger trust signal than one that oversells
+         it. */
+      credentialsTitle: 'Diplomas y certificados',
+      inviteQuestion: '¿Ha sido paciente del Dr. Valerio?',
+      inviteBody: 'Su experiencia ayuda a quien está decidiendo.',
+      inviteCta: 'Dejar un testimonio',
     },
     booking: {
       title: 'Agende su consulta',
@@ -1264,7 +1296,10 @@ export const homeContent: Record<
       steps: [
         {
           title: 'Usted envía la solicitud',
-          desc: 'Rellene el formulario con su nombre, un teléfono y el motivo. No hace falta nada más.',
+          /* It used to promise "nombre, un teléfono y el motivo. No hace falta
+             nada más" above a form that required seven fields. This is what the
+             form actually asks for. */
+          desc: 'Su nombre, un teléfono, el motivo y el día que prefiere. El correo es opcional.',
         },
         {
           title: 'Le llamamos para confirmar',
@@ -1275,8 +1310,9 @@ export const homeContent: Record<
           desc: 'El Dr. Valerio le examina, le explica las alternativas y le entrega el presupuesto por escrito.',
         },
       ],
-      ctaPrimary: 'Rellenar el formulario',
-      ctaCall: 'Llamar ahora',
+      ctaPrimary: 'Agendar una cita',
+      ctaCall: 'Llamar',
+      ctaWhatsapp: 'WhatsApp',
       reassurance: 'Solicitar una cita no compromete a nada.',
     },
     proof: {
@@ -1284,10 +1320,10 @@ export const homeContent: Record<
       description:
         'Testimonios enviados por pacientes de la consulta. Se publican tras revisarse.',
     },
-    servicesLead: 'Además de implantes y prótesis',
   },
   en: {
     hero: {
+      eyebrow: 'Dental implants · Santiago de los Caballeros',
       // Written, not translated. The old line was ungrammatical: "again"
       // attached to *thinking about it* rather than to *chew*, so it parsed as
       // "stop thinking about it a second time".
@@ -1296,15 +1332,9 @@ export const homeContent: Record<
         'Prosthetics, implants and orthodontics with Dr. Francis Valerio. The person who sees you at the first visit is the one who does the work.',
       ctaPrimary: 'Book an appointment',
       ctaSecondary: 'How an implant works',
-      imageAlt:
-        'Reception of the Orthoprotesis clinic at Plaza Las Ramblas, Santiago de los Caballeros',
-      locationNote: 'Plaza Las Ramblas, Module 101 · Santiago de los Caballeros',
+      photoLead: 'Over 30 years in practice in Santiago',
+      photoPlace: 'Plaza Las Ramblas, Module 101',
     },
-    trust: [
-      { value: '30+', label: 'years in practice' },
-      { value: '3', label: 'specialities: prosthetics, implants, orthodontics' },
-      { value: 'ADA', label: 'member of the Dominican Dental Association' },
-    ],
     problem: {
       title: 'When one tooth goes, everything else shifts.',
       description:
@@ -1332,8 +1362,10 @@ export const homeContent: Record<
         'He is a member of the Dominican Dental Association and has kept training throughout his career: each diploma below corresponds to a specific course or certification.',
         'In practice this means the same clinician assesses you, plans your treatment and carries it out, from start to finish.',
       ],
-      credentialsTitle: 'Accredited training',
-      viewDiplomas: 'View diplomas and certifications',
+      credentialsTitle: 'Diplomas and certificates',
+      inviteQuestion: 'Have you been a patient of Dr. Valerio?',
+      inviteBody: 'Your experience helps someone who is deciding.',
+      inviteCta: 'Leave a testimonial',
     },
     booking: {
       title: 'Book your consultation',
@@ -1342,7 +1374,7 @@ export const homeContent: Record<
       steps: [
         {
           title: 'You send the request',
-          desc: 'Fill in the form with your name, a phone number and the reason. Nothing else is needed.',
+          desc: 'Your name, a phone number, the reason and the day you prefer. Email is optional.',
         },
         {
           title: 'We call to confirm',
@@ -1353,32 +1385,67 @@ export const homeContent: Record<
           desc: 'Dr. Valerio examines you, explains the alternatives and hands you a written quote.',
         },
       ],
-      ctaPrimary: 'Fill in the form',
-      ctaCall: 'Call now',
+      ctaPrimary: 'Book an appointment',
+      ctaCall: 'Call',
+      ctaWhatsapp: 'WhatsApp',
       reassurance: 'Requesting an appointment commits you to nothing.',
     },
     proof: {
       title: 'What patients say',
       description: 'Testimonials submitted by patients of the practice. Published after review.',
     },
-    servicesLead: 'Beyond implants and prosthetics',
   },
 };
 
-export const visitUsCarouselImages: CarouselImageItem[] = [
-  { src: "/images/vitrine_clinique1.jpg", altEs: "Vitrine de la clínica dental Orthoprotesis en Plaza Las Ramblas, Santiago de los Caballeros", altEn: "Dental clinic Orthoprotesis storefront in Plaza Las Ramblas, Santiago de los Caballeros", hint: "clinic storefront" },
-  { src: "/images/vitrine_clinique2.jpg", altEs: "Interior de la clínica dental Orthoprotesis, Santiago de los Caballeros", altEn: "Interior of Orthoprotesis dental clinic, Santiago de los Caballeros", hint: "clinic interior" },
-  { src: "/images/vitrine_clinique3.jpg", altEs: "Vista exterior de la clínica dental Orthoprotesis en Plaza Las Ramblas", altEn: "Exterior view of Orthoprotesis dental clinic in Plaza Las Ramblas", hint: "clinic exterior view" },
-];
+/**
+ * The practice's photographs, with their dimensions and alt text.
+ *
+ * There are three, all of the storefront, so each is placed ONCE: the hero (the
+ * portrait door shot on wide screens, the landscape front on phones — one
+ * placement, art-directed) and "Cómo llegar". The page used to show the same
+ * glass door five times, including in place of a portrait of the doctor.
+ *
+ * When the clinic supplies a portrait of Dr. Valerio and a photograph of the
+ * treatment room, the portrait belongs in the doctor band and the treatment
+ * room in the hero; the storefront then moves to "Cómo llegar" only.
+ */
+export const clinicPhotos = {
+  door: {
+    src: '/images/vitrine_clinique2.jpg',
+    width: 900,
+    height: 1600,
+    alt: {
+      es: 'Puerta de entrada de la consulta del Dr. Francis Valerio Paulino en Plaza Las Ramblas',
+      en: "Entrance door of Dr. Francis Valerio Paulino's practice at Plaza Las Ramblas",
+    },
+  },
+  front: {
+    src: '/images/vitrine_clinique1.jpg',
+    width: 1600,
+    height: 900,
+    alt: {
+      es: 'Fachada de cristal de la consulta, con el nombre del Dr. Francis Valerio Paulino y la recepción al fondo',
+      en: "The practice's glass front, lettered with Dr. Francis Valerio Paulino's name, with the reception behind it",
+    },
+  },
+  approach: {
+    src: '/images/vitrine_clinique3.jpg',
+    width: 1600,
+    height: 900,
+    alt: {
+      es: 'La consulta vista desde el pasillo de Plaza Las Ramblas, bajo el rótulo «Dr. Francis Valerio Paulino · Odontología especializada»',
+      en: 'The practice seen from the walkway at Plaza Las Ramblas, under the sign “Dr. Francis Valerio Paulino · Odontología especializada”',
+    },
+  },
+} as const;
 
 /**
- * Diplomas section — interface copy.
+ * Diploma rail and lightbox — interface copy.
  *
- * Every label the certificate gallery and its lightbox need. The previous
- * version of that section built its two strings inline with a
- * `lang === 'es' ? … : …` ternary inside the component, which is the same
- * problem this file exists to solve, just in a smaller box: the copy could not
- * be read or corrected from here.
+ * Every label the certificate rail and its lightbox need. The previous version
+ * of that section built its two strings inline with a `lang === 'es' ? … : …`
+ * ternary inside the component, which is the same problem this file exists to
+ * solve, just in a smaller box: the copy could not be read or corrected here.
  *
  * `{{title}}`, `{{institution}}`, `{{year}}`, `{{index}}` and `{{total}}` are
  * substituted at render time — the same convention as `{{clinicName}}`.
@@ -1386,15 +1453,17 @@ export const visitUsCarouselImages: CarouselImageItem[] = [
 export const diplomasUi: Record<
   Language,
   {
-    /** Vertical label in the outer gutter. `{{range}}` = earliest–latest year. */
+    /** Span of the record. `{{range}}` = earliest–latest year. */
     rail: string;
-    /** Sets expectations: these are phone photographs, not flat scans. */
-    photoNote: string;
     empty: string;
     /** Visible hover/tap hint on a certificate. */
     openHint: string;
     /** Accessible name of the trigger button. Must name the specific document. */
     openLabel: string;
+    /** Accessible name of the scrollable strip, and its scroll buttons. */
+    stripLabel: string;
+    scrollBack: string;
+    scrollForward: string;
     counter: string;
     prev: string;
     next: string;
@@ -1404,12 +1473,13 @@ export const diplomasUi: Record<
   }
 > = {
   es: {
-    rail: 'Formación continua · {{range}}',
-    photoNote:
-      'Fotografías de los documentos originales. Abra cualquiera para leerlo a tamaño completo.',
+    rail: 'Formación continua, {{range}}',
     empty: 'No hay diplomas registrados.',
     openHint: 'Ampliar',
     openLabel: 'Ampliar el certificado {{title}}, {{institution}}, {{year}}',
+    stripLabel: 'Diplomas y certificados del Dr. Francis Valerio',
+    scrollBack: 'Ver los anteriores',
+    scrollForward: 'Ver los siguientes',
     counter: '{{index}} de {{total}}',
     prev: 'Certificado anterior',
     next: 'Certificado siguiente',
@@ -1418,12 +1488,13 @@ export const diplomasUi: Record<
     keyboardHint: 'Use las flechas ← y → para pasar de un certificado a otro.',
   },
   en: {
-    rail: 'Continuing education · {{range}}',
-    photoNote:
-      'Photographs of the original documents. Open any of them to read it at full size.',
+    rail: 'Continuing education, {{range}}',
     empty: 'No diplomas on record.',
     openHint: 'Enlarge',
     openLabel: 'Enlarge the certificate {{title}}, {{institution}}, {{year}}',
+    stripLabel: "Dr. Francis Valerio's diplomas and certificates",
+    scrollBack: 'Show earlier ones',
+    scrollForward: 'Show later ones',
     counter: '{{index}} of {{total}}',
     prev: 'Previous certificate',
     next: 'Next certificate',
@@ -1461,11 +1532,11 @@ export const diplomas: DiplomaData = {
     },
     {
       id: 'diploma4',
-      title: '2° Encuentro Científico Cultural Dominico-Mexicano: Rehabilitación Oral y Ortodoncia Clínica',
+      title: '2.º Encuentro Científico Cultural Dominico-Mexicano: Rehabilitación Oral y Ortodoncia Clínica',
       institution: 'Facultad de Odontología UNAM',
       year: '2000',
       image: '/images/diploma4.jpg',
-      description: 'Participación en el 2do encuentro científico y cultural dominico-mexicano sobre la rehabilitación oral y la ortodoncia clínica.'
+      description: 'Participación en el 2.º encuentro científico y cultural dominico-mexicano sobre la rehabilitación oral y la ortodoncia clínica.'
     },
     {
       id: 'diploma5',
@@ -1478,15 +1549,15 @@ export const diplomas: DiplomaData = {
     {
       id: 'diploma6',
       title: 'Especialista en Implantología Oral',
-      institution: 'Universidad Central de Este, San Pedro de Macorís (RD)',
+      institution: 'Universidad Central del Este, San Pedro de Macorís (RD)',
       year: '2021',
       image: '/images/diploma6.jpg',
       description: 'Especialización en implantología oral.'
     },
     {
       id: 'diploma7',
-      title: '17° Congresso Brasileiro de Ortodontia',
-      institution: 'Sao Paulo',
+      title: '17º Congresso Brasileiro de Ortodontia',
+      institution: 'São Paulo, Brasil',
       year: '2010',
       image: '/images/diploma7.jpg',
       description: 'Certificado de participación en el 17º Congreso Brasileño de Ortodoncia.'
@@ -1552,7 +1623,7 @@ export const diplomas: DiplomaData = {
     {
       id: 'diploma6',
       title: 'Specialist in Oral Implantology',
-      institution: 'Universidad Central de Este, San Pedro de Macorís (DR)',
+      institution: 'Universidad Central del Este, San Pedro de Macorís (DR)',
       year: '2021',
       image: '/images/diploma6.jpg',
       description: 'Specialization in oral implantology.'
@@ -1560,7 +1631,7 @@ export const diplomas: DiplomaData = {
     {
       id: 'diploma7',
       title: '17th Brazilian Orthodontics Congress',
-      institution: 'Sao Paulo',
+      institution: 'São Paulo, Brazil',
       year: '2010',
       image: '/images/diploma7.jpg',
       description: 'Certificate of participation in the 17th Brazilian Orthodontics Congress.'
@@ -1664,7 +1735,8 @@ export interface ImplantPageContent {
   /** Names the schema.org MedicalProcedure this page is `about`. */
   procedureName: string;
   sections: ImplantSection[];
-  faq: { question: string; answer: string }[];
+  /** `id` only where another page borrows the answer (see `getHomeFaq`). */
+  faq: { id?: string; question: string; answer: string }[];
   keywords: string[];
 }
 
@@ -2017,11 +2089,13 @@ export const implantCluster: Record<Language, ImplantClusterContent> = {
       ],
       faq: [
         {
+          id: 'duele',
           question: '¿Duele colocar un implante?',
           answer:
             'La cirugía se realiza con anestesia local y no debería doler mientras se hace. Las molestias posteriores son las de una intervención menor: inflamación y dolor controlable con la medicación pautada, con el punto máximo entre las cuarenta y ocho y las setenta y dos horas. La mayoría de los pacientes lo describe como más llevadero que una extracción complicada.',
         },
         {
+          id: 'duracion',
           question: '¿Cuánto tiempo dura todo el tratamiento?',
           answer:
             'Desde la primera visita hasta la corona definitiva, lo habitual es de tres a seis meses cuando no hace falta injerto, y de seis a doce meses cuando sí. El plazo concreto depende de la densidad de su hueso y de su cicatrización, y por eso se confirma después de la cirugía y no antes.',
@@ -2499,6 +2573,7 @@ export const implantCluster: Record<Language, ImplantClusterContent> = {
         ],
         faq: [
           {
+            id: 'precio',
             question: '¿Por qué no me dan un precio por teléfono?',
             answer:
               'Porque el precio depende de cuántos implantes, de si hace falta preparar el hueso y del tipo de prótesis, y ninguna de esas tres cosas se puede saber sin explorarle y sin una radiografía. Una cifra dada a ciegas o se queda corta y hay que corregirla después, o se infla para cubrirse. Preferimos la evaluación primero.',
@@ -2919,11 +2994,13 @@ export const implantCluster: Record<Language, ImplantClusterContent> = {
       ],
       faq: [
         {
+          id: 'duele',
           question: 'Does placing an implant hurt?',
           answer:
             'The surgery is done under local anaesthetic and should not hurt while it is happening. What follows is what follows any minor procedure: swelling and discomfort manageable with the prescribed medication, peaking between forty-eight and seventy-two hours. Most patients describe it as easier than a difficult extraction.',
         },
         {
+          id: 'duracion',
           question: 'How long does the whole treatment take?',
           answer:
             'From the first visit to the definitive crown, three to six months is usual where no graft is needed, and six to twelve months where one is. The exact timeline depends on your bone density and your healing, which is why it is confirmed after the surgery rather than before it.',
@@ -3399,6 +3476,7 @@ export const implantCluster: Record<Language, ImplantClusterContent> = {
         ],
         faq: [
           {
+            id: 'precio',
             question: 'Why will you not give me a price over the phone?',
             answer:
               'Because the price depends on how many implants, on whether the bone needs preparing, and on the type of prosthesis — and none of those three can be known without examining you and taking an x-ray. A blind figure either falls short and has to be corrected later, or is inflated to be safe. We would rather do the assessment first.',
@@ -3535,4 +3613,53 @@ export function getImplantSpoke(
   slug: string,
 ): ImplantSpokeContent | undefined {
   return implantCluster[lang].spokes.find((spoke) => spoke.slug === slug);
+}
+
+/** A homepage FAQ entry. `guide` entries are borrowed from the implant guide
+ *  and carry the address of the page they come from. */
+export interface HomeFaqItem extends FAQItem {
+  origin: 'home' | 'guide';
+  href?: string;
+}
+
+/**
+ * The homepage's questions, implant-first.
+ *
+ * Only one of the six questions the homepage used to carry was about implants,
+ * the practice's commercial priority, while two were about check-up frequency
+ * and whitening. The implant answers already exist, written and reviewed, in
+ * the guide; this borrows three of them by id rather than copying the prose, so
+ * an edit to the guide is an edit here too. `origin` lets the structured data
+ * mark up only the homepage's own items (see `faqItems`).
+ *
+ * A borrowed item whose id has gone missing from the guide is dropped, not
+ * rendered empty.
+ */
+export function getHomeFaq(lang: Language): HomeFaqItem[] {
+  const cluster = implantCluster[lang];
+  const home = new Map(faqItems[lang].map((item) => [item.id, item]));
+  const price = cluster.spokes.find((spoke) => spoke.slug === 'precio');
+
+  const own = (id: string): HomeFaqItem[] => {
+    const item = home.get(id);
+    return item ? [{ ...item, origin: 'home' }] : [];
+  };
+  const borrowed = (
+    faq: ImplantPageContent['faq'] | undefined,
+    id: string,
+    href: string,
+  ): HomeFaqItem[] => {
+    const item = faq?.find((entry) => entry.id === id);
+    return item ? [{ id, question: item.question, answer: item.answer, origin: 'guide', href }] : [];
+  };
+
+  return [
+    ...own('candidato'),
+    ...borrowed(cluster.pillar.faq, 'duele', implantClusterPath(lang)),
+    ...borrowed(cluster.pillar.faq, 'duracion', implantClusterPath(lang)),
+    ...borrowed(price?.faq, 'precio', implantClusterPath(lang, 'precio')),
+    ...own('protesis'),
+    ...own('seguro'),
+    ...own('urgencia'),
+  ];
 }

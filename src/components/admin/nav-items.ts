@@ -1,20 +1,22 @@
 import {
   CalendarDays,
   LayoutDashboard,
+  MessageSquareQuote,
   MessagesSquare,
   Settings,
-  ShieldAlert,
   type LucideIcon,
 } from 'lucide-react';
 
 /* ============================================================================
    ADMIN NAVIGATION
    ----------------------------------------------------------------------------
-   Spanish only, because the panel is. `src/lib/data.ts` carries an
-   `adminNavItems` map in both languages whose hrefs — /admin/appointments,
-   /admin/messages, /admin/testimonials, /admin/settings — pointed at files that
-   had never existed. The routes below are those hrefs, now real, so the two no
-   longer contradict each other.
+   Spanish only, because the panel is, and defined here beside the chrome that
+   renders it — the bilingual `adminNavItems` map that used to sit in
+   src/lib/data.ts, pointing at routes that did not exist, is gone.
+
+   Testimonios is a quotation mark, not the `ShieldAlert` it used to share with
+   the dashboard's "Nada pendiente" state: one glyph meaning both "moderation
+   queue" and "all clear" taught the reader nothing about either.
 
    `badge` names which counter from the dashboard snapshot decorates the item.
    The counter is the number of things WAITING, not the number of things: a "42"
@@ -52,7 +54,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     label: 'Testimonios',
     href: '/admin/testimonials',
-    icon: ShieldAlert,
+    icon: MessageSquareQuote,
     badge: 'testimonialsPending',
     badgeNoun: 'por revisar',
   },

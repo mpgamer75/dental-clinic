@@ -17,7 +17,7 @@
 
 import 'server-only';
 
-import { lt, sql } from 'drizzle-orm';
+import { and, eq, inArray, lt, sql } from 'drizzle-orm';
 
 import { db } from './db';
 import { rateLimits } from './schema';
@@ -190,9 +190,125 @@ export function checkPublicFormLimit(
   return checkRateLimit({ bucket: publicFormBucket(form, ipHash), ...PUBLIC_FORM_RATE_LIMIT });
 }
 
-/** `checkRateLimit` with the admin-login preset already applied. */
+/** `checkRateLimit` with the admin-login preset already applied.
+ *
+ *  Counts EVERY attempt, per client. Used by /api/auth/[...path], Neon Auth's
+ *  public sign-in route, which only a script calls — the panel's own form signs
+ *  in through `signInAction`, which uses the failure-counting gate below. */
 export function checkAdminLoginLimit(ipHash: string | null): Promise<RateLimitResult> {
   return checkRateLimit({ bucket: adminLoginBucket(ipHash), ...ADMIN_LOGIN_RATE_LIMIT });
+}
+
+/* ============================================================================
+   The panel's sign-in form: FAILURES, per account and per client
+   ----------------------------------------------------------------------------
+   The form used to spend `checkAdminLoginLimit` — five attempts per fifteen
+   minutes, counted BEFORE authenticating, keyed on the client address. The
+   whole clinic leaves the building through one NAT address, so three members
+   of staff signing in correctly plus two typos locked everybody out, and the
+   message blamed "intentos fallidos" for attempts that had succeeded.
+
+   Two buckets now, and only failed sign-ins count against either:
+
+     per account, per client   5 failures / 15 min — online guessing of one
+                               account stops being a strategy, exactly as
+                               before;
+     per client                15 failures / 15 min — spraying many accounts
+                               from one address is capped, while several staff
+                               mistyping on the same morning are not.
+
+   The gate also refuses a client that has used up the API route's every-attempt
+   bucket, so alternating between the two public sign-in endpoints buys an
+   attacker nothing. Legitimate staff never touch that route.
+
+   Fails CLOSED, like the preset it replaces for this path: an unreadable
+   counter must not turn the login into an unmetered oracle.
+   ========================================================================== */
+
+const ADMIN_LOGIN_FAILURES = {
+  perAccount: 5,
+  perClient: 15,
+  windowMs: 15 * MINUTE_MS,
+} as const;
+
+/** Bucket keys. `accountKey` is a salted hash of the address, never the
+ *  address itself — rate_limits is not a place for staff personal data. */
+function loginFailureBuckets(ipHash: string | null, accountKey: string) {
+  return {
+    account: bucketKey(`login-fail:${accountKey}`, ipHash),
+    client: bucketKey('login-fail', ipHash),
+  };
+}
+
+/**
+ * May this client try to sign in to this account right now? Reads the
+ * counters without adding to them — a successful sign-in must cost nothing.
+ */
+export async function checkAdminLoginGate(
+  ipHash: string | null,
+  accountKey: string,
+): Promise<RateLimitResult> {
+  const now = Date.now();
+  const { windowMs } = ADMIN_LOGIN_FAILURES;
+  const windowStartMs = Math.floor(now / windowMs) * windowMs;
+  const secondsToWindowEnd = Math.max(1, Math.ceil((windowStartMs + windowMs - now) / 1000));
+  const buckets = loginFailureBuckets(ipHash, accountKey);
+  const apiBucket = adminLoginBucket(ipHash);
+
+  /* All three are fifteen-minute windows, so they share a window start and a
+     single SELECT answers all of them. */
+  let hits: Map<string, number>;
+  try {
+    const rows = await db
+      .select({ bucket: rateLimits.bucket, hits: rateLimits.hits })
+      .from(rateLimits)
+      .where(
+        and(
+          inArray(rateLimits.bucket, [buckets.account, buckets.client, apiBucket]),
+          eq(rateLimits.windowStart, new Date(windowStartMs)),
+        ),
+      );
+    hits = new Map(rows.map((row) => [row.bucket, row.hits]));
+  } catch (error) {
+    console.error('[rate-limit] login gate unavailable: %s', formatDatabaseFailure(error));
+    return { allowed: false, remaining: 0, retryAfterSeconds: secondsToWindowEnd };
+  }
+
+  const accountFailures = hits.get(buckets.account) ?? 0;
+  const clientFailures = hits.get(buckets.client) ?? 0;
+  const apiAttempts = hits.get(apiBucket) ?? 0;
+
+  const allowed =
+    accountFailures < ADMIN_LOGIN_FAILURES.perAccount &&
+    clientFailures < ADMIN_LOGIN_FAILURES.perClient &&
+    apiAttempts < ADMIN_LOGIN_RATE_LIMIT.limit;
+
+  return {
+    allowed,
+    remaining: Math.max(0, ADMIN_LOGIN_FAILURES.perAccount - accountFailures),
+    retryAfterSeconds: allowed ? 0 : secondsToWindowEnd,
+  };
+}
+
+/** Count one rejected sign-in against both buckets. Never throws: losing one
+ *  increment must not turn a wrong password into a server error. */
+export async function recordAdminLoginFailure(
+  ipHash: string | null,
+  accountKey: string,
+): Promise<void> {
+  const buckets = loginFailureBuckets(ipHash, accountKey);
+  const preset = {
+    windowMs: ADMIN_LOGIN_FAILURES.windowMs,
+    onDatabaseError: 'deny' as const,
+  };
+
+  /* `checkRateLimit` is the atomic increment; its verdict is not needed here —
+     the next attempt's gate reads the counts. It already logs and absorbs a
+     database failure. */
+  await Promise.all([
+    checkRateLimit({ bucket: buckets.account, limit: ADMIN_LOGIN_FAILURES.perAccount, ...preset }),
+    checkRateLimit({ bucket: buckets.client, limit: ADMIN_LOGIN_FAILURES.perClient, ...preset }),
+  ]);
 }
 
 /**

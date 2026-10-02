@@ -41,6 +41,19 @@ function luminance(linear) {
 
 const inGamut = (linear) => linear.every((v) => v >= -0.001 && v <= 1.001);
 
+/** Linear-light channel <-> gamma-encoded sRGB channel. */
+const encode = (v) => {
+  const c = Math.min(1, Math.max(0, v));
+  return c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+};
+const decode = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+
+/** `fg` drawn at `alpha` over `bg`, blended in gamma-encoded sRGB the way a
+ *  browser composites `color / alpha`, returned as linear light. */
+function compositeOver(fg, bg, alpha) {
+  return fg.map((v, i) => decode(alpha * encode(v) + (1 - alpha) * encode(bg[i])));
+}
+
 function contrast(a, b) {
   const la = luminance(a), lb = luminance(b);
   const [hi, lo] = la > lb ? [la, lb] : [lb, la];
@@ -78,14 +91,30 @@ function triple(vars, fallback, name) {
   return parts.slice(0, 3);
 }
 
-/* --- the pairs the design system actually renders ------------------------ */
+/* --- the pairs the design system actually renders ------------------------
+   [foreground, background, minimum, label, alpha?]. `alpha` is the opacity
+   the foreground is drawn at (`text-drench-on/75` → 0.75); it is composited
+   over the background in gamma-encoded sRGB, which is what browsers do, before
+   the ratio is taken. */
 const PAIRS = [
   ['--ink', '--canvas', 4.5, 'body text on page'],
   ['--ink', '--canvas-sunk', 4.5, 'body text on sunk band'],
   ['--ink', '--surface', 4.5, 'body text on card'],
+  ['--ink', '--primary-soft', 4.5, 'body text on tint band'],
   ['--ink-soft', '--canvas', 4.5, 'secondary text on page'],
+  ['--ink-soft', '--canvas-sunk', 4.5, 'secondary text on sunk band'],
   ['--ink-soft', '--surface', 4.5, 'secondary text on card'],
-  ['--ink-faint', '--canvas', 3.0, 'faint text (large/decorative)'],
+  ['--ink-soft', '--primary-soft', 4.5, 'secondary text on tint band'],
+  /* ink-faint carries real text (labels, captions, admin metadata), so it is
+     held to the body-text bar on every ground it sits on, not the 3:1 that
+     only icons need. It used to be tested against 3:1 alone and failed AA on
+     ~30 pieces of small text. */
+  ['--ink-faint', '--canvas', 4.5, 'faint text on page'],
+  ['--ink-faint', '--canvas-sunk', 4.5, 'faint text on sunk band / muted'],
+  ['--ink-faint', '--surface', 4.5, 'faint text on card'],
+  ['--ink-faint', '--primary-soft', 4.5, 'faint text on tint band'],
+  ['--on-drench', '--drench-deep', 4.5, 'drench text at 70% (hero, footer)', 0.7],
+  ['--on-drench', '--drench', 4.5, 'drench text at 75% (booking band)', 0.75],
   ['--primary-foreground', '--primary-base', 4.5, 'label on primary button'],
   ['--primary-base', '--canvas', 3.0, 'primary as a graphic/border'],
   ['--primary-base', '--surface', 3.0, 'primary on card'],
@@ -114,13 +143,15 @@ for (const theme of ['root', 'dark']) {
   const fallback = theme === 'dark' ? blocks.root : {};
   console.log(`\n${theme === 'root' ? 'LIGHT' : 'DARK'}`);
   console.log('  ratio  min   pair');
-  for (const [fg, bg, min, label] of PAIRS) {
+  for (const [fg, bg, min, label, alpha = 1] of PAIRS) {
     const f = triple(vars, fallback, fg);
     const b = triple(vars, fallback, bg);
     if (!f || !b) { console.log(`  ????   ${min.toFixed(1)}   ${label}  (token missing)`); failures++; continue; }
-    const lf = oklchToSrgb(...f), lb = oklchToSrgb(...b);
+    const lb = oklchToSrgb(...b);
+    let lf = oklchToSrgb(...f);
     if (!inGamut(lf)) { console.log(`  !! ${fg} is outside the sRGB gamut`); gamut++; }
     if (!inGamut(lb)) { console.log(`  !! ${bg} is outside the sRGB gamut`); gamut++; }
+    if (alpha < 1) lf = compositeOver(lf, lb, alpha);
     const c = contrast(lf, lb);
     const ok = c >= min;
     if (!ok) failures++;

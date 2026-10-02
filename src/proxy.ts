@@ -35,11 +35,23 @@ const SECURITY_HEADERS = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
   'Content-Security-Policy': [
     "default-src 'self'",
-    // 'unsafe-eval' is gone: it was never needed in a production build, and it
-    // is the single directive that most weakens the rest of this policy.
+    // 'unsafe-eval' is never sent in production: no production build needs it,
+    // and it is the single directive that most weakens the rest of this policy.
+    // DEVELOPMENT gets it, because React's dev build uses eval() to rebuild
+    // server call stacks; without it every page logged a CSP error and Next's
+    // overlay showed a permanent "1 Issue" badge that hid the real ones.
     // 'unsafe-inline' has to stay until Next's bootstrap script is served with
     // a nonce — it is a known gap, not an accepted one.
-    "script-src 'self' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com",
+    [
+      'script-src',
+      "'self'",
+      "'unsafe-inline'",
+      process.env.NODE_ENV === 'development' ? "'unsafe-eval'" : '',
+      'https://vercel.live',
+      'https://va.vercel-scripts.com',
+    ]
+      .filter(Boolean)
+      .join(' '),
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
@@ -51,7 +63,9 @@ const SECURITY_HEADERS = {
     ['connect-src', "'self'", authOrigin(), 'https://vercel.live', 'https://va.vercel-scripts.com']
       .filter(Boolean)
       .join(' '),
-    "frame-src 'self' https://www.google.com https://www.youtube.com",
+    // Google only: the map in "Cómo llegar", loaded on request. YouTube was
+    // allow-listed for an embed that never existed.
+    "frame-src 'self' https://www.google.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type MutableRefObject } from 'react';
+import { useEffect, useEffectEvent, useRef, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import {
   buildFixture,
@@ -13,6 +13,7 @@ import {
   buildTurnedRoughness,
   FIXTURE_LENGTH,
 } from './geometry';
+import { PHASE_WINDOWS } from './phases';
 
 /**
  * Scroll-driven dental implant assembly, in vanilla three.js.
@@ -202,32 +203,84 @@ function buildEnvironment(renderer: THREE.WebGLRenderer): THREE.WebGLRenderTarge
   return target;
 }
 
+/* ── scheduling ───────────────────────────────────────────────────────────── */
+
+/**
+ * Hands the main thread back to the browser between setup steps.
+ *
+ * Building this scene used to be ONE task: renderer, studio environment, seven
+ * procedural meshes and five physical-material programs inside a single effect.
+ * Measured at 4× CPU throttling that task ran 992 ms — and it starts while the
+ * visitor is still scrolling the band ABOVE the section (the stage promotes the
+ * scene 400 px early), so it froze the very scroll that was carrying them
+ * towards it. Split at the steps below, no single step is long enough to be
+ * felt, and input is handled in between.
+ *
+ * `scheduler.yield()` where it exists (Chromium), because its continuation keeps
+ * its place at the front of the queue rather than going to the back behind
+ * every other timer; `setTimeout(0)` everywhere else.
+ */
+function yieldToMain(): Promise<void> {
+  const scheduler = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  if (typeof scheduler?.yield === 'function') return scheduler.yield();
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 /* ── component ────────────────────────────────────────────────────────────── */
 
 export default function ImplantScene({
   progress,
   reduced = false,
+  onUnavailable,
 }: {
   progress: MutableRefObject<number>;
   reduced?: boolean;
+  /**
+   * Called if WebGL cannot be set up or the context is lost, so the stage can
+   * put the 2D plate back. Without it a driver failure left an empty vitrine:
+   * the probe in <ImplantStage> can only predict that a context WILL work.
+   */
+  onUnavailable?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  /* An Effect Event, so a new callback identity from the parent does not tear
+     down and rebuild the whole scene — it is not a dependency of the effect. */
+  const reportUnavailable = useEffectEvent(() => onUnavailable?.());
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
     let disposed = false;
-    let raf = 0;
+    /** True while `compileAsync` may still be polling the programs; see the
+     *  teardown at the bottom for why that window matters. */
+    let compiling = false;
+    let released = false;
+    /** Listeners and observers. Removed the moment the component unmounts. */
+    const detach: (() => void)[] = [];
+    /** GPU-backed resources that are not reachable by traversing the scene. */
+    const materials: THREE.Material[] = [];
+    const textures: THREE.Texture[] = [];
+    let envTarget: THREE.WebGLRenderTarget | null = null;
+
     /* Set whenever something that affects the image changes. The loop renders
        only when it is true — see the note in tick(). */
     let dirty = true;
 
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+      });
+    } catch {
+      /* The capability probe in <ImplantStage> got a context and this did not
+         — a driver blocklist, a context limit, a GPU process that just
+         crashed. The plate is a complete answer; hand back to it. */
+      reportUnavailable();
+      return;
+    }
     // DPR 2 on a ~620×744 vitrine is ~1.85 M fragments, every one of them
     // running a physical shader with clearcoat, sheen and a cubeUV environment
     // lookup. Capping at 1.75 takes roughly a quarter off that and is
@@ -245,7 +298,11 @@ export default function ImplantScene({
     renderer.toneMappingExposure = 0.92;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    /* PCFShadowMap, named explicitly. PCFSoftShadowMap is deprecated in this
+       three.js and was already being replaced by PCFShadowMap at runtime — with
+       a console warning on every mount — so this is the shadow the scene has
+       been drawing all along, minus the warning. */
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     /* The shadow map is redrawn only when the assembly actually moves.
        The single caster is a DirectionalLight with a fixed position and a
        fixed orthographic frustum, so its depth pass does not depend on the
@@ -270,6 +327,16 @@ export default function ImplantScene({
       display: 'block',
       touchAction: 'pan-y',
     });
+
+    /* A lost context (GPU reset, driver update, too many contexts) leaves the
+       canvas permanently blank. Fall back to the plate rather than show an
+       empty case for the rest of the visit. */
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      reportUnavailable();
+    };
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost);
+    detach.push(() => renderer.domElement.removeEventListener('webglcontextlost', onContextLost));
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 400);
@@ -299,9 +366,7 @@ export default function ImplantScene({
       attributes: true,
       attributeFilter: ['class'],
     });
-
-    const envTarget = buildEnvironment(renderer);
-    scene.environment = envTarget.texture;
+    detach.push(() => themeObserver.disconnect());
 
     /* Cool, matching the page's ground. This was 0xfff2e2 — a warm white
        lifting every shadow towards the old palette. */
@@ -353,6 +418,7 @@ export default function ImplantScene({
        Roughness is set to the TOP of each range because the map multiplies. */
     const roughMachined = buildTurnedRoughness(0.42, 3.5);
     const roughFixture = buildTurnedRoughness(0.74, 2.2);
+    textures.push(roughMachined, roughFixture);
 
     const matFixture = new THREE.MeshPhysicalMaterial({
       color: 0xc1baaf,
@@ -500,12 +566,15 @@ export default function ImplantScene({
       // than remembering to close on the day someone sets castShadow here.
       clipShadows: true,
     });
+    materials.push(matFixture, matMachined, matCrown, matBone, matGum);
 
     /* --- assembly ---
        Anatomy stack, in millimetres, crest of the ridge at y = 0:
          fixture platform seats at the crest
          abutment rises 0 → 7 from the platform
-         crown cervical margin seats 4.2 up the abutment prep  */
+         crown cervical margin seats 4.2 up the abutment prep
+       The groups exist from the start; their meshes are built one per setup
+       step below. */
     const CREST = 5.87; // bone ridge crest in its own local space
     const root = new THREE.Group();
     scene.add(root);
@@ -514,51 +583,12 @@ export default function ImplantScene({
     tissue.position.y = -CREST;
     root.add(tissue);
 
-    const boneGeo = buildBoneRidge();
-    const bone = new THREE.Mesh(boneGeo, matBone);
-    bone.receiveShadow = true;
-    bone.castShadow = true;
-    tissue.add(bone);
-
-    const gumGeo = buildGingiva();
-    const gum = new THREE.Mesh(gumGeo, matGum);
-    // NOT `CREST`. The gingiva is traced from the same `ridgeSection` as the
-    // bone, so the two geometries are already in one coordinate system and the
-    // mesh needs no offset at all — lifting it by the crest height floated the
-    // tissue a clear 5.9 mm above the ridge, as a pink saddle hovering in mid
-    // air over a beige block. Supracrestal height is a property of the tissue,
-    // and it is modelled inside buildGingiva where it belongs.
-    gum.receiveShadow = true;
-    tissue.add(gum);
-
     // Fixture group: local y = 0 at the apex, y = FIXTURE_LENGTH at the platform.
     const fixture = new THREE.Group();
-    const fixtureGeo = buildFixture();
-    const fixtureMesh = new THREE.Mesh(fixtureGeo, matFixture);
-    fixtureMesh.castShadow = true;
-    fixture.add(fixtureMesh);
-    const platGeo = buildFixturePlatform();
-    const plat = new THREE.Mesh(platGeo, matMachined);
-    plat.position.y = FIXTURE_LENGTH;
-    fixture.add(plat);
     root.add(fixture);
-
     const abutment = new THREE.Group();
-    const abutGeo = buildAbutment();
-    const abutMesh = new THREE.Mesh(abutGeo, matMachined);
-    abutMesh.castShadow = true;
-    abutment.add(abutMesh);
-    const screwGeo = buildAbutmentScrew();
-    const screw = new THREE.Mesh(screwGeo, matMachined);
-    screw.position.y = -2.4;
-    abutment.add(screw);
     root.add(abutment);
-
     const crown = new THREE.Group();
-    const crownGeo = buildCrown();
-    const crownMesh = new THREE.Mesh(crownGeo, matCrown);
-    crownMesh.castShadow = true;
-    crown.add(crownMesh);
     root.add(crown);
 
     /* No fake floor shadow.
@@ -604,6 +634,10 @@ export default function ImplantScene({
     if (!reduced) {
       host.addEventListener('pointermove', onPointerMove, { passive: true });
       host.addEventListener('pointerleave', onPointerLeave, { passive: true });
+      detach.push(() => {
+        host.removeEventListener('pointermove', onPointerMove);
+        host.removeEventListener('pointerleave', onPointerLeave);
+      });
     }
 
     /* --- sizing --- */
@@ -618,35 +652,53 @@ export default function ImplantScene({
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(host);
+    detach.push(() => ro.disconnect());
 
-    /* --- run only while on screen --- */
-    let visible = true;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        visible = e.isIntersecting;
-        // Coming back on screen after a resize or theme change must repaint
-        // even if nothing is moving.
-        if (visible) dirty = true;
-      },
-      /* A margin, so the first frame is drawn just BEFORE the vitrine reaches
-         the viewport. <ImplantStage> only mounts this component within 400 px
-         of the fold; with a zero margin here the scene would then sit idle
-         until the frame the section is already visible, and the visitor would
-         catch one frame of empty case. */
-      { rootMargin: '200px' },
-    );
-    io.observe(host);
-
-    /* --- loop --- */
-    const clock = new THREE.Clock();
+    /* --- loop: runs only while it can be seen ---
+       The loop used to keep re-arming requestAnimationFrame for the whole visit
+       and merely return early off screen — a callback, a delta and a branch
+       sixty times a second for a figure the visitor had scrolled two bands
+       past, and in a hidden tab. It now STOPS: nothing is scheduled while the
+       figure is off screen or the document is hidden, and it is restarted by
+       the observer and the visibility event that report the change. */
+    const timer = new THREE.Timer();
+    let raf = 0;
+    let running = false;
+    /** Setup has finished and the programs are linked. */
+    let ready = false;
+    /** Within the observer's margin of the viewport. */
+    let visible = false;
     let shown = 0;
 
-    const tick = () => {
-      if (disposed) return;
+    const stopLoop = () => {
+      running = false;
+      cancelAnimationFrame(raf);
+    };
+
+    const startLoop = () => {
+      if (running || disposed || !ready || !visible || document.hidden) return;
+      running = true;
+      /* A pause must not come back as one enormous frame: the delta would be
+         the whole time the figure was off screen, and the damping below would
+         snap every part straight to its target. */
+      timer.reset();
+      raf = requestAnimationFrame(tick);
+    };
+
+    const tick = (now: number) => {
+      if (!running) return;
+      if (disposed || !visible || document.hidden) {
+        running = false;
+        return;
+      }
       raf = requestAnimationFrame(tick);
 
-      const dt = Math.min(clock.getDelta(), 1 / 30);
-      if (!visible) return; // keep the delta consumed, skip the work
+      timer.update(now);
+      /* Clamped on BOTH sides. Above, so a dropped frame cannot overshoot the
+         damping; below, because the first delta after `reset()` can come out
+         a hair negative — the rAF timestamp is taken at the start of the frame,
+         which can precede the moment `reset()` read the clock. */
+      const dt = Math.min(Math.max(timer.getDelta(), 0), 1 / 30);
 
       const pTarget = progress.current;
       /* Pointer parallax targets. The damping below at lambda 3 gives about a
@@ -693,17 +745,17 @@ export default function ImplantScene({
          It rotates as it descends, which is what a screw does; the rotation is
          cut to ~3 turns rather than the 12.5 the real pitch implies, because
          12.5 turns at scroll speed reads as a blur. */
-      const tFix = easeOutQuint(seg(p, 0.06, 0.46));
+      const tFix = easeOutQuint(seg(p, ...PHASE_WINDOWS.fixture));
       fixture.position.y = lerp(6, SEAT_FIXTURE, tFix);
       fixture.rotation.y = (1 - tFix) * Math.PI * 6;
 
       /* Phase 2 — the abutment drops onto the platform. */
-      const tAbut = easeOutQuint(seg(p, 0.42, 0.68));
+      const tAbut = easeOutQuint(seg(p, ...PHASE_WINDOWS.abutment));
       abutment.position.y = lerp(18, SEAT_ABUT, tAbut);
       abutment.visible = tAbut > 0.001;
 
       /* Phase 3 — the crown seats. */
-      const tCrown = easeOutQuint(seg(p, 0.62, 0.86));
+      const tCrown = easeOutQuint(seg(p, ...PHASE_WINDOWS.crown));
       crown.position.y = lerp(28, SEAT_CROWN, tCrown);
       crown.visible = tCrown > 0.001;
 
@@ -769,50 +821,43 @@ export default function ImplantScene({
       renderer.render(scene, camera);
     };
 
-    /* Link the programs BEFORE the first frame rather than during it.
+    const io = new IntersectionObserver(
+      ([e]) => {
+        visible = e.isIntersecting;
+        if (visible) {
+          // Coming back on screen after a resize or theme change must repaint
+          // even if nothing is moving.
+          dirty = true;
+          startLoop();
+        } else {
+          stopLoop();
+        }
+      },
+      /* A margin, so the first frame is drawn just BEFORE the vitrine reaches
+         the viewport. <ImplantStage> only mounts this component within 400 px
+         of the fold; with a zero margin here the scene would then sit idle
+         until the frame the section is already visible, and the visitor would
+         catch one frame of empty case. */
+      { rootMargin: '200px' },
+    );
+    io.observe(host);
+    detach.push(() => io.disconnect());
 
-       Five physical materials, each with clearcoat, sheen, a cubeUV
-       environment lookup, fog and — on the tissue — clipping planes, is a lot
-       of generated GLSL. Compiled lazily they all land inside the first
-       `render`, as a synchronous stall of tens of milliseconds arriving at
-       exactly the moment the section scrolls into view. `compileAsync` hands
-       them to the driver up front and, where KHR_parallel_shader_compile
-       exists, resolves only once they report ready, so the first frame is a
-       draw and nothing else.
-
-       It walks with `scene.traverse`, not traverseVisible, so it finds the
-       parts regardless of the `visible` flags tick() is about to set. It does
-       NOT reach the shadow pass's depth variants — those are built by
-       WebGLShadowMap and there is no public lever for them — so the first
-       frame still pays for four of those. That is a quarter of the stall
-       rather than all of it.
-
-       The catch is not defensive padding: `compile` runs outside the promise,
-       so if it throws there is no promise to reject and the loop would simply
-       never be started — turning a slow first frame into a blank canvas
-       forever. */
-    const start = () => {
-      if (disposed) return;
-      // Nothing has drawn yet, so the shadow map does not exist. autoUpdate is
-      // off, so the first pass has to be asked for explicitly.
-      renderer.shadowMap.needsUpdate = true;
-      tick();
+    const onVisibility = () => {
+      if (document.hidden) {
+        stopLoop();
+      } else {
+        dirty = true;
+        startLoop();
+      }
     };
-    try {
-      renderer.compileAsync(scene, camera).then(start, start);
-    } catch {
-      start();
-    }
+    document.addEventListener('visibilitychange', onVisibility);
+    detach.push(() => document.removeEventListener('visibilitychange', onVisibility));
 
     /* --- teardown: three.js does not garbage collect GPU resources --- */
-    return () => {
-      disposed = true;
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-      io.disconnect();
-      themeObserver.disconnect();
-      host.removeEventListener('pointermove', onPointerMove);
-      host.removeEventListener('pointerleave', onPointerLeave);
+    const release = () => {
+      if (released) return;
+      released = true;
       scene.traverse((o) => {
         if (o instanceof THREE.Mesh) {
           o.geometry.dispose();
@@ -821,9 +866,10 @@ export default function ImplantScene({
           else m.dispose();
         }
       });
-      roughMachined.dispose();
-      roughFixture.dispose();
-      envTarget.dispose();
+      // Also the ones no mesh has picked up yet, if setup was cut short.
+      materials.forEach((m) => m.dispose());
+      textures.forEach((t) => t.dispose());
+      envTarget?.dispose();
       // `scene.traverse` above only disposes meshes, so lights are skipped —
       // and a 1024² shadow map is a real allocation. LightShadow.dispose()
       // frees both `map` and `mapPass`.
@@ -838,11 +884,149 @@ export default function ImplantScene({
          language a dozen times — every toggle rewrites the path and remounts
          this tree — would otherwise take down some other canvas on the page.
          Dropping the context is the only lever that actually returns any of
-         it, and it is safe here: the element is going away.
-         (This used to be justified by the crown's transmission render target,
-         which no longer exists. The lever is still the right one.) */
+         it, and it is safe here: the element is going away. */
       renderer.forceContextLoss();
       renderer.domElement.remove();
+    };
+
+    /* --- setup, one step per task --- */
+    const mesh = (
+      geometry: THREE.BufferGeometry,
+      material: THREE.Material,
+      parent: THREE.Object3D,
+      configure?: (m: THREE.Mesh) => void,
+    ) => {
+      const m = new THREE.Mesh(geometry, material);
+      configure?.(m);
+      parent.add(m);
+      return m;
+    };
+
+    const steps: (() => void)[] = [
+      () => {
+        envTarget = buildEnvironment(renderer);
+        scene.environment = envTarget.texture;
+      },
+      () =>
+        mesh(buildBoneRidge(), matBone, tissue, (m) => {
+          m.receiveShadow = true;
+          m.castShadow = true;
+        }),
+      () =>
+        // NOT offset by `CREST`. The gingiva is traced from the same
+        // `ridgeSection` as the bone, so the two geometries are already in one
+        // coordinate system and the mesh needs no offset at all — lifting it by
+        // the crest height floated the tissue a clear 5.9 mm above the ridge,
+        // as a pink saddle hovering in mid air over a beige block. Supracrestal
+        // height is a property of the tissue, and it is modelled inside
+        // buildGingiva where it belongs.
+        mesh(buildGingiva(), matGum, tissue, (m) => {
+          m.receiveShadow = true;
+        }),
+      () => {
+        mesh(buildFixture(), matFixture, fixture, (m) => {
+          m.castShadow = true;
+        });
+        mesh(buildFixturePlatform(), matMachined, fixture, (m) => {
+          m.position.y = FIXTURE_LENGTH;
+        });
+      },
+      () => {
+        mesh(buildAbutment(), matMachined, abutment, (m) => {
+          m.castShadow = true;
+        });
+        mesh(buildAbutmentScrew(), matMachined, abutment, (m) => {
+          m.position.y = -2.4;
+        });
+        mesh(buildCrown(), matCrown, crown, (m) => {
+          m.castShadow = true;
+        });
+      },
+      /* Link the programs BEFORE the first frame rather than during it — and
+         one family per task. Five physical materials, each with clearcoat,
+         sheen, a cubeUV environment lookup, fog and — on the tissue — clipping
+         planes, is a lot of generated GLSL; compiled lazily it all landed
+         inside the first `render`, and compiled in one call it was still one
+         long task. `compile` is given the main scene as its target so each
+         program is built against the real lights, fog and environment, which
+         is what lets the final `compileAsync` below find every one cached. */
+      () => renderer.compile(tissue, camera, scene),
+      () => renderer.compile(fixture, camera, scene),
+      () => {
+        renderer.compile(abutment, camera, scene);
+        renderer.compile(crown, camera, scene);
+      },
+    ];
+
+    const setup = async () => {
+      for (const step of steps) {
+        await yieldToMain();
+        if (disposed) {
+          release();
+          return;
+        }
+        step();
+      }
+
+      /* Wait for the driver to finish linking. Where KHR_parallel_shader_compile
+         exists this resolves only once every program reports ready, so the
+         first frame is a draw and nothing else; the programs are already
+         cached by the steps above, so its own `compile` pass is cheap.
+
+         `compiling` marks the window in which three is polling those programs
+         on a 10 ms timer. See the teardown for why that window must not be
+         interrupted. It does NOT reach the shadow pass's depth variants —
+         WebGLShadowMap builds those and there is no public lever for them — so
+         the first frame still pays for four of those. */
+      compiling = true;
+      try {
+        await renderer.compileAsync(scene, camera);
+      } catch {
+        /* `compile` runs outside the promise, so a throw lands here rather than
+           as a rejection. Fall through: the first render compiles lazily,
+           which is a slow first frame instead of a blank canvas forever. */
+      } finally {
+        compiling = false;
+      }
+      if (disposed) {
+        release();
+        return;
+      }
+
+      ready = true;
+      // Nothing has drawn yet, so the shadow map does not exist. autoUpdate is
+      // off, so the first pass has to be asked for explicitly.
+      renderer.shadowMap.needsUpdate = true;
+      dirty = true;
+      startLoop();
+    };
+
+    setup().catch((error: unknown) => {
+      console.error(
+        '[implant] 3D scene setup failed: %s',
+        error instanceof Error ? error.name : 'unknown error',
+      );
+      release();
+      reportUnavailable();
+    });
+
+    return () => {
+      disposed = true;
+      stopLoop();
+      detach.forEach((undo) => undo());
+      /* NOT while `compileAsync` is pending.
+
+         three resolves that promise by polling every material's program with
+         `properties.get(material).currentProgram.isReady()` on a 10 ms timer.
+         Disposing a material or the renderer clears those properties, so the
+         next poll reads `.isReady` off `undefined` and throws — from inside a
+         timer, uncaught — on every StrictMode double-mount, and in production
+         on any navigation or language toggle that unmounts the figure while
+         its shaders are still linking. Losing the context is no better: a
+         program on a lost context never reports ready, so the poll would spin
+         forever. So the release waits; `setup` performs it the moment the
+         promise settles, because it re-checks `disposed` right there. */
+      if (!compiling) release();
     };
   }, [progress, reduced]);
 

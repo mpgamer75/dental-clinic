@@ -16,24 +16,24 @@ import { getCachedDashboardCounts } from '../_lib/queries';
 import { ADMIN_LOGIN_PATH, requireAdminPage } from '../_lib/session';
 
 /* ============================================================================
-   THE SECURITY BOUNDARY
+   THE PANEL'S FRONT DOOR — not its only lock
    ----------------------------------------------------------------------------
-   This layout is the reason the panel is safe, and everything below it assumes
-   it ran. It is a SERVER component: the session is resolved before a single
-   byte of admin markup is serialised, so an anonymous request receives a
-   redirect and never receives a patient's name, a table shell, or the shape of
-   the panel.
+   A SERVER component that resolves the session before any admin markup is
+   serialised: an anonymous request gets a redirect, a non-member gets a
+   refusal, and neither gets the chrome or the shape of the panel.
 
-   That is the whole change. The version this replaces was a `use client` page
-   that fetched a session in a `useEffect` and conditionally rendered a login
-   form — which means the dashboard, its queries and a database credential had
-   already been sent to the browser by the time it decided who was asking. And
-   src/proxy.ts skipped /admin entirely, so nothing else was checking either.
+   What it cannot do is keep DATA out of the response. A layout that declines to
+   render `{children}` does not stop the page segment beneath it from running —
+   the router renders segments independently and serialises each one into the
+   RSC payload — and on client-side navigation a layout does not re-run at all.
+   So the authorisation that actually protects patient rows lives in the data
+   layer: every read in _lib/queries.ts goes through `runQuery`, which asks
+   `readAdminSessionOnce()` first. The layout and the queries share that one
+   memoised answer per request.
 
-   It is not, however, the only check. A layout guards PAGES; it cannot guard a
-   Server Action, which is a public endpoint reachable without ever rendering
-   the page that would normally call it. Every mutation therefore re-verifies
-   the session for itself in _lib/mutation.ts.
+   Mutations are the third check. A Server Action is a public endpoint reachable
+   without rendering any page, so each one re-verifies the session for itself in
+   _lib/mutation.ts.
 
    The route group is what keeps /admin/login outside this guard: a login form
    nested inside its own redirect is a loop.

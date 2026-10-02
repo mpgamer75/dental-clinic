@@ -37,6 +37,10 @@ export default defineConfig([
     '.cursor/**',
     '.gemini/**',
     '.impeccable/**',
+    /* Browser-automation scratch (screenshots, throwaway measurement scripts).
+       Gitignored for the same reason, and its one-off scripts failed
+       `npm run lint` with errors that have nothing to do with the site. */
+    '.playwright-mcp/**',
   ]),
   ...nextCoreWebVitals,
   ...nextTypeScript,

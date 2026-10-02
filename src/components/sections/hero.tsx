@@ -1,87 +1,82 @@
-import Image from 'next/image';
 import Link from 'next/link';
+import { getImageProps } from 'next/image';
+import { ArrowRight, Phone } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone } from 'lucide-react';
-import type { homeContent } from '@/lib/data';
+import { WhatsAppIcon } from '@/components/icons/whatsapp';
+import { TEL_HREF, contactLinkLabels, whatsappHref } from '@/lib/contact';
+import { clinicPhotos, type homeContent } from '@/lib/data';
+import type { Language } from '@/lib/types';
 
-
-type Hero = (typeof homeContent)['es']['hero'];
+type HeroCopy = (typeof homeContent)['es']['hero'];
 
 interface HeroProps {
-  content: Hero;
-  trust: { value: string; label: string }[];
+  lang: Language;
+  content: HeroCopy;
   appointmentHref: string;
   implantHref: string;
-  phone: string;
 }
 
 /**
  * Hero.
  *
- * Drenched deep-primary band: colour carries the surface here rather than
- * sitting as an accent on a pale page. Asymmetric 7/5 split with the clinic's
- * own photograph bleeding off the right edge — the room is the proof, so it
- * gets real estate instead of a stock illustration.
+ * One claim, one action, and the place. Three things the previous version did
+ * are gone on purpose:
  *
- * Server component: no state, no effects, so the headline and CTA are in the
- * initial HTML with nothing to hydrate before they're usable.
+ *  - The three-number trust strip (30+ / 3 / AOD). It sat at the very bottom
+ *    of a band 1019px tall, so on a 1440×900 screen the numbers were sliced in
+ *    half by the fold, and "AOD" set as a statistic meant nothing to anyone who
+ *    did not already know the acronym. The one fact worth a hero — thirty
+ *    years in Santiago — now sits on the photograph as its caption, and the
+ *    association membership is stated in words in the doctor band.
+ *  - The full-bleed photo. It was a 16:9 file cropped into a near-square box
+ *    and stretched about 2.4× (the browser picked the 750w variant for a box
+ *    1018px tall), which is why it looked soft and why "Dr. F…" was cut at the
+ *    edge. Wide screens now get the PORTRAIT shot of the door in a tall panel
+ *    it actually fits; phones get the landscape front. One <picture>, so each
+ *    device downloads exactly one of them.
+ *  - The ambient "drift" animation: two gradient layers looping every 26 s for
+ *    as long as the page was open, including off screen.
+ *
+ * Server component: nothing here needs the client.
  */
-export function Hero({ content, trust, appointmentHref, implantHref, phone }: HeroProps) {
+export function Hero({ lang, content, appointmentHref, implantHref }: HeroProps) {
+  const links = contactLinkLabels(lang);
+  const { door, front } = clinicPhotos;
+  const alt = front.alt[lang];
+
+  /* Art direction. `sizes` is the width each source is DRAWN at: the portrait
+     panel is ~5 of 12 columns on wide screens; the landscape front spans the
+     column on phones and tablets. */
+  const {
+    props: { srcSet: wideSrcSet },
+  } = getImageProps({ src: door.src, width: door.width, height: door.height, quality: 82, alt, sizes: '(min-width: 1024px) 38vw' });
+  const {
+    props: { srcSet: narrowSrcSet, ...img },
+  } = getImageProps({ src: front.src, width: front.width, height: front.height, quality: 80, alt, sizes: '100vw' });
+
   return (
     <section className="drenched-deep relative isolate overflow-hidden">
-      {/* Ambient light-wash. Decorative only, long and low-amplitude so it
-          reads as light moving through a room. Stilled under reduced-motion by
-          the global media query, which zeroes the animation.
+      {/* Static light wash. Pre-blurred into the gradient itself (no `filter`),
+          and fading to the same hue at zero alpha rather than to `transparent`,
+          which interpolates through grey and leaves a muddy ring. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-1/4 top-[-30%] -z-10 h-[70vw] w-[70vw]"
+        style={{
+          backgroundImage:
+            'radial-gradient(closest-side, oklch(var(--brass) / 0.14), oklch(var(--brass) / 0))',
+        }}
+      />
 
-          The softness is a radial gradient, NOT `blur-3xl` on a filled circle,
-          and that distinction is the whole cost of this effect. A 64px blur
-          over a 70vw disc is a filter pass the compositor cannot cache across
-          a transform: the drift animates `scale`, so every frame re-rasterised
-          two full-viewport blurred layers for the entire time the hero was on
-          screen. Pre-blurring the shape into the gradient itself leaves a
-          plain painted layer that the compositor promotes once and then only
-          moves — same picture, no per-frame filter.
-
-          Both stops fade to the SAME hue at zero alpha rather than to
-          `transparent`, which is `rgba(0,0,0,0)` and interpolates through grey
-          — the classic muddy ring around a soft glow. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-        <div
-          className="absolute -left-1/4 top-[-30%] h-[70vw] w-[70vw] animate-drift"
-          style={{
-            backgroundImage:
-              'radial-gradient(closest-side, oklch(var(--brass) / 0.16), oklch(var(--brass) / 0))',
-          }}
-        />
-        <div
-          className="absolute -right-1/3 bottom-[-40%] h-[60vw] w-[60vw] animate-drift"
-          style={{
-            backgroundImage:
-              'radial-gradient(closest-side, oklch(var(--primary-base) / 0.26), oklch(var(--primary-base) / 0))',
-            animationDelay: '-13s',
-          }}
-        />
-      </div>
-
-      {/* The shell, so the hero's left rule is the SAME rule every other band
-          and the header align to. A hero on its own container is the classic
-          "stretched template" tell: it promises a wide composition the rest of
-          the page then fails to deliver. */}
-      <div className="shell items-center gap-y-12 pb-[clamp(3.5rem,7vw,6rem)] pt-[clamp(4.5rem,9vw,8rem)] lg:pb-0 lg:pt-0">
+      <div className="shell items-center gap-y-10 py-[clamp(3rem,7vw,6.5rem)] lg:min-h-[min(calc(100svh-4.5rem),54rem)]">
         {/* ── Copy ─────────────────────────────────────────────── */}
-        <div className="lg:col-span-6 lg:py-[clamp(5rem,9vw,9rem)]">
-          <p className="flex items-center gap-2 font-body text-small text-brass-lift">
-            <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {content.locationNote}
+        <div className="lg:col-span-7 xl:col-span-6">
+          <p className="font-body text-small font-medium tracking-[0.02em] text-brass-lift">
+            {content.eyebrow}
           </p>
 
-          {/* The cap is not what governs the line breaks here — at this
-              breakpoint the 6-of-12 grid column is ~630 px, narrower than 16ch
-              resolves to (~880 px), so the column wins and the headline sets in
-              three lines either way. Kept as a guard for very wide viewports,
-              where the column does get wider than a comfortable measure.
-              `text-wrap: balance` is applied to h1 globally and evens the rag. */}
-          <h1 className="mt-5 max-w-[16ch] font-heading text-h1 font-medium text-drench-on">
+          <h1 className="mt-4 max-w-[15ch] font-heading text-h1 font-medium text-drench-on">
             {content.title}
           </h1>
 
@@ -89,65 +84,92 @@ export function Hero({ content, trust, appointmentHref, implantHref, phone }: He
             {content.standfirst}
           </p>
 
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-9 flex flex-col gap-x-7 gap-y-4 sm:flex-row sm:items-center">
             <Button asChild size="xl" variant="brass">
               <Link href={appointmentHref}>{content.ctaPrimary}</Link>
             </Button>
-            <Button asChild size="xl" variant="onDrench">
-              <Link href={implantHref}>{content.ctaSecondary}</Link>
-            </Button>
+            {/* A text link, not a second button: two equal buttons side by side
+                asked the visitor to choose between booking and reading, and
+                reading is not the decision this band exists for. */}
+            <Link
+              href={implantHref}
+              className="group/more inline-flex min-h-11 items-center gap-2 self-start font-medium text-drench-on underline-offset-[6px] hover:underline sm:self-auto"
+            >
+              {content.ctaSecondary}
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-base ease-out-quart group-hover/more:translate-x-0.5"
+                aria-hidden="true"
+              />
+            </Link>
           </div>
 
-          {/* `py-2` with a matching negative margin: on a phone this is a
-              one-tap call to a clinic, and it measured 28px tall — under the
-              44px a thumb actually wants, on the hero's only direct-contact
-              action. The negative margin absorbs the padding so the trust strip
-              below does not shift. */}
-          <a
-            href={`tel:${phone.replace(/[^\d+]/g, '')}`}
-            className="-my-2 mt-4 inline-flex items-center gap-2 py-2 text-drench-on/75 underline-offset-4 transition-colors duration-fast hover:text-brass hover:underline"
-          >
-            <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="tabular">{phone}</span>
-          </a>
-
-          {/* Trust strip — inline with the hero rather than as its own band,
-              so the claim and its evidence stay in one eyeful. */}
-          {/* Fixed three-column grid rather than flex-wrap: the middle label is
-              long enough to wrap onto two lines, which pushed the third item
-              onto its own row and clipped it against the band's bottom edge. */}
-          <dl className="mt-10 grid grid-cols-1 gap-x-8 gap-y-5 border-t border-drench-on/15 pt-7 sm:grid-cols-3">
-            {trust.map((t) => (
-              <div key={t.label}>
-                <dt className="font-heading text-h3 font-medium text-brass tabular">
-                  {t.value}
-                </dt>
-                <dd className="mt-1 text-small leading-snug text-drench-on/70">{t.label}</dd>
-              </div>
-            ))}
-          </dl>
+          {/* The two direct channels, at a size a thumb can hit (44px). Phone
+              first because the clinic answers it; WhatsApp because that is how
+              most Dominican patients would rather ask. */}
+          <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-drench-on/15 pt-5 text-drench-on/80">
+            <li>
+              <a
+                href={TEL_HREF}
+                aria-label={links.callAria}
+                className="inline-flex min-h-11 items-center gap-2.5 transition-colors duration-fast hover:text-brass-lift"
+              >
+                <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="tabular">{links.phone}</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href={whatsappHref(lang)}
+                aria-label={links.whatsappAria}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center gap-2.5 transition-colors duration-fast hover:text-brass-lift"
+              >
+                <WhatsAppIcon className="h-4 w-4 shrink-0" />
+                {links.whatsapp}
+              </a>
+            </li>
+          </ul>
         </div>
 
         {/* ── Photograph ───────────────────────────────────────── */}
-        <div className="relative lg:col-span-6 lg:col-start-7 lg:h-full">
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl lg:absolute lg:inset-y-0 lg:right-[calc(50%-50vw)] lg:aspect-auto lg:h-full lg:w-[calc(100%+50vw-50%)] lg:rounded-none lg:rounded-l-2xl">
-            <Image
-              src="/images/vitrine_clinique1.jpg"
-              alt={content.imageAlt}
-              fill
-              sizes="(max-width: 1024px) 100vw, 45vw"
-              className="object-cover"
-              priority
-              quality={82}
-            />
-            {/* Ties the photograph into the drenched band so it reads as part
-                of the surface rather than a pasted-in rectangle. */}
+        <figure className="relative m-0 lg:col-span-5 lg:col-start-8 xl:col-span-5 xl:col-start-8">
+          <div className="relative aspect-[16/10] overflow-hidden rounded-2xl sm:aspect-[16/9] lg:aspect-[4/5] lg:max-h-[min(calc(100svh-10rem),46rem)]">
+            <picture>
+              <source media="(min-width: 1024px)" srcSet={wideSrcSet} sizes="38vw" />
+              {/* A plain <img> inside <picture> is the documented art-direction
+                  pattern; its props come from getImageProps, so it is still
+                  optimised, sized and given a srcset. */}
+              <img
+                {...img}
+                src={img.src}
+                srcSet={narrowSrcSet}
+                sizes="100vw"
+                alt={alt}
+                fetchPriority="high"
+                loading="eager"
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover object-[62%_50%] lg:object-[50%_42%]"
+              />
+            </picture>
+            {/* Seats the caption plate on wide screens: a short scrim at the
+                foot only, so the photograph keeps its own light elsewhere. */}
             <div
               aria-hidden="true"
-              className="absolute inset-0 bg-gradient-to-r from-drench-deep/70 via-drench-deep/10 to-transparent"
+              className="absolute inset-x-0 bottom-0 hidden h-2/5 bg-gradient-to-t from-drench-deep/85 to-drench-deep/0 lg:block"
             />
           </div>
-        </div>
+          {/* Overlaid on the portrait panel, where the lower third of the door
+              shot is plain glass; BELOW the landscape crop on smaller screens,
+              where the clinic's own lettering sits exactly where an overlay
+              would go and the two texts would read on top of each other. */}
+          <figcaption className="mt-4 lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:p-6">
+            <p className="font-heading text-h4 font-medium leading-snug text-drench-on">
+              {content.photoLead}
+            </p>
+            <p className="mt-1 text-small text-drench-on/80">{content.photoPlace}</p>
+          </figcaption>
+        </figure>
       </div>
 
       {/* Brass hairline closing the band. */}

@@ -1,16 +1,14 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import {
-  useForm,
-  useFormContext,
-  useWatch,
-  type Control,
-  type FieldErrors,
-} from 'react-hook-form';
+import { useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useForm, useFormContext, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { es as esLocale, enUS as enLocale } from 'date-fns/locale';
+/* react-day-picker's OWN locales, not date-fns'. They extend the date-fns
+   locale with DayPicker's ARIA labels; the date-fns objects translate only the
+   month and weekday names, so on /es the navigation buttons were still
+   announced as "Go to the Next Month". */
+import { es as esLocale, enUS as enLocale } from 'react-day-picker/locale';
 import {
   AlertTriangle,
   CalendarCheck,
@@ -50,12 +48,22 @@ import type {
   AppointmentFormData,
   AppointmentTimePreference,
   Language,
+  ServiceKey,
   ZodMessages,
 } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
 import { actionMessages, appointmentBooking, formCommon, formTranslations } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import { ConsentNotice, FormSuccess } from '@/components/form-feedback';
+import {
+  CharacterCounter,
+  ConsentNotice,
+  FormSuccess,
+  RequiredFieldsNote,
+  RequiredMark,
+  fieldClass as baseFieldClass,
+  fieldLabelClass,
+  textareaClass as baseTextareaClass,
+} from '@/components/form-feedback';
 
 /* ============================================================================
    Calendar-date helpers — LOCAL, never UTC.
@@ -173,15 +181,67 @@ function formatShortDate(date: Date, lang: Language): string {
 }
 
 /* ============================================================================
+   Client-only facts: the booking window and the pointer type
+   ----------------------------------------------------------------------------
+   Both are read through `useSyncExternalStore` with a server snapshot of
+   "unknown", not set from an effect.
+
+   "Today" on the server (Vercel runs UTC) and "today" in the visitor's browser
+   are different dates for several hours a day, and the server has no pointer at
+   all — so neither may be computed during the server render or the hydration
+   pass, or the native input's min/max attributes differ between the HTML and
+   the first client render. The effect this replaces avoided that by starting at
+   `null` and setting state after mount, which renders the form twice on every
+   load. With a server snapshot React hydrates against the "unknown" values and
+   then reads the real ones in the same commit, with no second render pass of
+   the whole form and no cascading update.
+   ========================================================================== */
+
+interface BookingWindow {
+  min: string;
+  max: string;
+  minDate: Date;
+  maxDate: Date;
+}
+
+/** `getSnapshot` must return the SAME object while nothing changed, or React
+ *  re-renders forever; it changes only when the local date does. */
+let windowCache: BookingWindow | null = null;
+
+function readBookingWindow(): BookingWindow {
+  const start = today();
+  const min = toCalendarDate(start);
+  if (windowCache?.min !== min) {
+    const end = new Date(start);
+    end.setDate(end.getDate() + MAX_LEAD_DAYS);
+    windowCache = { min, max: toCalendarDate(end), minDate: start, maxDate: end };
+  }
+  return windowCache;
+}
+
+const unknownOnServer = () => null;
+/** Nothing to subscribe to: the window is re-read on every render anyway. */
+const neverChanges = () => () => {};
+
+const FINE_POINTER = '(pointer: fine)';
+
+function subscribeToPointer(onChange: () => void) {
+  const query = window.matchMedia(FINE_POINTER);
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
+
+const readFinePointer = () => window.matchMedia(FINE_POINTER).matches;
+const coarseOnServer = () => false;
+
+/* ============================================================================
    Schema
    ========================================================================== */
 
 const TIME_PREFERENCES = ['morning', 'afternoon', 'any'] as const satisfies readonly AppointmentTimePreference[];
 
+/** The column's CHECK. The counter (form-feedback.tsx) appears in the last fifth. */
 const REASON_MAX = 500;
-/** The counter stays hidden until the last fifth of the allowance. See the note
- *  at its render site. */
-const REASON_COUNTER_FROM = 400;
 
 /**
  * Built from the shared message contract so the schema and the copy cannot
@@ -196,12 +256,18 @@ function createAppointmentSchema(m: ZodMessages) {
       .min(2, { message: m.nameMin })
       .max(100, { message: m.nameMax })
       .refine((value) => !/[\x00-\x1F\x7F]/.test(value), { message: m.invalidCharacters }),
+    /* Optional since migrations/0005: empty is "not given" and the server
+       stores NULL. A value that IS typed is still checked as an address.
+       No `.toLowerCase()` — the server stores the address as typed (the column
+       is citext, and the local part is case-sensitive), and lower-casing it
+       here contradicted that. */
     email: z
       .string()
       .trim()
-      .toLowerCase()
-      .email({ message: m.emailInvalid })
-      .max(255, { message: m.emailMax }),
+      .max(255, { message: m.emailMax })
+      .refine((value) => value === '' || z.email().safeParse(value).success, {
+        message: m.emailInvalid,
+      }),
     // Required, and required on the server too. A request the clinic cannot
     // call back is not a request.
     phone: z
@@ -283,7 +349,9 @@ function isFormField(key: string): key is AppointmentField {
  * `isUrgent` is deliberately absent from group 3: it is optional, so leaving it
  * off must not stop the group reading as finished. Anything listed here is
  * checked against the live schema, which is what keeps the "done" tick honest —
- * see `GroupStatus`.
+ * see `GroupStatus`. `email` stays in group 1 although it is optional: an empty
+ * value passes its rule, so the tick still turns over without one, but a
+ * half-typed address does not.
  *
  * Module-level so the arrays keep a stable identity across renders and the
  * per-group `useWatch` subscriptions never churn.
@@ -308,45 +376,14 @@ const REASSURANCE_ICON: Record<'call' | 'reply' | 'cost', LucideIcon> = {
    Presentation helpers
    ========================================================================== */
 
-/* Field chrome uses the design system's own border tokens (`border-input`,
-   supplied by the base Input/Textarea) instead of the old
-   `border-2 border-muted-foreground/20`, which was a hand-mixed grey that
-   matched nothing else on the site and doubled the border weight of every
-   control on the page.
-
-   The invalid border keys off `aria-invalid`, which <FormControl> already sets
-   from the field's error state — so the attribute a screen reader reads and the
-   colour a sighted user sees can never disagree. Colour is never the only
-   signal: the message below the field carries the same information.
-
+/* The shared field chrome (see form-feedback.tsx) plus this form's ground.
    `ring-offset-card` overrides the `ring-offset-background` baked into the base
-   Input/Textarea/SelectTrigger. The form sits on `bg-card`, not `bg-background`,
-   so the 2px focus-ring offset was previously drawn in canvas beige on top of a
-   near-white card — a faint mismatched halo around every focused control. */
-const invalidClass =
-  'aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive';
-const fieldClass = cn(
-  'h-12 text-base transition-colors duration-fast ring-offset-card focus-visible:border-primary',
-  invalidClass,
-);
-const textareaClass = cn(
-  'min-h-[9rem] resize-y text-base leading-relaxed transition-colors duration-fast ring-offset-card focus-visible:border-primary',
-  invalidClass,
-);
-const labelClass = 'text-base font-medium text-ink';
-
-function RequiredMark({ srLabel }: { srLabel: string }) {
-  // Visual only. Requiredness is conveyed to assistive tech by `aria-required`
-  // on each control; adding an sr-only " (required)" here folded it into the
-  // accessible NAME as well, so screen readers announced it twice. The radio
-  // group already made this choice — this makes the text fields agree.
-  void srLabel;
-  return (
-    <span aria-hidden="true" className="text-primary">
-      {' *'}
-    </span>
-  );
-}
+   Input/Textarea/SelectTrigger: this form sits on `bg-card`, not
+   `bg-background`, so the 2px focus-ring offset was drawn in canvas tone on top
+   of a near-white card — a faint mismatched halo around every focused control. */
+const fieldClass = cn(baseFieldClass, 'ring-offset-card');
+const textareaClass = cn(baseTextareaClass, 'ring-offset-card');
+const labelClass = fieldLabelClass;
 
 /**
  * The step chip in a fieldset legend, and the form's only progress affordance.
@@ -468,62 +505,27 @@ function FieldGroup({
   );
 }
 
-/**
- * The textarea's character counter.
- *
- * Hidden until 400/500. A counter sitting at "0 / 500" from the moment the page
- * loads is not feedback — it is a target, and on a field that asks a nervous
- * patient to describe a symptom it reads as "you are expected to write 500
- * characters". It only becomes information when the limit is close, so that is
- * when it appears, and it counts DOWN (what is left) rather than up (what has
- * been used), because remaining budget is the thing being decided.
- *
- * `aria-hidden`: a live counter that fires on every keystroke is one of the
- * noisiest things a screen reader can be handed. The same fact is given once,
- * calmly, by the sr-only limit note in the field description — which is read on
- * focus, before any typing — and the browser's own `maxLength` makes overrun
- * impossible rather than merely reported.
- *
- * Its own component so `useWatch` re-renders this <span> and nothing else. The
- * parent previously called `watch('reason')`, which re-rendered the whole form
- * — all eight Controllers, the three radio cards, the urgency toggle, plus a
- * fresh `Intl.DateTimeFormat` in the date field's render prop — once per
- * character typed.
- */
-function ReasonCounter({
-  control,
-  remainingLabel,
-  limitLabel,
-}: {
-  control: Control<AppointmentFormValues>;
-  remainingLabel: string;
-  limitLabel: string;
-}) {
-  const value = useWatch({ control, name: 'reason' }) ?? '';
-  if (value.length < REASON_COUNTER_FROM) return null;
-
-  const remaining = REASON_MAX - value.length;
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        'shrink-0 tabular',
-        // Weight and wording carry the "you are at the ceiling" state, not a
-        // colour: `text-warning` is a mid-light amber that does not clear 4.5:1
-        // against the card in the light theme.
-        remaining <= 0 ? 'font-medium text-ink' : 'text-ink-soft',
-      )}
-    >
-      {remaining <= 0 ? limitLabel : remainingLabel.replace('{{count}}', String(remaining))}
-    </span>
-  );
-}
-
 /* ============================================================================
    Form
    ========================================================================== */
 
-export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }) {
+export interface AppointmentServiceOption {
+  /** What is submitted. The server resolves it with `serviceKeyOf`. */
+  value: ServiceKey;
+  /** What the patient reads, in their language. */
+  label: string;
+}
+
+/**
+ * The booking form.
+ *
+ * `serviceOptions` arrives from the server page, built by `serviceOptions(lang)`
+ * in src/lib/service-catalog.ts, rather than being built here from `services`:
+ * that list carries every service's full description, and importing it into a
+ * client component would ship eight paragraphs to the browser to render eight
+ * labels.
+ */
+export function AppointmentForm({ serviceOptions }: { serviceOptions: AppointmentServiceOption[] }) {
   const { lang } = useLanguage();
   const { toast } = useToast();
   const strings = formTranslations.appointmentForm[lang];
@@ -573,19 +575,10 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
      leaf component using `useWatch`. The parent therefore re-renders only for
      submit state and the panel/alert state below — never for typing. */
 
-  /* Everything date-shaped is computed after mount, not during render.
-     "Today" on the server (Vercel runs UTC) and "today" in the visitor's
-     browser are different dates for several hours a day, so computing this
-     during render produces attributes that change between the server HTML and
-     the first client render — a hydration mismatch, on the one control where a
-     wrong value is a wrong appointment. The bounds are a convenience anyway;
-     the Zod rules above and in actions.ts are the real constraint. */
-  const [bounds, setBounds] = useState<{
-    min: string;
-    max: string;
-    minDate: Date;
-    maxDate: Date;
-  } | null>(null);
+  /* The booking window, client-side only — see "Client-only facts" above. The
+     bounds are a convenience; the Zod rules above and in actions.ts are the
+     real constraint. */
+  const bounds = useSyncExternalStore(neverChanges, readBookingWindow, unknownOnServer);
 
   /* Date entry is a HYBRID, and the split is by pointer type rather than by
      viewport width.
@@ -609,27 +602,10 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
      needs the catch, and because a value can arrive on the calendar path too
      (browser autofill, a stale value after switching input device).
 
-     `false` until the effect runs, so the server render and the first client
-     render always agree on the native input — which works everywhere. */
-  const [pointerFine, setPointerFine] = useState(false);
-
-  useEffect(() => {
-    const start = today();
-    const end = new Date(start);
-    end.setDate(end.getDate() + MAX_LEAD_DAYS);
-    setBounds({
-      min: toCalendarDate(start),
-      max: toCalendarDate(end),
-      minDate: start,
-      maxDate: end,
-    });
-
-    const query = window.matchMedia('(pointer: fine)');
-    const sync = () => setPointerFine(query.matches);
-    sync();
-    query.addEventListener('change', sync);
-    return () => query.removeEventListener('change', sync);
-  }, []);
+     `false` on the server and during hydration, so the server render and the
+     first client render always agree on the native input — which works
+     everywhere. */
+  const pointerFine = useSyncExternalStore(subscribeToPointer, readFinePointer, coarseOnServer);
 
   // The calendar needs its own limits to be meaningful, so it waits for them.
   const usesCalendar = pointerFine && bounds !== null;
@@ -712,7 +688,12 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
      the fold. */
   function onInvalid(errors: FieldErrors<AppointmentFormValues>) {
     const count = Object.keys(errors).length;
-    setFormAlert(t.errorSummary.replace('{{count}}', String(count)));
+    // Two strings rather than "campo(s)": the parenthesised plural is a
+    // template showing through, on the screen a patient sees when they are
+    // already being told something went wrong.
+    setFormAlert(
+      count === 1 ? t.errorSummary.one : t.errorSummary.other.replace('{{count}}', String(count)),
+    );
     setLiveMessage('');
   }
 
@@ -731,9 +712,16 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
   const stepLabel = (step: number) =>
     t.stepOf.replace('{{step}}', String(step)).replace('{{total}}', String(TOTAL_STEPS));
 
+  /* `handleSubmit` is called inside the event, not during render. Calling it in
+     render to build the handler hands react-hook-form a callback that reads
+     `alertRef`, and the React compiler cannot tell that it is not invoked
+     synchronously — so it flagged a ref read during render. */
+  const submit = (event: React.FormEvent<HTMLFormElement>) =>
+    form.handleSubmit(onValid, onInvalid)(event);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onValid, onInvalid)} noValidate>
+      <form onSubmit={submit} noValidate>
         {/* Transient status (submitting). Failures are announced by the
             role="alert" panel below instead, so nothing is read twice.
 
@@ -763,12 +751,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
               It used to sit under the submit button, where it explains a
               convention the patient has already had to work out for themselves
               across eight controls. */}
-          <p className="text-small text-ink-soft">
-            <span aria-hidden="true" className="font-medium text-primary">
-              *
-            </span>{' '}
-            {c.requiredFields}
-          </p>
+          <RequiredFieldsNote lang={lang} />
 
           {/* ── 1. Who you are ─────────────────────────────────────────────── */}
           <FieldGroup
@@ -787,7 +770,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                 <FormItem>
                   <FormLabel className={labelClass}>
                     {strings.nameLabel}
-                    <RequiredMark srLabel={t.requiredMark} />
+                    <RequiredMark />
                   </FormLabel>
                   <FormControl>
                     <Input
@@ -812,7 +795,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                   <FormItem>
                     <FormLabel className={labelClass}>
                       {strings.phoneLabel}
-                      <RequiredMark srLabel={t.requiredMark} />
+                      <RequiredMark />
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -838,10 +821,9 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>
-                      {strings.emailLabel}
-                      <RequiredMark srLabel={t.requiredMark} />
-                    </FormLabel>
+                    {/* No asterisk and no aria-required: optional since
+                        migration 0005, and the label says so in words. */}
+                    <FormLabel className={labelClass}>{strings.emailLabel}</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
@@ -849,7 +831,6 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                         placeholder={strings.emailPlaceholder}
                         autoComplete="email"
                         maxLength={255}
-                        aria-required="true"
                         className={fieldClass}
                         {...field}
                       />
@@ -882,7 +863,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                 <FormItem>
                   <FormLabel className={labelClass}>
                     {strings.serviceTypeLabel}
-                    <RequiredMark srLabel={t.requiredMark} />
+                    <RequiredMark />
                   </FormLabel>
                   <Select
                     value={field.value}
@@ -907,8 +888,8 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                     </FormControl>
                     <SelectContent className="max-h-72">
                       {serviceOptions.map((option) => (
-                        <SelectItem key={option} value={option} className="py-3 text-base">
-                          {option}
+                        <SelectItem key={option.value} value={option.value} className="py-3 text-base">
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -925,7 +906,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                 <FormItem>
                   <FormLabel className={labelClass}>
                     {strings.reasonLabel}
-                    <RequiredMark srLabel={t.requiredMark} />
+                    <RequiredMark />
                   </FormLabel>
                   <FormControl>
                     <Textarea
@@ -943,8 +924,10 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                           which is where a limit belongs for a screen reader. */}
                       <span className="sr-only"> {t.reasonLimitNote}</span>
                     </span>
-                    <ReasonCounter
+                    <CharacterCounter
                       control={control}
+                      name="reason"
+                      max={REASON_MAX}
                       remainingLabel={t.reasonRemaining}
                       limitLabel={t.reasonLimitReached}
                     />
@@ -993,11 +976,20 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                   <FormItem>
                     <FormLabel id={dateLabelId} className={labelClass}>
                       {t.preferredDateLabel}
-                      <RequiredMark srLabel={t.requiredMark} />
+                      <RequiredMark />
                     </FormLabel>
 
                     {usesCalendar ? (
-                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                      <Popover
+                        open={calendarOpen}
+                        onOpenChange={(open) => {
+                          setCalendarOpen(open);
+                          // Closed without choosing (Escape, a click outside):
+                          // THAT is the moment the field was visited and left,
+                          // so it is when "Elija el día" may first appear.
+                          if (!open && !field.value) field.onBlur();
+                        }}
+                      >
                         <PopoverTrigger asChild>
                           <FormControl>
                             {/* `role="combobox"`, not the implicit button role.
@@ -1028,7 +1020,19 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                               aria-required="true"
                               aria-labelledby={dateLabelId}
                               ref={field.ref}
-                              onBlur={field.onBlur}
+                              onBlur={(event) => {
+                                /* Opening the calendar moves focus INTO it,
+                                   which is a blur of this button. Passed
+                                   straight to react-hook-form that marked the
+                                   field touched, and "Elija el día que
+                                   prefiere" appeared under a picker the patient
+                                   was in the middle of using. A blur into the
+                                   calendar is not leaving the field. */
+                                const next = event.relatedTarget as Node | null;
+                                const dialog = document.getElementById(dateDialogId);
+                                if (calendarOpen || (next && dialog?.contains(next))) return;
+                                field.onBlur();
+                              }}
                               className={cn(
                                 fieldClass,
                                 'flex w-full items-center justify-between gap-3 rounded-md border border-input bg-background px-3.5 text-left',
@@ -1052,7 +1056,20 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                             </button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent id={dateDialogId} align="start" className="w-auto p-0">
+                        {/* A FIXED width, the calendar's own (seven 2.5rem
+                            cells + its 1rem padding each side), not `w-auto`.
+                            Radix's popper wrapper is `min-width: max-content`,
+                            so with an auto width the weekend note below was
+                            laid out on ONE line and stretched the popover to
+                            509px — on a 390px window the next-month button sat
+                            off-screen. `max-w` and `collisionPadding` keep the
+                            panel inside the viewport on narrow windows. */}
+                        <PopoverContent
+                          id={dateDialogId}
+                          align="start"
+                          collisionPadding={12}
+                          className="w-[19.5rem] max-w-[calc(100vw-1.5rem)] p-0"
+                        >
                           <Calendar
                             mode="single"
                             selected={picked ?? undefined}
@@ -1157,7 +1174,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                   <div className="min-w-0">
                     <p id={labelId} className={labelClass}>
                       {t.timePreferenceLabel}
-                      <RequiredMark srLabel={t.requiredMark} />
+                      <RequiredMark />
                     </p>
                     {/* mt-2, matching <FormItem>'s own `space-y-2`: this group
                         is hand-rolled rather than a FormItem, and at mt-1.5 its
@@ -1310,8 +1327,13 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
                 costs nothing — was previously either far above (groupWhenHint),
                 only shown AFTER success (responseTime), or in the page aside,
                 which on a phone renders BELOW the form and so arrives too late to
-                be reassurance at all. */}
-            <ul className="space-y-2.5 rounded-lg border border-line bg-canvas-sunk/50 p-4">
+                be reassurance at all.
+
+                A plain list, not a bordered box: it sits inside the form's own
+                card, and a card in a card is a second frame competing with the
+                first for the job of saying "this is one thing". The rule above
+                already separates it from the fields. */}
+            <ul className="space-y-2.5">
               {t.submitReassurance.map((item) => {
                 const Icon = REASSURANCE_ICON[item.key];
                 return (

@@ -1,8 +1,11 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Loader2, Send } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,106 +20,140 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { submitContactForm } from '@/app/actions';
-import type { ContactFormData } from '@/lib/types';
+import type { ContactFormData, ZodMessages } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
 import { formTranslations, actionMessages, formCommon } from '@/lib/data';
-import { Loader2, Send, User, Mail, Phone, MessageSquare } from 'lucide-react';
-import { useState } from 'react';
-import { FormSuccess, ConsentNotice } from '@/components/form-feedback';
+import {
+  CharacterCounter,
+  ConsentNotice,
+  FormSuccess,
+  RequiredFieldsNote,
+  RequiredMark,
+  fieldClass,
+  fieldLabelClass,
+  textareaClass,
+} from '@/components/form-feedback';
 
-const inputClass =
-  'h-12 border-2 border-muted-foreground/20 bg-background text-base transition-colors focus-visible:border-primary';
-const labelClass = 'flex items-center gap-2 text-base font-medium';
+/** `app.contact_messages` CHECKs `length(message) BETWEEN 10 AND 1000`. */
+const MESSAGE_MAX = 1000;
 
-export function ContactForm() {
-  const { lang } = useLanguage();
-  const { toast } = useToast();
-  const currentFormStrings = formTranslations.contactForm[lang];
-  const currentActionMessages = actionMessages[lang];
-  const c = formCommon[lang];
-  const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
+/** Must match the visual order of the fields: it is the order focus is moved
+ *  in when the server rejects a submission. */
+const FIELD_ORDER = ['name', 'email', 'phone', 'message'] as const;
+type ContactField = (typeof FIELD_ORDER)[number];
 
-  // Client-side validation hint; the server action remains authoritative.
-  //
-  // These rules must MIRROR createContactFormSchema in src/app/actions.ts.
-  // They had drifted: the client checked only the character set, while the
-  // server additionally required 7-15 digits and capped the message at 1000.
-  // So "555" looked valid, submitted cleanly, and came back rejected after a
-  // network round-trip with no field highlighted — the worst kind of form
-  // error, because nothing on screen said what was wrong.
-  const clientSchema = z.object({
-    name: z.string().min(2, { message: currentActionMessages.zod.nameMin }),
-    email: z.string().email({ message: currentActionMessages.zod.emailInvalid }),
+const isContactField = (key: string): key is ContactField =>
+  (FIELD_ORDER as readonly string[]).includes(key);
+
+/**
+ * Client-side hint; the server action remains authoritative.
+ *
+ * These rules MIRROR createContactFormSchema in src/app/actions.ts. They had
+ * drifted: the client checked only the character set while the server also
+ * required 7–15 digits and capped the message at 1000, so "555" looked valid,
+ * submitted cleanly, and came back rejected after a round-trip with no field
+ * highlighted.
+ *
+ * `.trim()` runs BEFORE the address check. Without it, an address pasted with a
+ * trailing space — which the server trims and accepts — was refused here as
+ * malformed, so the patient never got as far as the server.
+ */
+function createContactSchema(m: ZodMessages) {
+  return z.object({
+    name: z.string().trim().min(2, { message: m.nameMin }).max(100, { message: m.nameMax }),
+    email: z
+      .string()
+      .trim()
+      .max(255, { message: m.emailMax })
+      .refine((value) => z.email().safeParse(value).success, { message: m.emailInvalid }),
     phone: z
       .string()
+      .trim()
       .optional()
       .refine(
         (value) => {
-          if (!value || value.trim() === '') return true;
+          if (!value) return true;
           // 40 is the column's own CHECK. Seven digits padded with thirty
           // spaces satisfies both the digit count and the character class, so
           // without this the value reaches Postgres and comes back as a generic
           // failure on a number that looked perfectly fine on screen.
           if (value.length > 40) return false;
-          const digitsOnly = value.replace(/[^0-9]/g, '');
-          return (
-            digitsOnly.length >= 7 &&
-            digitsOnly.length <= 15 &&
-            /^[0-9+\s()-]*$/.test(value)
-          );
+          const digits = value.replace(/[^0-9]/g, '');
+          return digits.length >= 7 && digits.length <= 15 && /^[0-9+\s()-]*$/.test(value);
         },
-        { message: currentActionMessages.zod.phoneInvalid },
+        { message: m.phoneInvalid },
       ),
     message: z
       .string()
-      .min(10, { message: currentActionMessages.zod.messageMin })
-      /* 1000, because that is what `app.contact_messages` CHECKs. The cap here
-         was 2000, so a longer message passed the browser, passed the server,
-         and was refused by Postgres — the patient wrote at length, waited, and
-         was told the site had a problem. A client limit that disagrees with the
-         column is not a looser limit, it is a delayed one. */
-      .max(1000, { message: currentActionMessages.zod.messageMax }),
+      .trim()
+      .min(10, { message: m.messageMin })
+      .max(MESSAGE_MAX, { message: m.messageMax }),
   });
+}
 
-  const form = useForm<ContactFormData>({
-    resolver: zodResolver(clientSchema),
+type ContactFormValues = z.infer<ReturnType<typeof createContactSchema>>;
+
+export function ContactForm() {
+  const { lang } = useLanguage();
+  const { toast } = useToast();
+  const strings = formTranslations.contactForm[lang];
+  const messages = actionMessages[lang];
+  const c = formCommon[lang];
+  const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
+
+  const schema = useMemo(() => createContactSchema(messages.zod), [messages.zod]);
+
+  const form = useForm<ContactFormValues>({
+    resolver: zodResolver(schema),
+    // Same rhythm as the appointment form: checked the first time a field is
+    // left, then live. Not on every keystroke, and not only on submit.
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
     defaultValues: { name: '', email: '', phone: '', message: '' },
   });
 
   const {
+    control,
     formState: { isSubmitting },
-    watch,
   } = form;
-  const messageValue = watch('message');
 
-  async function onSubmit(data: ContactFormData) {
+  async function onValid(values: ContactFormValues) {
+    const payload: Omit<ContactFormData, 'id' | 'submitted_at' | 'status'> = {
+      name: values.name,
+      email: values.email,
+      phone: values.phone,
+      message: values.message,
+    };
+
     try {
-      const result = await submitContactForm(data, lang);
+      const result = await submitContactForm(payload, lang);
       if (result.success) {
-        toast({ title: currentFormStrings.successToastTitle, description: result.message });
+        toast({ title: strings.successToastTitle, description: result.message });
         form.reset();
         setSubmittedMessage(result.message);
-      } else {
-        toast({
-          title: currentFormStrings.errorToastTitle,
-          description: result.message || currentActionMessages.contactError,
-          variant: 'destructive',
-        });
-        if (result.errors) {
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            if (messages && messages.length > 0) {
-              form.setError(field as keyof ContactFormData, {
-                type: 'manual',
-                message: messages.join(', '),
-              });
-            }
-          });
+        return;
+      }
+
+      toast({
+        title: strings.errorToastTitle,
+        description: result.message || messages.contactError,
+        variant: 'destructive',
+      });
+
+      if (result.errors) {
+        for (const [field, fieldMessages] of Object.entries(result.errors)) {
+          if (!fieldMessages?.length || !isContactField(field)) continue;
+          form.setError(field, { type: 'server', message: fieldMessages.join(' ') });
         }
+        // A server-side rejection used to exist only as a toast that vanished,
+        // nowhere near the field that had to change. Put the caret on it.
+        const firstBad = FIELD_ORDER.find((field) => result.errors?.[field]?.length);
+        if (firstBad) requestAnimationFrame(() => form.setFocus(firstBad));
       }
     } catch {
       toast({
-        title: currentFormStrings.unexpectedErrorToastTitle,
-        description: currentActionMessages.contactError,
+        title: strings.unexpectedErrorToastTitle,
+        description: messages.contactError,
         variant: 'destructive',
       });
     }
@@ -125,10 +162,10 @@ export function ContactForm() {
   if (submittedMessage) {
     return (
       <FormSuccess
-        title={c.successTitle}
+        title={c.messageSuccessTitle}
         message={submittedMessage}
         responseTime={c.responseTime}
-        resetLabel={c.successAnother}
+        resetLabel={c.messageSuccessAnother}
         onReset={() => setSubmittedMessage(null)}
       />
     );
@@ -136,23 +173,25 @@ export function ContactForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={(event) => form.handleSubmit(onValid)(event)} noValidate className="space-y-6">
+        <RequiredFieldsNote lang={lang} />
+
         <FormField
-          control={form.control}
+          control={control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className={labelClass}>
-                <User className="h-4 w-4 text-primary" />
-                {currentFormStrings.nameLabel}
-                <span className="text-destructive">*</span>
+              <FormLabel className={fieldLabelClass}>
+                {strings.nameLabel}
+                <RequiredMark />
               </FormLabel>
               <FormControl>
                 <Input
-                  placeholder={currentFormStrings.namePlaceholder}
+                  placeholder={strings.namePlaceholder}
                   autoComplete="name"
                   maxLength={100}
-                  className={inputClass}
+                  aria-required="true"
+                  className={fieldClass}
                   {...field}
                 />
               </FormControl>
@@ -163,22 +202,23 @@ export function ContactForm() {
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <FormField
-            control={form.control}
+            control={control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelClass}>
-                  <Mail className="h-4 w-4 text-primary" />
-                  {currentFormStrings.emailLabel}
-                  <span className="text-destructive">*</span>
+                <FormLabel className={fieldLabelClass}>
+                  {strings.emailLabel}
+                  <RequiredMark />
                 </FormLabel>
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder={currentFormStrings.emailPlaceholder}
+                    inputMode="email"
+                    placeholder={strings.emailPlaceholder}
                     autoComplete="email"
                     maxLength={255}
-                    className={inputClass}
+                    aria-required="true"
+                    className={fieldClass}
                     {...field}
                   />
                 </FormControl>
@@ -187,21 +227,21 @@ export function ContactForm() {
             )}
           />
           <FormField
-            control={form.control}
+            control={control}
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelClass}>
-                  <Phone className="h-4 w-4 text-primary" />
-                  {currentFormStrings.phoneLabel}
-                </FormLabel>
+                <FormLabel className={fieldLabelClass}>{strings.phoneLabel}</FormLabel>
                 <FormControl>
                   <Input
                     type="tel"
-                    placeholder={currentFormStrings.phonePlaceholder}
+                    inputMode="tel"
+                    placeholder={strings.phonePlaceholder}
                     autoComplete="tel"
-                    className={inputClass}
+                    maxLength={25}
+                    className={fieldClass}
                     {...field}
+                    value={field.value ?? ''}
                   />
                 </FormControl>
                 <FormMessage />
@@ -211,25 +251,38 @@ export function ContactForm() {
         </div>
 
         <FormField
-          control={form.control}
+          control={control}
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className={labelClass}>
-                <MessageSquare className="h-4 w-4 text-primary" />
-                {currentFormStrings.messageLabel}
-                <span className="text-destructive">*</span>
+              <FormLabel className={fieldLabelClass}>
+                {strings.messageLabel}
+                <RequiredMark />
               </FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder={currentFormStrings.messagePlaceholder}
-                  maxLength={1000}
-                  className="min-h-[140px] resize-none border-2 border-muted-foreground/20 bg-background text-base transition-colors focus-visible:border-primary"
+                  placeholder={strings.messagePlaceholder}
+                  maxLength={MESSAGE_MAX}
+                  aria-required="true"
+                  className={textareaClass}
                   {...field}
                 />
               </FormControl>
-              <FormDescription className="text-right text-xs">
-                {messageValue?.length || 0} / 1000
+              {/* The description holds only the sr-only limit note, read once on
+                  focus. The visible counter beside it is aria-hidden: it used to
+                  BE the description, so "0 / 1000" was announced as what the
+                  message box was for. */}
+              <FormDescription className="flex justify-end text-small text-ink-soft">
+                <span className="sr-only">
+                  {c.characterLimitNote.replace('{{max}}', String(MESSAGE_MAX))}
+                </span>
+                <CharacterCounter
+                  control={control}
+                  name="message"
+                  max={MESSAGE_MAX}
+                  remainingLabel={c.charactersRemaining}
+                  limitLabel={c.characterLimitReached.replace('{{max}}', String(MESSAGE_MAX))}
+                />
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -238,17 +291,17 @@ export function ContactForm() {
 
         <Button
           type="submit"
-          variant="cta"
           size="lg"
           className="w-full"
           disabled={isSubmitting}
+          aria-busy={isSubmitting || undefined}
         >
           {isSubmitting ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           ) : (
-            <Send className="h-5 w-5" />
+            <Send className="h-5 w-5" aria-hidden="true" />
           )}
-          {isSubmitting ? currentFormStrings.submittingButtonText : currentFormStrings.submitButtonText}
+          {isSubmitting ? strings.submittingButtonText : strings.submitButtonText}
         </Button>
 
         <ConsentNotice lang={lang} />

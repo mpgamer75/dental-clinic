@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { CalendarX2 } from 'lucide-react';
 
 import { AppointmentsTable } from '@/components/admin/appointments-table';
@@ -13,9 +14,11 @@ import {
   SORT_LABELS,
   buildListHref,
   parseAppointmentSort,
+  lastPageFor,
   parseAppointmentStatus,
   parsePage,
   parseSearch,
+  parseUrgentOnly,
   type RawSearchParams,
 } from '../../_lib/list-params';
 import { listAppointments } from '../../_lib/queries';
@@ -53,10 +56,19 @@ export default async function AppointmentsPage({
     search: parseSearch(raw),
     status: parseAppointmentStatus(raw),
     sort: parseAppointmentSort(raw),
+    urgentOnly: parseUrgentOnly(raw),
   };
 
   const result = await listAppointments(query);
-  const filtered = query.search !== '' || query.status !== null;
+  const filtered = query.search !== '' || query.status !== null || query.urgentOnly;
+
+  /* Asked for a page past the end — typically after confirming one's way
+     through `?estado=pending&pagina=2` until that page emptied. Sent to the real
+     last page with every other parameter intact, instead of a "Todavía no hay
+     solicitudes" over a list that still has rows and no pager to reach them. */
+  if (result.ok && result.data.rows.length === 0 && result.data.total > 0 && query.page > 1) {
+    redirect(buildListHref(PATHNAME, raw, { page: String(lastPageFor(result.data.total)) }));
+  }
 
   return (
     <>
@@ -74,6 +86,7 @@ export default async function AppointmentsPage({
         statusLabel="Estado"
         statusOptions={STATUS_OPTIONS}
         sortOptions={SORT_OPTIONS}
+        urgentFilter
       />
 
       {!result.ok ? (
@@ -89,7 +102,7 @@ export default async function AppointmentsPage({
           }
           clearHref={
             filtered
-              ? buildListHref(PATHNAME, raw, { search: null, status: null, page: null })
+              ? buildListHref(PATHNAME, raw, { search: null, status: null, urgent: null, page: null })
               : undefined
           }
         />

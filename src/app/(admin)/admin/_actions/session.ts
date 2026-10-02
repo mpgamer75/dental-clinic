@@ -10,12 +10,14 @@
    away, so a database blip logged the dentist out with "Acceso denegado" — a
    check that failed presented as a check that denied.
 
-   Two throttles guard this endpoint, and they are not redundant. This action
-   counts against `checkAdminLoginLimit` because it is a public HTTP endpoint
-   that a script can call directly; /api/auth/[...path] counts against the same
-   bucket because Neon Auth's own sign-in route is public too and would
-   otherwise be the unmetered way in. One bucket, so five attempts means five
-   attempts however they arrive.
+   Two throttles guard sign-in, because there are two public ways in. This
+   action counts FAILED attempts only, per account and per client (see
+   `checkAdminLoginGate`): the whole clinic shares one NAT address, and the
+   every-attempt limit it used to spend locked all staff out after three good
+   sign-ins and two typos. /api/auth/[...path], Neon Auth's own sign-in route,
+   keeps the every-attempt bucket — nobody legitimate calls it — and this
+   action's gate also refuses a client that has used that bucket up, so
+   alternating between the two endpoints gains an attacker nothing.
    ========================================================================== */
 
 import { redirect } from 'next/navigation';
@@ -28,8 +30,8 @@ import { db } from '@/lib/db';
 import { formatDatabaseFailure } from '@/lib/db-errors';
 import { staff } from '@/lib/schema';
 import { CSRF_FIELD_NAME, assertCsrf, ensureCsrfToken } from '@/lib/csrf';
-import { checkAdminLoginLimit } from '@/lib/rate-limit';
-import { getRequestContext } from '@/lib/request-context';
+import { checkAdminLoginGate, recordAdminLoginFailure } from '@/lib/rate-limit';
+import { getRequestContext, hashIp } from '@/lib/request-context';
 
 import type { CsrfSeal } from '../_lib/csrf-seal';
 import type { LoginState } from '../_lib/form-contracts';
@@ -92,21 +94,19 @@ export async function signInAction(
 ): Promise<LoginState> {
   const { ipHash } = await getRequestContext();
 
-  /* Before parsing, so a script pays one indexed upsert per attempt rather
-     than a Zod parse and a round trip to Neon Auth. */
-  const limit = await checkAdminLoginLimit(ipHash);
-  if (!limit.allowed) {
-    const minutes = Math.max(1, Math.ceil(limit.retryAfterSeconds / 60));
-    return {
-      status: 'error',
-      message:
-        `Demasiados intentos fallidos desde esta conexión. ` +
-        `Vuelva a intentarlo en ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}.`,
-    };
-  }
+  /* The address the person typed, echoed back on every refusal. React 19
+     resets a form after its action runs, so without this a wrong password also
+     erased the email and both had to be typed again — on a phone, at the front
+     desk, with a patient waiting. It is the caller's own input returned to the
+     caller, so nothing leaks. */
+  const typedEmail =
+    typeof formData.get('email') === 'string' ? String(formData.get('email')).trim() : '';
 
+  /* Parsed BEFORE the throttle now: the throttle is keyed on the account, so
+     it needs the address. A parse costs no database work, so an empty or
+     malformed submit is still answered without touching the counter. */
   const parsed = credentialsSchema.safeParse({
-    email: typeof formData.get('email') === 'string' ? String(formData.get('email')).trim() : undefined,
+    email: typedEmail || undefined,
     password: typeof formData.get('password') === 'string' ? formData.get('password') : undefined,
   });
 
@@ -117,6 +117,25 @@ export async function signInAction(
       status: 'error',
       message: flattened.email?.[0] ?? flattened.password?.[0] ?? REJECTED,
       field,
+      email: typedEmail,
+    };
+  }
+
+  /* The account half of the throttle key: a salted digest of the address
+     (the same salted SHA-256 the client address goes through — `hashIp` is the
+     project's one keyed hash, whatever its name says), so rate_limits never
+     holds a member of staff's email. */
+  const accountKey = hashIp(`login-email:${parsed.data.email.toLowerCase()}`) ?? 'unknown';
+
+  const gate = await checkAdminLoginGate(ipHash, accountKey);
+  if (!gate.allowed) {
+    const minutes = Math.max(1, Math.ceil(gate.retryAfterSeconds / 60));
+    return {
+      status: 'error',
+      message:
+        `Demasiados intentos fallidos con esta cuenta desde esta conexión. ` +
+        `Vuelva a intentarlo en ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}.`,
+      email: typedEmail,
     };
   }
 
@@ -129,14 +148,21 @@ export async function signInAction(
     });
 
     if (error || !data) {
-      /* Neither the attempted address nor the upstream message is recorded.
+      /* Only a REJECTED credential is counted — a successful sign-in costs the
+         clinic nothing, which is what stops three correct logins and two typos
+         locking everyone out.
+
+         Neither the attempted address nor the upstream message is recorded.
          The address is a member of staff's personal data in an append-only
          table, and the message is upstream prose that can quote the request.
          What an investigation needs is here already: the hashed client, the
          user agent, and the fact that an attempt failed. */
-      await recordAudit({ action: 'session.sign_in_failed', entity: 'session' });
+      await Promise.all([
+        recordAdminLoginFailure(ipHash, accountKey),
+        recordAudit({ action: 'session.sign_in_failed', entity: 'session' }),
+      ]);
       console.warn('[admin] sign-in rejected (status %s)', error?.status ?? 'none');
-      return { status: 'error', message: REJECTED, field: 'password' };
+      return { status: 'error', message: REJECTED, field: 'password', email: typedEmail };
     }
 
     signedInUserId = data.user?.id ?? null;
@@ -150,6 +176,7 @@ export async function signInAction(
       status: 'error',
       message:
         'No se pudo contactar con el servicio de autenticación. Inténtelo de nuevo en unos momentos.',
+      email: typedEmail,
     };
   }
 
@@ -219,13 +246,16 @@ export async function signOutAction(formData: FormData): Promise<MutationResult>
   }
 
   /* Read before the session is destroyed: afterwards there is nobody to
-     attribute the row to. */
+     attribute the row to. Handed to the audit as the verified actor so the
+     sign-out costs one session lookup, not two. */
   const check = await readAdminSession();
+  const actor = check.status === 'authenticated' ? check.actor : null;
 
   await recordAudit({
     action: 'session.signed_out',
     entity: 'session',
-    entityId: check.status === 'authenticated' ? check.actor.id : null,
+    entityId: actor?.id ?? null,
+    verifiedActor: actor,
   });
 
   try {

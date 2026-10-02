@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
 import '@/app/globals.css';
@@ -6,11 +6,12 @@ import { fontVariables } from '@/app/fonts';
 import { BackToTop } from '@/components/back-to-top';
 import { Footer } from '@/components/layout/footer';
 import { Navbar } from '@/components/layout/navbar';
-import { ScrollProgress } from '@/components/scroll-progress';
+import { MaintenanceNotice } from '@/components/maintenance-notice';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from '@/contexts/language-context';
 import { getHomeMetadata } from '@/lib/seo-config';
+import { getPublicSiteSettings } from '@/lib/site-settings';
 import type { Language } from '@/lib/types';
 
 /* ============================================================================
@@ -72,6 +73,16 @@ export async function generateMetadata({
   return getHomeMetadata(toLanguage(lang));
 }
 
+/** The phone's browser chrome takes the header's ground, so the status bar and
+ *  the bar beneath it read as one surface. A literal, because this is emitted
+ *  as a <meta> tag where tokens do not exist: it is `--canvas` (light) resolved
+ *  to sRGB. One value, not a prefers-color-scheme pair — the theme here is a
+ *  class the visitor toggles (system detection is off), so an OS-dark pair
+ *  would paint navy chrome above the light site most visitors see. */
+export const viewport: Viewport = {
+  themeColor: '#f3f6fa',
+};
+
 export default async function SiteLayout({
   children,
   params,
@@ -82,8 +93,18 @@ export default async function SiteLayout({
   const { lang: rawLang } = await params;
   const lang = toLanguage(rawLang);
 
+  /* A database read, not a Dynamic API: it happens when the page is generated
+     (at build, then on revalidation), so every public route stays static. The
+     admin settings action revalidates this layout when the switch changes.
+     Fails open — see src/lib/site-settings.ts. */
+  const { maintenanceMode } = await getPublicSiteSettings();
+
   return (
-    <html lang={lang} className={fontVariables} suppressHydrationWarning>
+    // `data-scroll-behavior`: globals.css sets `scroll-behavior: smooth` for
+    // in-page anchors, and Next 16 no longer suspends it during route changes
+    // unless asked — without this, every navigation would animate a long
+    // scroll to the top of the new page instead of simply arriving there.
+    <html lang={lang} className={fontVariables} data-scroll-behavior="smooth" suppressHydrationWarning>
       {/* `flex flex-col` with `flex-1` on <main> is what holds the footer at the
           bottom of a short page. It used to be declared here and defeated one
           level down: body was the flex container, but its child was a plain
@@ -111,16 +132,15 @@ export default async function SiteLayout({
             >
               {lang === 'es' ? 'Saltar al contenido' : 'Skip to content'}
             </a>
-            <ScrollProgress />
             <Navbar />
             {/* `tabIndex={-1}` so the skip link actually moves focus. Chrome and
                 Firefox set the sequential-focus starting point from a fragment
                 link to a non-focusable element; Safari does not, so without this
                 the link scrolled and the next Tab went back to the header. */}
             <main id="main-content" tabIndex={-1} className="flex-1">
-              {children}
+              {maintenanceMode ? <MaintenanceNotice lang={lang} /> : children}
             </main>
-            <Footer />
+            <Footer lang={lang} />
             <BackToTop />
           </LanguageProvider>
           <Toaster />

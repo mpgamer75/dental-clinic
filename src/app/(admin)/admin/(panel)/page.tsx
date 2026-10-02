@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import {
+  CalendarCheck,
   CalendarDays,
   FlaskConical,
   Inbox,
   MessagesSquare,
-  ShieldAlert,
   TriangleAlert,
 } from 'lucide-react';
 
@@ -91,9 +91,9 @@ export default async function AdminDashboardPage() {
             filas de demostración (<span className="tabular">{demo.data.appointments}</span> citas,{' '}
             <span className="tabular">{demo.data.messages}</span> mensajes,{' '}
             <span className="tabular">{demo.data.testimonials}</span> testimonios). Van marcadas con
-            la etiqueta «Demo» en las tablas y cuentan en las cifras y las gráficas. Para retirarlas:{' '}
-            <code className="tabular rounded bg-canvas-sunk px-1 py-0.5">npm run db:demo:purge</code>
-            .
+            la etiqueta «Demo» en las tablas y cuentan en las cifras y las gráficas. No corresponden a
+            ningún paciente: no llame a esos números. Pida a quien mantiene el sitio que retire los
+            datos de demostración antes de usar el panel con pacientes reales.
           </p>
         </div>
       )}
@@ -119,8 +119,8 @@ export default async function AdminDashboardPage() {
             }
             icon={TriangleAlert}
             tone={counts.data.appointmentsUrgentPending > 0 ? 'alert' : 'neutral'}
-            href="/admin/appointments?estado=pending&orden=cola"
-            linkLabel="Ver la cola"
+            href="/admin/appointments?estado=pending&urgente=1&orden=cola"
+            linkLabel="Ver las urgentes"
           />
           <StatCard
             label="Mensajes sin leer"
@@ -164,7 +164,7 @@ export default async function AdminDashboardPage() {
               <ErrorPanel title="No se pudo leer la cola de citas" detail={queue.detail} />
             ) : queue.data.length === 0 ? (
               <EmptyState
-                icon={ShieldAlert}
+                icon={CalendarCheck}
                 title="Nada pendiente"
                 description="Todas las solicitudes de cita recibidas están confirmadas, completadas o canceladas."
               />

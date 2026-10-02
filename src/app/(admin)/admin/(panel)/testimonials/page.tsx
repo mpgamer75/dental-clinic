@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { MessageSquareOff } from 'lucide-react';
 
 import { ListToolbar } from '@/components/admin/list-toolbar';
@@ -16,6 +17,7 @@ import {
   parseSearch,
   parseTestimonialSort,
   parseTestimonialStatus,
+  lastPageFor,
   type RawSearchParams,
 } from '../../_lib/list-params';
 import { listTestimonials } from '../../_lib/queries';
@@ -59,6 +61,14 @@ export default async function TestimonialsPage({
   };
 
   const result = await listTestimonials(query);
+
+  /* Asked for a page past the end — typically after working through a filtered
+     list until its last page emptied. Sent to the real last page with every
+     other parameter intact, instead of a "nothing here" that has no pager to
+     reach the rows that still exist. */
+  if (result.ok && result.data.rows.length === 0 && result.data.total > 0 && query.page > 1) {
+    redirect(buildListHref(PATHNAME, raw, { page: String(lastPageFor(result.data.total)) }));
+  }
   const filtered = query.search !== '' || query.status !== null;
 
   return (

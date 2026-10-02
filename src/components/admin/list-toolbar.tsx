@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useId, useState, useTransition } from 'react';
-import { Loader2, Search, X } from 'lucide-react';
+import { useId, useState, useTransition } from 'react';
+import { AlertTriangle, Loader2, Search, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,7 @@ export function ListToolbar({
   statusOptions,
   statusLabel,
   sortOptions,
+  urgentFilter = false,
 }: {
   pathname: string;
   current: RawSearchParams;
@@ -56,6 +57,8 @@ export function ListToolbar({
   statusLabel: string;
   statusOptions: readonly ToolbarOption[];
   sortOptions: readonly ToolbarOption[];
+  /** Appointments only: the "Solo urgentes" toggle, written to `?urgente=1`. */
+  urgentFilter?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -69,20 +72,29 @@ export function ListToolbar({
   const rawSearch = current[PARAM.search];
   const rawStatus = current[PARAM.status];
   const rawSort = current[PARAM.sort];
+  const urgentOnly = current[PARAM.urgent] === '1';
 
   const currentSearch = typeof rawSearch === 'string' ? rawSearch : '';
   const currentStatus = typeof rawStatus === 'string' ? rawStatus : ALL;
   const currentSort = typeof rawSort === 'string' ? rawSort : sortOptions[0].value;
 
   const [draft, setDraft] = useState(currentSearch);
+  const [syncedSearch, setSyncedSearch] = useState(currentSearch);
 
   /* The input is uncontrolled by the URL while it is being typed in, but it has
      to follow the URL when the URL changes for another reason — a cleared
      filter, the back button. Without this, pressing back leaves the box showing
-     a term that is no longer being searched for. */
-  useEffect(() => {
+     a term that is no longer being searched for.
+
+     Adjusted DURING render, when the URL's term differs from the one the draft
+     last synced to — React's documented pattern for state that follows a prop.
+     It used to be an effect, which rendered once with the stale term and then
+     again with the right one; and remounting the field on a `key` instead would
+     throw focus out of the box the moment Enter was pressed. */
+  if (syncedSearch !== currentSearch) {
+    setSyncedSearch(currentSearch);
     setDraft(currentSearch);
-  }, [currentSearch]);
+  }
 
   const go = (change: Parameters<typeof buildListHref>[2]) => {
     startTransition(() => {
@@ -115,7 +127,12 @@ export function ListToolbar({
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder={searchPlaceholder}
-                className="pl-9"
+                /* The native clear (×) is hidden: it sat under the custom one,
+                   two different buttons for one action, and the native one
+                   emptied the box without clearing the search the list was
+                   still filtered by. `pr-10` keeps typed text from running
+                   under the custom button. */
+                className="pl-9 pr-10 [&::-webkit-search-cancel-button]:appearance-none"
                 autoComplete="off"
               />
               {currentSearch && (
@@ -138,7 +155,7 @@ export function ListToolbar({
           </div>
         </form>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:w-auto">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:w-auto lg:auto-cols-max lg:grid-flow-col">
           <div className="min-w-0 sm:w-52">
             <Label htmlFor={statusId} className="mb-1.5 block text-small text-ink-soft">
               {statusLabel}
@@ -178,6 +195,22 @@ export function ListToolbar({
               </SelectContent>
             </Select>
           </div>
+
+          {urgentFilter && (
+            <div className="flex items-end sm:col-span-2 lg:col-span-1">
+              <Button
+                type="button"
+                variant={urgentOnly ? 'destructive' : 'outline'}
+                size="sm"
+                aria-pressed={urgentOnly}
+                onClick={() => go({ urgent: urgentOnly ? null : '1' })}
+                className="w-full sm:w-auto"
+              >
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                Solo urgentes
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

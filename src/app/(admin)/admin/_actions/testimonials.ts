@@ -71,17 +71,27 @@ export async function reviewTestimonial(formData: FormData): Promise<MutationRes
 
   let outcome:
     | { kind: 'missing' }
+    | { kind: 'demo' }
     | { kind: 'ok'; before: Record<string, unknown>; after: Record<string, unknown> };
 
   try {
     outcome = await db.transaction(async (tx) => {
-      const [before] = await tx
-        .select(auditColumns)
+      const [row] = await tx
+        .select({ ...auditColumns, isDemo: testimonials.isDemo })
         .from(testimonials)
         .where(eq(testimonials.id, id.data))
         .limit(1);
 
-      if (!before) return { kind: 'missing' } as const;
+      if (!row) return { kind: 'missing' } as const;
+
+      /* Demo rows are invented quotes under invented names. They sit in the
+         queue so the panel can be tried out, and approving one used to publish
+         it on the homepage of a medical practice exactly as if a patient had
+         written it. Refused here, server-side, because hiding the button is
+         not a control: this is a public endpoint. */
+      if (row.isDemo && decision.data === 'approved') return { kind: 'demo' } as const;
+
+      const before = { status: row.status, moderationScore: row.moderationScore };
 
       const now = new Date();
       const changed = await tx
@@ -108,8 +118,15 @@ export async function reviewTestimonial(formData: FormData): Promise<MutationRes
   }
 
   if (outcome.kind === 'missing') return { ok: false, message: MUTATION_MESSAGES.vanished };
+  if (outcome.kind === 'demo') {
+    return {
+      ok: false,
+      message: 'Es un testimonio de demostración: no se puede publicar. Puede rechazarlo o eliminarlo.',
+    };
+  }
 
   await recordAudit({
+    verifiedActor: guard.actor,
     action: decision.data === 'approved' ? 'testimonial.approved' : 'testimonial.rejected',
     entity: 'testimonial',
     entityId: id.data,
@@ -147,6 +164,7 @@ export async function deleteTestimonial(formData: FormData): Promise<MutationRes
   if (!removed) return { ok: false, message: MUTATION_MESSAGES.vanished };
 
   await recordAudit({
+    verifiedActor: guard.actor,
     action: 'testimonial.deleted',
     entity: 'testimonial',
     entityId: id.data,

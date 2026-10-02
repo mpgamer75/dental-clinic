@@ -10,6 +10,7 @@ import {
   MoreVertical,
   Phone,
   Trash2,
+  Undo2,
   X,
 } from 'lucide-react';
 
@@ -36,6 +37,7 @@ import type { AppointmentStatus } from '@/lib/schema';
 import { ConfirmDialog } from './confirm-dialog';
 import { APPOINTMENT_STATUS_META, DemoBadge, isDemoRow, StatusBadge, UrgentBadge } from './status';
 import { useRowMutation } from './use-row-mutation';
+import { WhatsAppIcon } from '@/components/icons/whatsapp';
 
 /* ============================================================================
    THE APPOINTMENT QUEUE
@@ -44,25 +46,41 @@ import { useRowMutation } from './use-row-mutation';
    every control a button in reading order — so it can be worked with a keyboard
    and read aloud in the order it is laid out.
 
+   Its job is ringing people back, so every row carries a one-tap CALL and
+   WHATSAPP at every width. On a phone that used to take about six taps per
+   patient: the number lived in a column hidden below `lg`, or in a dialog as
+   plain text, and the status could not be changed from that dialog at all.
+
    Responsive by dropping COLUMNS, so that at 360px there is nothing to scroll
-   to: the table keeps patient, status and actions, and the contact details and
-   requested day move into the detail dialog, which is where someone on a phone
-   would open them anyway. A table that scrolls horizontally on a phone hides
-   its actions column behind a gesture nobody discovers. The wrapper still
-   allows overflow — a single unbroken 60-character service name must scroll
-   rather than be clipped by the rounded corner it disappears behind.
+   to. Below `md` the patient's name is the button that opens the details (the
+   separate "Ver" button would not fit beside the call controls) and below `sm`
+   the status badge moves under the name. A table that scrolls horizontally on a
+   phone hides its actions column behind a gesture nobody discovers.
 
    Urgency is marked three ways at once — a badge with its own word and icon, a
-   primary-coloured rule down the left edge of the row, and its position at the top of
-   the default order. That redundancy is the point: this is the signal the old
-   panel let a page limit erase.
+   destructive rule down the left edge of the row, and its position at the top
+   of the default order. That redundancy is the point: this is the signal the
+   old panel let a page limit erase.
    ========================================================================== */
 
-const STATUS_ACTIONS: { status: AppointmentStatus; label: string; icon: typeof Check }[] = [
-  { status: 'confirmed', label: 'Marcar como confirmada', icon: CalendarCheck },
-  { status: 'completed', label: 'Marcar como completada', icon: Check },
-  { status: 'cancelled', label: 'Marcar como cancelada', icon: X },
+/** Every status a request can be moved to, including back to pending — a
+ *  request confirmed by mistake used to have no way back. */
+/* `short` is the dialog's button label. "Cancelar" alone is not used: inside a
+   dialog it reads as "close this dialog", and the click would cancel the
+   patient's appointment instead. */
+const STATUS_ACTIONS: { status: AppointmentStatus; label: string; short: string; icon: typeof Check }[] = [
+  { status: 'confirmed', label: 'Marcar como confirmada', short: 'Confirmar', icon: CalendarCheck },
+  { status: 'completed', label: 'Marcar como completada', short: 'Marcar completada', icon: Check },
+  { status: 'cancelled', label: 'Marcar como cancelada', short: 'Cancelar la cita', icon: X },
+  { status: 'pending', label: 'Volver a pendiente', short: 'Volver a pendiente', icon: Undo2 },
 ];
+
+/** "Sin responder" fires at three whole days. Three days without an answer is
+ *  the point at which a pending request stops being a queue and starts being a
+ *  patient who has given up and phoned someone else. */
+function overdue(row: AppointmentRow): boolean {
+  return row.status === 'pending' && row.daysWaiting >= 3;
+}
 
 export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
   const { pendingId, run } = useRowMutation();
@@ -71,6 +89,9 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
 
   const detail = rows.find((row) => row.id === detailId) ?? null;
   const pendingDelete = rows.find((row) => row.id === deleteId) ?? null;
+
+  const changeStatus = (id: string, status: AppointmentStatus) =>
+    run(id, setAppointmentStatus, { status });
 
   return (
     <>
@@ -101,7 +122,7 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
               <th scope="col" className="hidden px-4 py-3 text-small font-semibold text-ink-soft md:table-cell">
                 Recibida
               </th>
-              <th scope="col" className="px-4 py-3 text-small font-semibold text-ink-soft">
+              <th scope="col" className="hidden px-4 py-3 text-small font-semibold text-ink-soft sm:table-cell">
                 Estado
               </th>
               <th scope="col" className="px-4 py-3 text-right text-small font-semibold text-ink-soft">
@@ -135,7 +156,17 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                       />
                       <div className="min-w-0">
                         <span className="flex min-w-0 items-center gap-1.5">
-                          <span className="truncate font-medium text-ink">{row.name}</span>
+                          {/* The name opens the details. Below `md` it is the
+                              only way to, so it is a real button with a real
+                              accessible name, not a clickable row. */}
+                          <button
+                            type="button"
+                            onClick={() => setDetailId(row.id)}
+                            className="-my-1 truncate rounded-sm py-1 text-left font-medium text-ink underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {row.name}
+                            <span className="sr-only"> — ver los detalles de la cita</span>
+                          </button>
                           {/* Beside the name, because the name is what someone
                               is about to dial. */}
                           {isDemoRow(row) && <DemoBadge />}
@@ -144,24 +175,37 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                           {row.serviceType}
                         </span>
                         {row.isUrgent && <UrgentBadge className="mt-1.5" />}
-                        <span className="mt-1 block text-small text-ink-faint md:hidden">
-                          {row.waitedLabel}
+                        <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 md:hidden">
+                          <StatusBadge meta={meta} className="sm:hidden" />
+                          <span className="text-small text-ink-faint">{row.waitedLabel}</span>
+                          {overdue(row) && (
+                            <span className="text-small font-medium text-destructive">
+                              Sin responder
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>
                   </th>
 
                   <td className="hidden max-w-0 px-4 py-3 lg:table-cell">
-                    <a
-                      href={`mailto:${row.email}`}
-                      className="flex items-center gap-1.5 truncate text-small text-ink-soft underline-offset-4 hover:text-primary hover:underline"
-                    >
-                      <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      <span className="truncate">{row.email}</span>
-                    </a>
+                    {row.email ? (
+                      <a
+                        href={`mailto:${row.email}`}
+                        className="flex items-center gap-1.5 truncate text-small text-ink-soft underline-offset-4 hover:text-primary hover:underline"
+                      >
+                        <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">{row.email}</span>
+                      </a>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-small text-ink-faint">
+                        <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        Sin correo
+                      </span>
+                    )}
                     {row.phone && (
                       <a
-                        href={`tel:${row.phone.replace(/[^\d+]/g, '')}`}
+                        href={row.phoneHref ?? undefined}
                         className="tabular mt-1 flex items-center gap-1.5 text-small text-ink-soft underline-offset-4 hover:text-primary hover:underline"
                       >
                         <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -187,27 +231,26 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                     <time dateTime={row.submittedAtIso} title={row.submittedAtLabel}>
                       {row.waitedLabel}
                     </time>
-                    {/* Three days without an answer is the point at which a
-                        pending request stops being a queue and starts being a
-                        patient who has given up and phoned someone else. */}
-                    {row.status === 'pending' && row.daysWaiting >= 3 && (
+                    {overdue(row) && (
                       <span className="mt-1 block text-small font-medium text-destructive">
                         Sin responder
                       </span>
                     )}
                   </td>
 
-                  <td className="px-4 py-3">
+                  <td className="hidden px-4 py-3 sm:table-cell">
                     <StatusBadge meta={meta} />
                   </td>
 
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
+                  <td className="px-2 py-2 sm:px-4 sm:py-3">
+                    <div className="flex items-center justify-end gap-0.5">
+                      <ContactButtons row={row} />
+
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="px-2.5"
+                        className="hidden px-2.5 md:inline-flex"
                         onClick={() => setDetailId(row.id)}
                       >
                         Ver
@@ -237,9 +280,7 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                               return (
                                 <DropdownMenuItem
                                   key={action.status}
-                                  onSelect={() =>
-                                    run(row.id, setAppointmentStatus, { status: action.status })
-                                  }
+                                  onSelect={() => changeStatus(row.id, action.status)}
                                 >
                                   <Icon className="mr-2 h-4 w-4" aria-hidden="true" />
                                   {action.label}
@@ -270,7 +311,7 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
         <DialogContent className="max-h-[85vh] overflow-y-auto border-line bg-surface sm:max-w-lg">
           {detail && (
             <>
-              <DialogHeader>
+              <DialogHeader className="pr-8">
                 <DialogTitle className="font-heading text-h4 text-ink">{detail.name}</DialogTitle>
                 <DialogDescription className="text-ink-soft">
                   Solicitud recibida el {detail.submittedAtLabel} ({detail.waitedLabel}).
@@ -281,32 +322,60 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                 <StatusBadge meta={APPOINTMENT_STATUS_META[detail.status]} />
                 {detail.isUrgent && <UrgentBadge />}
                 {/* Repeated in the dialog: this is the view someone opens
-                    immediately before copying an email or tapping a number. */}
+                    immediately before tapping a number. */}
                 {isDemoRow(detail) && <DemoBadge />}
               </div>
 
-              <dl className="mt-2 space-y-3 text-body">
-                <DetailRow label="Servicio" value={detail.serviceType} />
-                <DetailRow
-                  label="Correo electrónico"
-                  value={
-                    <a
-                      href={`mailto:${detail.email}`}
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      {detail.email}
+              {/* The reason this dialog is opened, first: reach the patient. */}
+              <div className="flex flex-wrap gap-2">
+                {detail.phoneHref && (
+                  <Button asChild size="sm">
+                    <a href={detail.phoneHref} className="tabular">
+                      <Phone className="h-4 w-4" aria-hidden="true" />
+                      Llamar al {detail.phone}
                     </a>
-                  }
-                />
+                  </Button>
+                )}
+                {detail.whatsappHref && (
+                  <Button asChild variant="outline" size="sm">
+                    <a href={detail.whatsappHref} target="_blank" rel="noopener noreferrer">
+                      <WhatsAppIcon className="h-4 w-4" />
+                      WhatsApp
+                      <span className="sr-only"> (se abre WhatsApp)</span>
+                    </a>
+                  </Button>
+                )}
+                {detail.email && (
+                  <Button asChild variant="outline" size="sm">
+                    <a href={`mailto:${detail.email}`}>
+                      <Mail className="h-4 w-4" aria-hidden="true" />
+                      Correo
+                    </a>
+                  </Button>
+                )}
+              </div>
+
+              <dl className="mt-1 space-y-3 text-body">
+                <DetailRow label="Servicio" value={detail.serviceType} />
                 <DetailRow
                   label="Teléfono"
                   value={
                     detail.phone ? (
+                      <span className="tabular">{detail.phone}</span>
+                    ) : (
+                      <span className="text-ink-faint">No facilitado</span>
+                    )
+                  }
+                />
+                <DetailRow
+                  label="Correo electrónico"
+                  value={
+                    detail.email ? (
                       <a
-                        href={`tel:${detail.phone.replace(/[^\d+]/g, '')}`}
-                        className="tabular text-primary underline-offset-4 hover:underline"
+                        href={`mailto:${detail.email}`}
+                        className="text-primary underline-offset-4 hover:underline"
                       >
-                        {detail.phone}
+                        {detail.email}
                       </a>
                     ) : (
                       <span className="text-ink-faint">No facilitado</span>
@@ -334,6 +403,37 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
                   </dd>
                 </div>
               </dl>
+
+              {/* The status, changeable where the decision is made. It used to
+                  live only in the row's menu, so the person who had just read
+                  the request and called the patient had to close the dialog
+                  and find the row again to record the outcome. */}
+              <div className="border-t border-line pt-4">
+                <p className="text-small font-medium text-ink-soft">Cambiar el estado</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {STATUS_ACTIONS.filter((action) => action.status !== detail.status).map(
+                    (action) => {
+                      const Icon = action.icon;
+                      return (
+                        <Button
+                          key={action.status}
+                          type="button"
+                          variant={action.status === 'confirmed' ? 'default' : 'outline'}
+                          size="sm"
+                          disabled={pendingId === detail.id}
+                          onClick={() => {
+                            changeStatus(detail.id, action.status);
+                            setDetailId(null);
+                          }}
+                        >
+                          <Icon className="h-4 w-4" aria-hidden="true" />
+                          {action.short}
+                        </Button>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
             </>
           )}
         </DialogContent>
@@ -355,6 +455,41 @@ export function AppointmentsTable({ rows }: { rows: AppointmentRow[] }) {
           setDeleteId(null);
         }}
       />
+    </>
+  );
+}
+
+/**
+ * One tap to call, one to WhatsApp — the two things the queue is for.
+ *
+ * Icon-only to fit beside the menu at 360px, so each carries a full accessible
+ * name with the patient's name in it ("Llamar a María González"): a screen
+ * reader moving down a column of identical "Llamar" buttons cannot tell whose
+ * number each one dials.
+ */
+function ContactButtons({ row }: { row: AppointmentRow }) {
+  return (
+    <>
+      {row.phoneHref && (
+        <Button asChild variant="ghost" size="icon" className="text-primary">
+          <a href={row.phoneHref} aria-label={`Llamar a ${row.name}`} title={`Llamar al ${row.phone}`}>
+            <Phone className="h-[1.1rem] w-[1.1rem]" aria-hidden="true" />
+          </a>
+        </Button>
+      )}
+      {row.whatsappHref && (
+        <Button asChild variant="ghost" size="icon" className="text-primary">
+          <a
+            href={row.whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Escribir por WhatsApp a ${row.name}`}
+            title="WhatsApp"
+          >
+            <WhatsAppIcon className="h-[1.1rem] w-[1.1rem]" />
+          </a>
+        </Button>
+      )}
     </>
   );
 }

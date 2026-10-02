@@ -80,6 +80,7 @@ export async function setMessageStatus(formData: FormData): Promise<MutationResu
   if (outcome.kind === 'missing') return { ok: false, message: MUTATION_MESSAGES.vanished };
 
   await recordAudit({
+    verifiedActor: guard.actor,
     action: 'contact_message.status_changed',
     entity: 'contact_message',
     entityId: id.data,
@@ -116,6 +117,7 @@ export async function deleteMessage(formData: FormData): Promise<MutationResult>
   if (!removed) return { ok: false, message: MUTATION_MESSAGES.vanished };
 
   await recordAudit({
+    verifiedActor: guard.actor,
     action: 'contact_message.deleted',
     entity: 'contact_message',
     entityId: id.data,
