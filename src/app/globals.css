@@ -21,8 +21,9 @@
 
    Blue stays, at the dentist's request, but as the colour of surgical drapes
    (hue 242, chroma 0.11) used only where something can be done or is active:
-   buttons, links, the current step, icons, figures. It never fills a band and
-   never sits next to a warm metallic. Navy bands with gold accents are exactly
+   buttons, links, the current step, icons, figures. The only blue surface is
+   the very pale --primary-soft tint behind the implant explainer; it never
+   fills a dark band and never sits next to a warm metallic. Navy bands with gold accents are exactly
    what made the old site read like the boutique, so that pairing is the one
    thing this palette must not drift back into.
 
@@ -206,7 +207,7 @@
        the same brand across the toggle. */
     --primary-base: 0.74 0.10 240;
     --primary-hover: 0.80 0.09 240;
-    --primary-soft: 0.29 0.04 242;
+    --primary-soft: 0.245 0.014 242;
     --primary-border: 0.40 0.05 242;
 
     --drench: 0.24 0.006 230;

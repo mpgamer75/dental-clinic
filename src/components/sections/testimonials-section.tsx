@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { AddTestimonialForm } from '@/components/add-testimonial-form';
-import { MessageSquareQuote, AlertCircle } from 'lucide-react';
+import { MessageSquareQuote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-context';
 import { Section } from '@/components/primitives/section';
@@ -55,18 +55,15 @@ export function TestimonialsSection({
   const hasTestimonials = testimonialsList.length > 0;
 
   // The two empty states are genuinely different situations and must not be
-  // collapsed: "nothing published yet" invites a submission, "we couldn't load
-  // them" is a fault the visitor should be told about rather than silently
-  // shown an invitation.
-  const empty = loadError
-    ? {
-        title: lang === 'es' ? 'No pudimos cargar los testimonios' : "We couldn't load testimonials",
-        body:
-          lang === 'es'
-            ? 'Es un problema temporal de nuestro lado. Vuelva a intentarlo en unos minutos.'
-            : "This is a temporary problem on our side. Please try again in a few minutes.",
-      }
-    : {
+  // collapsed into one: "nothing published yet" invites a submission, while a
+  // failed load must not pretend there is nothing to read.
+  //
+  // A failed load now drops the section instead of printing a fault card. The
+  // homepage is statically generated, so a database blip during a build or a
+  // revalidation froze "No pudimos cargar los testimonios" into the page for
+  // every visitor until the next one, in the middle of the sales argument.
+  // Nothing on the page depends on this section being present.
+  const empty = {
         title: lang === 'es' ? 'Todavía no hay testimonios' : 'No testimonials yet',
         body:
           lang === 'es'
@@ -77,6 +74,8 @@ export function TestimonialsSection({
   // The first testimonial is given the full width as a pull quote; the rest sit
   // in a denser grid. Uniform cards for every quote is the template reflex.
   const [featured, ...rest] = testimonialsList;
+
+  if (loadError && !hasTestimonials) return null;
 
   return (
     <Section id={id} tone="sunk" space="normal">
@@ -91,7 +90,7 @@ export function TestimonialsSection({
         <>
           <Reveal>
             <figure className="border-y border-line py-9">
-              <blockquote className="font-heading text-h3 font-normal italic text-ink">
+              <blockquote className="font-heading text-h3 font-medium text-ink">
                 <p className="max-w-[38ch]">&ldquo;{featured.quote}&rdquo;</p>
               </blockquote>
               <figcaption className="mt-6 flex items-center gap-3">
@@ -138,11 +137,7 @@ export function TestimonialsSection({
       ) : (
         <Reveal>
           <div className="max-w-measure-tight rounded-2xl border border-dashed border-line-strong bg-surface p-9">
-            {loadError ? (
-              <AlertCircle className="h-7 w-7 text-warning" aria-hidden="true" />
-            ) : (
-              <MessageSquareQuote className="h-7 w-7 text-brass-ink" aria-hidden="true" />
-            )}
+            <MessageSquareQuote className="h-7 w-7 text-brass-ink" aria-hidden="true" />
             <h3 className="mt-4 font-heading text-h4 font-medium text-ink">{empty.title}</h3>
             <p className="mt-2 leading-relaxed text-ink-soft">{empty.body}</p>
           </div>
