@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { auth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/auth/server';
 
 /**
  * The auth service's origin, for `connect-src`.
@@ -86,7 +86,15 @@ const DEFAULT_LANGUAGE = 'es';
  * bounced between a middleware that sends them to one URL and a layout that
  * sends them to the other.
  */
-const guardAdminRoutes = auth.middleware({ loginUrl: '/admin/login' });
+let adminGuard: ReturnType<ReturnType<typeof getAuth>['middleware']> | null = null;
+
+/* Built on the first /admin request, not at module load. This module runs on
+   every request to the site; building the guard eagerly meant a missing auth
+   variable took down the public pages too, when only the panel needs it. */
+function guardAdminRoutes(req: NextRequest) {
+  adminGuard ??= getAuth().middleware({ loginUrl: '/admin/login' });
+  return adminGuard(req);
+}
 
 /** Copies the security headers onto a response. Redirects need this too — see
  *  the call sites below. */

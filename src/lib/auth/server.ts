@@ -30,7 +30,38 @@ function requireAuthEnv(name: 'NEON_AUTH_BASE_URL' | 'NEON_AUTH_COOKIE_SECRET'):
   return value;
 }
 
-export const auth = createNeonAuth({
-  baseUrl: requireAuthEnv('NEON_AUTH_BASE_URL'),
-  cookies: { secret: requireAuthEnv('NEON_AUTH_COOKIE_SECRET') },
-});
+type NeonAuth = ReturnType<typeof createNeonAuth>;
+
+let instance: NeonAuth | null = null;
+
+/**
+ * The auth client, created on first use rather than at import.
+ *
+ * Creating it at import made the environment check run whenever Next loaded
+ * this module, and Next loads it while collecting page data for
+ * /api/auth/[...path] during `next build`. A Vercel Preview whose environment
+ * did not carry the Neon Auth variables therefore failed to build at all, so
+ * no preview of a public-page change could be deployed.
+ *
+ * Deferring it keeps the guarantee that matters: nothing authenticates without
+ * the variables. A call made without them still throws, which the panel's
+ * session check reports as 'unavailable' and the login and auth routes answer
+ * with an error, so the panel stays shut. It is never silently open.
+ */
+export function getAuth(): NeonAuth {
+  instance ??= createNeonAuth({
+    baseUrl: requireAuthEnv('NEON_AUTH_BASE_URL'),
+    cookies: { secret: requireAuthEnv('NEON_AUTH_COOKIE_SECRET') },
+  });
+  return instance;
+}
+
+/* Production keeps failing at build time. A production deploy without these
+   variables would ship a panel nobody can sign in to, and that should stop the
+   deploy rather than surface as a 500 on the dentist's first login. Only
+   Vercel's production environment checks eagerly; previews and local builds
+   defer to the first request. */
+if (process.env.VERCEL_ENV === 'production') {
+  requireAuthEnv('NEON_AUTH_BASE_URL');
+  requireAuthEnv('NEON_AUTH_COOKIE_SECRET');
+}
