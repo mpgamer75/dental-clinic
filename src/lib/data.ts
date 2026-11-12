@@ -132,7 +132,7 @@ export const services: ServiceData = {
     {
       iconName: 'Users', // Prótesis - personnes/multiple dents
       title: 'Prótesis Dentales',
-      description: 'Restauramos la función y estética de tu sonrisa con prótesis fijas y removibles de alta calidad. Esto incluye coronas individuales para proteger dientes dañados, puentes para reemplazar uno o más dientes ausentes utilizando dientes adyacentes como soporte, y dentaduras completas o parciales para una restauración extensa. Cada solución es personalizada para asegurar comodidad, durabilidad y una apariencia natural.',
+      description: 'Restauramos la función y estética de su sonrisa con prótesis fijas y removibles de alta calidad. Esto incluye coronas individuales para proteger dientes dañados, puentes para reemplazar uno o más dientes ausentes utilizando dientes adyacentes como soporte, y dentaduras completas o parciales para una restauración extensa. Cada solución es personalizada para asegurar comodidad, durabilidad y una apariencia natural.',
     },
     {
       iconName: 'Scan', // Implantes - scan/technologie précise
@@ -142,7 +142,7 @@ export const services: ServiceData = {
     {
       iconName: 'Smile', // Represents a beautiful, aligned smile
       title: 'Ortodoncia',
-      description: 'Corregimos dientes desalineados y problemas de mordida (maloclusiones) para mejorar tanto la estética de tu sonrisa como tu salud oral general. Ofrecemos opciones como brackets metálicos tradicionales, brackets cerámicos más discretos, y los modernos alineadores transparentes (ortodoncia invisible). Los tratamientos son adaptados para niños, adolescentes y adultos, buscando una sonrisa alineada, funcional y saludable.',
+      description: 'Corregimos dientes desalineados y problemas de mordida (maloclusiones) para mejorar tanto la estética de su sonrisa como su salud oral general. Ofrecemos opciones como brackets metálicos tradicionales, brackets cerámicos más discretos, y los modernos alineadores transparentes (ortodoncia invisible). Los tratamientos son adaptados para niños, adolescentes y adultos, buscando una sonrisa alineada, funcional y saludable.',
     },
     {
       iconName: 'Sparkles', // Limpieza - brillance/propreté
@@ -152,12 +152,12 @@ export const services: ServiceData = {
     {
       iconName: 'Activity', // Blanqueamiento - résultats actifs
       title: 'Blanqueamiento Dental',
-      description: 'Devuelve el brillo y un tono más blanco a tu sonrisa con nuestros tratamientos de blanqueamiento dental seguros y efectivos. Utilizamos geles blanqueadores de última generación, aplicados profesionalmente en la clínica para resultados rápidos y notables, o mediante kits personalizados para usar en casa bajo supervisión odontológica. Elimina manchas y rejuvenece tu apariencia.',
+      description: 'Devuelva el brillo y un tono más blanco a su sonrisa con nuestros tratamientos de blanqueamiento dental seguros y efectivos. Utilizamos geles blanqueadores de última generación, aplicados profesionalmente en la clínica para resultados rápidos y notables, o mediante kits personalizados para usar en casa bajo supervisión odontológica. Elimina manchas y rejuvenece su apariencia.',
     },
     {
       iconName: 'ShieldCheck', // Empastes - protection réparation
       title: 'Empastes (Restauraciones)',
-      description: 'Reparamos dientes dañados por caries, devolviéndoles su forma, función e integridad. Tras eliminar el tejido carioso, rellenamos la cavidad con resinas compuestas del color del diente (estéticas) que se mimetizan perfectamente con tu sonrisa. Este tratamiento detiene el avance de la caries y alivia la sensibilidad dental.',
+      description: 'Reparamos dientes dañados por caries, devolviéndoles su forma, función e integridad. Tras eliminar el tejido carioso, rellenamos la cavidad con resinas compuestas del color del diente (estéticas) que se mimetizan perfectamente con su sonrisa. Este tratamiento detiene el avance de la caries y alivia la sensibilidad dental.',
     },
     {
       iconName: 'HeartPulse', // Represents saving a tooth/health
@@ -167,7 +167,7 @@ export const services: ServiceData = {
     {
       iconName: 'Stethoscope', // Consulta - examen médical
       title: 'Consulta General/Revisión',
-      description: 'Las consultas generales y revisiones periódicas son la base de una buena salud bucodental. El Dr. Francis Valerio realizará un examen completo de tus dientes, encías y tejidos orales, utilizando radiografías digitales si es necesario, para detectar problemas en etapas tempranas. Se discutirá cualquier hallazgo y se elaborará un plan de tratamiento personalizado si es preciso.',
+      description: 'Las consultas generales y revisiones periódicas son la base de una buena salud bucodental. El Dr. Francis Valerio le realizará un examen completo de sus dientes, encías y tejidos orales, utilizando radiografías digitales si es necesario, para detectar problemas en etapas tempranas. Se discutirá cualquier hallazgo y se elaborará un plan de tratamiento personalizado si es preciso.',
     }
   ],
   en: [
@@ -256,32 +256,32 @@ export const faqItems: FAQData = {
     {
       id: 'faq1',
       question: '¿Con qué frecuencia debo visitar al dentista?',
-      answer: 'Recomendamos una visita de control y limpieza dental profesional en Orthoprotesis Dental Clinic cada seis meses. Sin embargo, el Dr. Francis Valerio puede sugerir una frecuencia diferente según tus necesidades individuales.',
+      answer: 'Recomendamos una visita de control y limpieza dental profesional en Orthoprotesis Dental Clinic cada seis meses. Sin embargo, el Dr. Francis Valerio puede sugerirle una frecuencia diferente según sus necesidades individuales.',
     },
     {
       id: 'faq2',
       question: '¿El blanqueamiento dental daña los dientes?',
-      answer: 'Cuando es realizado por un profesional como el Dr. Francis Valerio, el blanqueamiento dental es un procedimiento seguro que no daña el esmalte de tus dientes. Utilizamos productos de calidad y técnicas probadas.',
+      answer: 'Cuando es realizado por un profesional como el Dr. Francis Valerio, el blanqueamiento dental es un procedimiento seguro que no daña el esmalte de sus dientes. Utilizamos productos de calidad y técnicas probadas.',
     },
     {
       id: 'faq3',
       question: '¿Qué debo hacer si tengo una emergencia dental?',
-      answer: 'Si tienes una emergencia dental, como dolor severo, un diente roto o una infección, contacta a Orthoprotesis Dental Clinic de inmediato al 809-581-7059. Haremos lo posible por atenderte lo antes posible.',
+      answer: 'Si tiene una emergencia dental, como dolor severo, un diente roto o una infección, contacte a Orthoprotesis Dental Clinic de inmediato al 809-581-7059. Haremos lo posible por atenderle lo antes posible.',
     },
     {
       id: 'faq4',
       question: '¿Aceptan seguro dental?',
-      answer: 'En Orthoprotesis Dental Clinic trabajamos con varios planes de seguros dentales. Por favor, contáctanos con la información de tu seguro para verificar la cobertura.',
+      answer: 'En Orthoprotesis Dental Clinic trabajamos con varios planes de seguros dentales. Por favor, contáctenos con la información de su seguro para verificar la cobertura.',
     },
     {
       id: 'faq5',
       question: '¿Qué tipo de prótesis dentales ofrecen?',
-      answer: 'El Dr. Francis Valerio se especializa en una amplia gama de prótesis, incluyendo coronas individuales, puentes fijos para reemplazar varios dientes, y dentaduras parciales o completas, tanto convencionales como sobre implantes, adaptadas a tus necesidades.',
+      answer: 'El Dr. Francis Valerio se especializa en una amplia gama de prótesis, incluyendo coronas individuales, puentes fijos para reemplazar varios dientes, y dentaduras parciales o completas, tanto convencionales como sobre implantes, adaptadas a sus necesidades.',
     },
     {
       id: 'faq6',
       question: '¿Soy candidato para implantes dentales?',
-      answer: 'Una evaluación detallada por el Dr. Francis Valerio es necesaria. Generalmente, buenos candidatos tienen encías sanas y suficiente hueso maxilar para soportar el implante. Incluso si hay pérdida ósea, existen técnicas de regeneración. Ofrecemos consultas para determinar la mejor opción para ti.',
+      answer: 'Una evaluación detallada por el Dr. Francis Valerio es necesaria. Generalmente, buenos candidatos tienen encías sanas y suficiente hueso maxilar para soportar el implante. Incluso si hay pérdida ósea, existen técnicas de regeneración. Ofrecemos consultas para determinar la mejor opción para usted.',
     }
   ],
   en: [
@@ -446,15 +446,15 @@ export const formCommon: Record<Language, {
   es: {
     charactersWord: "caracteres",
     requiredFields: "Campos obligatorios",
-    responseTime: "Te responderemos en menos de 24 horas.",
-    consentBefore: "Tus datos solo se usan para gestionar tu solicitud y nunca se comparten. Consulta nuestra ",
+    responseTime: "Le responderemos en menos de 24 horas.",
+    consentBefore: "Sus datos solo se usan para gestionar su solicitud y nunca se comparten. Consulte nuestra ",
     privacyLinkLabel: "Política de Privacidad",
     consentAfter: ".",
-    testimonialConsent: "Al enviar, autorizas a la clínica a publicar tu testimonio (nombre y ubicación) en este sitio. Puedes pedir que lo retiremos cuando quieras.",
+    testimonialConsent: "Al enviar, autoriza a la clínica a publicar su testimonio (nombre y ubicación) en este sitio. Puede pedir que lo retiremos cuando quiera.",
     successTitle: "¡Solicitud recibida!",
     successAnother: "Enviar otra solicitud",
     urgencyHelpOn: "Atención prioritaria activada",
-    urgencyHelpOff: "Marca esta casilla si necesitas atención inmediata",
+    urgencyHelpOff: "Marque esta casilla si necesita atención inmediata",
   },
   en: {
     charactersWord: "characters",
@@ -662,16 +662,16 @@ export const privacyPolicy: Record<Language, {
 }> = {
   es: {
     title: "Política de Privacidad",
-    intro: "En Orthoprotesis Dental Clinic respetamos tu privacidad. Esta política explica qué datos recogemos a través de este sitio y cómo los usamos.",
+    intro: "En Orthoprotesis Dental Clinic respetamos su privacidad. Esta política explica qué datos recogemos a través de este sitio y cómo los usamos.",
     sections: [
-      { heading: "Qué datos recogemos", body: "Cuando completas el formulario de cita, de contacto o de testimonio, recogemos los datos que nos facilitas: nombre, correo electrónico, teléfono y el motivo o mensaje de tu consulta." },
-      { heading: "Para qué los usamos", body: "Usamos tus datos únicamente para responder a tu solicitud y coordinar tu atención. No los vendemos ni los compartimos con terceros con fines comerciales." },
-      { heading: "Conservación", body: "Conservamos tus datos solo durante el tiempo necesario para atender tu solicitud y cumplir con nuestras obligaciones legales." },
-      { heading: "Tus derechos", body: "Puedes solicitar el acceso, la corrección o la eliminación de tus datos en cualquier momento contactándonos. Tratamos tus datos conforme a la Ley 172-13 sobre protección de datos personales de la República Dominicana." },
-      { heading: "Seguridad", body: "Aplicamos medidas técnicas razonables para proteger tu información. Las comunicaciones con este sitio se realizan mediante conexión cifrada (HTTPS)." },
+      { heading: "Qué datos recogemos", body: "Cuando completa el formulario de cita, de contacto o de testimonio, recogemos los datos que nos facilita: nombre, correo electrónico, teléfono y el motivo o mensaje de su consulta." },
+      { heading: "Para qué los usamos", body: "Usamos sus datos únicamente para responder a su solicitud y coordinar su atención. No los vendemos ni los compartimos con terceros con fines comerciales." },
+      { heading: "Conservación", body: "Conservamos sus datos solo durante el tiempo necesario para atender su solicitud y cumplir con nuestras obligaciones legales." },
+      { heading: "Sus derechos", body: "Puede solicitar el acceso, la corrección o la eliminación de sus datos en cualquier momento contactándonos. Tratamos sus datos conforme a la Ley 172-13 sobre protección de datos personales de la República Dominicana." },
+      { heading: "Seguridad", body: "Aplicamos medidas técnicas razonables para proteger su información. Las comunicaciones con este sitio se realizan mediante conexión cifrada (HTTPS)." },
     ],
     contactHeading: "Cómo contactarnos",
-    contactBody: "Para ejercer tus derechos o resolver dudas sobre tu privacidad, escríbenos a info@orthoprotesisdental.com o llámanos al 809-581-7059.",
+    contactBody: "Para ejercer sus derechos o resolver dudas sobre su privacidad, escríbanos a info@orthoprotesisdental.com o llámenos al 809-581-7059.",
   },
   en: {
     title: "Privacy Policy",
@@ -905,11 +905,13 @@ export const contactDetails: ContactDetails = {
   servicesSection: {
     es: {
       title: "Nuestros Servicios Dentales",
-      description: "En {{clinicName}}, el {{doctorName}} ofrece una amplia gama de servicios dentales para cubrir todas sus necesidades de salud oral, con especialización en prótesis, implantes y ortodoncia. Utilizamos la última tecnología y técnicas avanzadas."
+      description: "En {{clinicName}}, el {{doctorName}} ofrece una amplia gama de servicios dentales para cubrir todas sus necesidades de salud oral, con especialización en prótesis, implantes y ortodoncia. Utilizamos la última tecnología y técnicas avanzadas.",
+      implantGuideCta: "Leer la guía de implantes"
     },
     en: {
       title: "Our Dental Services",
-      description: "At {{clinicName}}, {{doctorName}} offers a wide range of dental services to cover all your oral health needs, specializing in prosthetics, implants, and orthodontics. We use the latest technology and advanced techniques."
+      description: "At {{clinicName}}, {{doctorName}} offers a wide range of dental services to cover all your oral health needs, specializing in prosthetics, implants, and orthodontics. We use the latest technology and advanced techniques.",
+      implantGuideCta: "Read the implant guide"
     }
   },
   testimonialsSection: {
@@ -950,9 +952,9 @@ export const contactDetails: ContactDetails = {
   },
   contactSection: {
     es: {
-      title: "Contáctanos",
-      description: "¿Listo para mejorar tu sonrisa con el {{doctorName}}? Contáctanos hoy en {{clinicName}} para agendar tu cita o para cualquier consulta.",
-      formTitle: "Envíanos un Mensaje",
+      title: "Contáctenos",
+      description: "¿Listo para mejorar su sonrisa con el {{doctorName}}? Contáctenos hoy en {{clinicName}} para agendar su cita o para cualquier consulta.",
+      formTitle: "Envíenos un Mensaje",
       detailsTitle: "Información de Contacto",
       addressLabel: "Dirección",
       phoneLabel: "Teléfono",
@@ -1000,7 +1002,7 @@ export const contactDetails: ContactDetails = {
   },
   footer: {
     es: {
-      tagline: "Dirigida por el {{doctorName}}. Cuidando tu sonrisa con pasión y profesionalismo en Santiago de los Caballeros, República Dominicana.",
+      tagline: "Dirigida por el {{doctorName}}. Cuidando su sonrisa con pasión y profesionalismo en Santiago de los Caballeros, República Dominicana.",
       quickContact: "Contacto Rápido",
       scheduleTitle: "Horario",
       copyright: "© {{year}} {{clinicName}}. Todos los derechos reservados.",
@@ -1019,7 +1021,7 @@ export const contactDetails: ContactDetails = {
 export const baseMetadata: BaseMetadata = {
   es: {
     titleSuffix: "Cuidado Dental Especializado en Santiago de los Caballeros",
-    description: "{{clinicName}}, dirigida por el {{doctorName}} en Santiago de los Caballeros, República Dominicana. Especialistas en prótesis, implantes y ortodoncia. Ofrecemos servicios dentales de alta calidad. Contáctanos para agendar tu cita.",
+    description: "{{clinicName}}, dirigida por el {{doctorName}} en Santiago de los Caballeros, República Dominicana. Especialistas en prótesis, implantes y ortodoncia. Ofrecemos servicios dentales de alta calidad. Contáctenos para agendar su cita.",
     keywords: ['dentista', 'clínica dental', 'Santiago de los Caballeros', 'República Dominicana', 'Francis Valerio', 'Orthoprotesis Dental Clinic', 'salud dental', 'odontología', 'prótesis dental', 'implantes dentales', 'ortodoncia', 'agendar cita dental'],
   },
   en: {
@@ -1204,24 +1206,16 @@ export const homeContent: Record<
 > = {
   es: {
     hero: {
-      // Noun phrase, so no terminal period — the house rule elsewhere in this
-      // layer (`Cuando falta una pieza, cambia todo lo demás.` takes one;
-      // `Agende su consulta` does not). The claim is not new: it is
-      // `doctor.body[2]` — "el mismo profesional le evalúa, le planifica el
-      // tratamiento y se lo realiza, de principio a fin" — promoted to the
-      // position where it does the most work. Nothing here is promissory: it
-      // describes who staffs the appointment, not what happens to your bone.
-      title: 'El mismo dentista, de principio a fin',
-      // Sentence one restores the subject matter the headline gives up, and
-      // matches the trust strip. Sentence two unpacks the headline in plain
-      // terms instead of repeating it. `reconstruyendo dentaduras` was dropped
-      // deliberately: in Dominican usage *dentadura* reads first as the
-      // appliance, so the old line could be parsed as "rebuilding dentures",
-      // which is not what the practice does — and the English said something
-      // different again ("rebuilding teeth"). The place is not repeated here;
-      // `locationNote` already prints it directly above.
+      // Names the category and the place, because the hero now shows an
+      // implant going in and the headline has to say what that picture is
+      // selling. The previous line ("El mismo dentista, de principio a fin")
+      // keeps its job one sentence down: it is the practice's real difference
+      // and it is factual (`doctor.body[2]`). Noun phrase, so no terminal
+      // period. The standfirst names the other two specialties so the page
+      // does not read as implants-only to someone who needs a prosthesis.
+      title: 'Implantes dentales en Santiago, de principio a fin',
       standfirst:
-        'Prótesis, implantes y ortodoncia con el Dr. Francis Valerio. Quien le atiende en la primera visita es quien le hace el tratamiento.',
+        'El Dr. Francis Valerio le evalúa, coloca el implante y le pone la corona: quien le atiende en la primera visita es quien le hace el tratamiento. También prótesis y ortodoncia.',
       ctaPrimary: 'Agendar una cita',
       ctaSecondary: 'Cómo funciona un implante',
       imageAlt:
@@ -1308,12 +1302,12 @@ export const homeContent: Record<
   },
   en: {
     hero: {
-      // Written, not translated. The old line was ungrammatical: "again"
-      // attached to *thinking about it* rather than to *chew*, so it parsed as
-      // "stop thinking about it a second time".
-      title: 'The same dentist, start to finish',
+      // Written, not translated: "start to finish" is the natural English for
+      // "de principio a fin". Same structure as the Spanish: category and
+      // place in the headline, the same-dentist claim in the standfirst.
+      title: 'Dental implants in Santiago, start to finish',
       standfirst:
-        'Prosthetics, implants and orthodontics with Dr. Francis Valerio. The person who sees you at the first visit is the one who does the work.',
+        'Dr. Francis Valerio assesses you, places the implant and fits the crown: the person who sees you at the first visit is the one who does the work. Prosthetics and orthodontics too.',
       ctaPrimary: 'Book an appointment',
       ctaSecondary: 'How an implant works',
       imageAlt:

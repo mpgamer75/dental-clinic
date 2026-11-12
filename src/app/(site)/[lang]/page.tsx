@@ -6,6 +6,7 @@ import {
   visitUsCarouselImages,
   diplomas,
   homeContent,
+  implantClusterPath,
 } from '@/lib/data';
 import { Hero } from '@/components/sections/hero';
 import { ProblemSection } from '@/components/sections/problem';
@@ -179,6 +180,10 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
         title={contactDetails.servicesSection[lang].title}
         description={fill(contactDetails.servicesSection[lang].description)}
         servicesList={servicesList}
+        implantGuide={{
+          href: implantClusterPath(lang),
+          label: contactDetails.servicesSection[lang].implantGuideCta,
+        }}
       />
 
       {/* 5 — proof from patients. */}

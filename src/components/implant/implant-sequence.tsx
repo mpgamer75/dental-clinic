@@ -280,9 +280,9 @@ export function ImplantSequence({ children, alt, scrollHint, phases }: ImplantSe
              shade from the band's never shows a seam. A static mask costs
              nothing per frame. */
           className={cn(
-            /* On a phone the stage stops above the phase caption (7.5rem), so
+            /* On a phone the stage stops above the phase caption (9rem), so
                the caption never sits on the bone where it cannot be read. */
-            'pointer-events-none absolute inset-x-0 bottom-[7.5rem] top-[44%] sm:top-[40%]',
+            'pointer-events-none absolute inset-x-0 bottom-[9rem] top-[45%] sm:top-[40%]',
             'lg:inset-y-0 lg:bottom-0 lg:left-[30%] lg:right-0 lg:top-0',
             '[mask-image:linear-gradient(to_bottom,transparent,black_12%,black_90%,transparent)]',
             'lg:[mask-image:linear-gradient(to_right,transparent,black_22%)]',

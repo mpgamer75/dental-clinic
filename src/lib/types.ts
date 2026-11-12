@@ -266,8 +266,8 @@ export interface ContactDetails {
     en: VisitUsContent;
   };
   servicesSection: {
-    es: SectionContent;
-    en: SectionContent;
+    es: SectionContent & { implantGuideCta: string };
+    en: SectionContent & { implantGuideCta: string };
   };
   testimonialsSection: {
     es: TestimonialsSectionContent;

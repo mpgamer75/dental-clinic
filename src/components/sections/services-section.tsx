@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useLanguage } from '@/contexts/language-context';
 import { generalUiStrings } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { DENTAL_ICONS, ToothIcon, type DentalIconName } from '@/components/icons/dental';
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
@@ -20,6 +20,8 @@ interface ServicesSectionProps {
   description: string;
   servicesList: Service[];
   lead?: string;
+  /** Where the implants card sends a visitor who wants to read more. */
+  implantGuide?: { href: string; label: string };
 }
 
 const MAX_CHARS_BEFORE_TRUNCATE = 200;
@@ -38,6 +40,7 @@ export function ServicesSection({
   description,
   servicesList,
   lead,
+  implantGuide,
 }: ServicesSectionProps) {
   const { lang } = useLanguage();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -126,6 +129,20 @@ export function ServicesSection({
                           aria-hidden="true"
                         />
                       </button>
+                    )}
+
+                    {/* Implants are the practice's priority and have a full
+                        guide (candidacy, surgery, healing, cost, risks), so
+                        this card is the one that leads somewhere instead of
+                        only expanding in place. */}
+                    {index === 0 && service.iconName === 'Scan' && implantGuide && (
+                      <Link
+                        href={implantGuide.href}
+                        className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-small font-semibold text-primary underline-offset-4 transition-colors duration-fast hover:text-primary-hover hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        {implantGuide.label}
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
                     )}
                   </div>
                 </div>

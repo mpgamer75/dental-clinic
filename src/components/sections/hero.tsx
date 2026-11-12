@@ -38,15 +38,15 @@ export function Hero({ content, trust, appointmentHref, implantHref, phone }: He
         scrollHint={content.sequence.scrollHint}
         phases={content.sequence.phases}
       >
-        <h1 className="max-w-[14ch] font-heading text-[clamp(2.1rem,5.6vw,4.4rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-drench-on">
+        <h1 className="max-w-[14ch] font-heading text-[clamp(1.85rem,5.6vw,4.4rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-drench-on">
           {content.title}
         </h1>
 
-        <p className="mt-4 max-w-[40ch] text-body leading-relaxed text-drench-on/75 lg:mt-6">
+        <p className="mt-3 max-w-[40ch] text-small leading-relaxed text-drench-on/75 sm:text-body lg:mt-6">
           {content.standfirst}
         </p>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3 lg:mt-8">
+        <div className="mt-5 flex flex-wrap items-center gap-3 lg:mt-8">
           <Button asChild size="lg" variant="brass">
             <Link href={appointmentHref}>{content.ctaPrimary}</Link>
           </Button>
