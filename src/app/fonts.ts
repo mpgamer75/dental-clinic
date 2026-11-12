@@ -1,4 +1,4 @@
-import { Newsreader, Instrument_Sans } from 'next/font/google';
+import { Schibsted_Grotesk, Instrument_Sans } from 'next/font/google';
 
 /* ============================================================================
    TYPE
@@ -10,31 +10,20 @@ import { Newsreader, Instrument_Sans } from 'next/font/google';
    ========================================================================== */
 
 /**
- * Newsreader (Production Type) — headings, pull-quotes, display.
+ * Schibsted Grotesk — headings and display.
  *
- * Chosen over the previous Piazzolla for one measurable reason: Piazzolla's
- * optical-size axis stops at 30, so an 88px hero headline was a 30pt TEXT
- * master scaled up, and its stroke contrast is a near-monolinear ~1.5:1 at
- * every size — at display sizes that reads as an even grey slab rather than a
- * drawn letter. Newsreader runs opsz 6–72 and its contrast modulates from
- * ~2.1:1 to ~4.6:1 as size rises, which is the whole reason display serifs
- * look expensive. Optical sizing is free via the CSS default
- * `font-optical-sizing: auto` — do NOT set `font-variation-settings: 'opsz'`,
- * which disables it and also overrides font-weight.
+ * Replaced Newsreader in the titanium rebrand. A high-contrast display serif
+ * over a navy-and-brass band was the "boutique editorial" register, and it is
+ * the main reason the site read like the fashion boutique in the same plaza.
+ * A compact grotesk reads as instrument and precision, which is what an
+ * implant practice sells. Display sizes take negative tracking in globals.css,
+ * because a grotesk set loose at 80px reads as spaced-out letters.
  *
- * Its digits are monowidth by default, which matters here: the stat counters,
- * phone numbers and diploma years all carry `.tabular`.
- *
- * SUBSETTING: `latin` only, and italic is gone. Both were costs on the LCP
- * path — six preloaded woff2 files, ~537 KB, competing with the hero image for
- * the same connection. Latin-1 covers every character Spanish needs (ñ á é í ó
- * ú ü ¿ ¡), and the italic was used once, below the fold. A name that falls
- * outside Latin-1 now renders in the fallback serif rather than costing every
- * visitor the extra subset on every page.
+ * Latin subset only: Latin-1 covers every Spanish character (ñ á é í ó ú ü ¿ ¡).
  */
-export const fontHeading = Newsreader({
+export const fontHeading = Schibsted_Grotesk({
   subsets: ['latin'],
-  axes: ['opsz'],
+  weight: ['500', '600', '700'],
   variable: '--font-heading',
   display: 'swap',
 });

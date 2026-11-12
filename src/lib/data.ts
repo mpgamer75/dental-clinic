@@ -1170,6 +1170,12 @@ export const homeContent: Record<
       ctaSecondary: string;
       imageAlt: string;
       locationNote: string;
+      /** The scroll-driven implant sequence that now carries the hero. */
+      sequence: {
+        alt: string;
+        scrollHint: string;
+        phases: { label: string; note: string }[];
+      };
     };
     trust: { value: string; label: string }[];
     problem: {
@@ -1221,6 +1227,20 @@ export const homeContent: Record<
       imageAlt:
         'Recepción de la clínica Orthoprotesis en Plaza Las Ramblas, Santiago de los Caballeros',
       locationNote: 'Plaza Las Ramblas, Módulo 101 · Santiago de los Caballeros',
+      // Phases follow the order the parts go in, not the reading order of the
+      // implant legend further down (crown first). The osseointegration
+      // timings are the ones the implant guide on this site already states
+      // (`implantArticles`), so the hero promises nothing the guide does not.
+      sequence: {
+        alt: 'Animación de un implante dental: el implante de titanio entra en el hueso, después se coloca el pilar y por último la corona.',
+        scrollHint: 'Desplácese para ver cómo se coloca',
+        phases: [
+          { label: 'Implante de titanio', note: 'Sustituye la raíz y se coloca en el hueso. Ø 4,1 × 10 mm.' },
+          { label: 'Pilar', note: 'Une el implante con la corona.' },
+          { label: 'Corona', note: 'Hecha a medida para su mordida y el color de sus dientes.' },
+          { label: 'Osteointegración', note: 'El hueso se une al titanio: unos 3 meses abajo, de 4 a 6 arriba.' },
+        ],
+      },
     },
     trust: [
       { value: '30+', label: 'años ejerciendo' },
@@ -1299,6 +1319,16 @@ export const homeContent: Record<
       imageAlt:
         'Reception of the Orthoprotesis clinic at Plaza Las Ramblas, Santiago de los Caballeros',
       locationNote: 'Plaza Las Ramblas, Module 101 · Santiago de los Caballeros',
+      sequence: {
+        alt: 'Animation of a dental implant: the titanium implant goes into the bone, then the abutment is fitted, then the crown.',
+        scrollHint: 'Scroll to see how it goes in',
+        phases: [
+          { label: 'Titanium implant', note: 'Replaces the root and is placed in the bone. Ø 4.1 × 10 mm.' },
+          { label: 'Abutment', note: 'Joins the implant to the crown.' },
+          { label: 'Crown', note: 'Made to fit your bite and match your teeth.' },
+          { label: 'Osseointegration', note: 'The bone bonds to the titanium: about 3 months in the lower jaw, 4 to 6 in the upper.' },
+        ],
+      },
     },
     trust: [
       { value: '30+', label: 'years in practice' },

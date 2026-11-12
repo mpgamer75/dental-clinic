@@ -30,8 +30,9 @@ const buttonVariants = cva(
           "bg-primary text-primary-foreground shadow-e1 hover:bg-primary-hover",
         /** Alias kept so existing call sites don't break. */
         cta: "bg-primary text-primary-foreground shadow-e1 hover:bg-primary-hover",
-        /** Brass — the primary action *on* a drenched band, where the navy
-            primary on a navy ground would disappear. Carries ink, not white (AA). */
+        /** Light titanium — the primary action *on* the graphite band, where the
+            steel primary would sink into the ground. The token is still named
+            brass (see globals.css). Carries ink, not white (AA). */
         brass:
           "bg-brass text-brass-on shadow-e2 hover:bg-brass-ink hover:text-brass-on",
         /** Secondary action on a drenched band. */
