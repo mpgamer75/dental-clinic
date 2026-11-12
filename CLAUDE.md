@@ -108,3 +108,13 @@ Implant-focused. `/[lang]/implantes-dentales` is a pillar page with five spokes 
 - Tailwind 4 is CSS-first; the JS config is opted back in via `@config` in `globals.css`.
 - UI is shadcn/ui (`src/components/ui/`, Radix + CVA); icons are `lucide-react`. Theme is class-based dark mode, storage key `orthoprotesis-theme`, **one** ThemeProvider (there were two, with different keys, so the theme never survived a reload).
 - Comments explain **why** a non-obvious choice was made and name the concrete failure it prevents. They are prose, not labels. Never write a comment that restates the code.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
