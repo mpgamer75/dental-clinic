@@ -30,10 +30,12 @@ const buttonVariants = cva(
           "bg-primary text-primary-foreground shadow-e1 hover:bg-primary-hover",
         /** Alias kept so existing call sites don't break. */
         cta: "bg-primary text-primary-foreground shadow-e1 hover:bg-primary-hover",
-        /** Brass — the primary action *on* a drenched band, where the navy
-            primary on a navy ground would disappear. Carries ink, not white (AA). */
+        /** Pale surgical blue — the primary action *on* the graphite band, where
+            the mid blue primary would sink into the ground. Blue marks what can
+            be done on every surface, so this keeps the rule on the dark bands.
+            Carries ink, not white (AA). */
         brass:
-          "bg-brass text-brass-on shadow-e2 hover:bg-brass-ink hover:text-brass-on",
+          "bg-brass-lift text-brass-on shadow-e2 hover:bg-drench-on hover:text-brass-on",
         /** Secondary action on a drenched band. */
         onDrench:
           "border border-drench-on/30 bg-transparent text-drench-on hover:border-drench-on/60 hover:bg-drench-on/10",

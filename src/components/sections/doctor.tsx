@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { Reveal } from '@/components/reveal';
+import CountUp from '@/components/reactbits/count-up';
 import { Button } from '@/components/ui/button';
 import type { homeContent } from '@/lib/data';
 
@@ -49,9 +50,13 @@ export function DoctorSection({
                 quality={80}
               />
             </div>
-            {/* Credential count as a brass plate, seated on the image edge. */}
+            {/* Credential count on a titanium plate, seated on the image edge.
+                The figure counts up once when it scrolls into view; under
+                reduced motion it is simply the final number. */}
             <figcaption className="absolute -bottom-5 left-6 right-6 rounded-xl bg-brass px-5 py-4 text-brass-on shadow-e3">
-              <p className="font-heading text-h3 font-medium tabular">{diplomaCount}</p>
+              <p className="font-heading text-h3 font-medium tabular text-brass-ink">
+                <CountUp to={diplomaCount} from={1} duration={1.2} mode="count" trigger="view" />
+              </p>
               <p className="text-sm leading-snug">{content.credentialsTitle}</p>
             </figcaption>
           </figure>

@@ -98,13 +98,35 @@ Use `formatDatabaseFailure` from `src/lib/db-errors.ts`. Drizzle wraps Postgres 
 ### Security headers
 `src/proxy.ts` sets CSP / HSTS / X-Frame-Options on every response, redirects included. The CSP's `connect-src` derives the auth origin **from the environment** — a hardcoded backend host is what went wrong last time, and a stale allow-listed host the clinic no longer controls is an exfiltration endpoint, not just clutter.
 
+### The hero implant sequence
+The homepage hero is a rendered film of an implant going in (fixture, abutment, crown), cut into WebP frames in `public/implant/` and drawn onto a 2D canvas by `src/components/implant/implant-sequence.tsx` as the visitor scrolls through a pinned band. It is three tiers, picked on the client: desktop (96 frames, `d/`), mobile and touch (48 frames, a centre crop, `m/`), and static (reduced motion, Save-Data, 2G, under 2 GB of memory), which shows `poster-end.webp` with no pin. The server always renders `poster-start.webp`, so the hero is complete before any script runs.
+
+The film was generated with Higgsfield (two keyframe stills, then a 5 s start/end-frame video). To re-cut frames from a new film, keep the graphite padding: the band colour `--drench-deep` is set to the film's exact background, and the 170 px pad keeps the crown clear of the site header.
+
+```bash
+ffmpeg -i film.mp4 -vf "fps=96/5.1667,pad=2560:1780:0:170:color=0x0f1316,scale=1600:-2:flags=lanczos" -frames:v 96 -c:v libwebp -quality 74 public/implant/d/%03d.webp
+ffmpeg -i film.mp4 -vf "fps=48/5.1667,crop=1440:1440:560:0,pad=1440:1780:0:170:color=0x0f1316,scale=900:-2:flags=lanczos" -frames:v 48 -c:v libwebp -quality 62 public/implant/m/%03d.webp
+```
+
+`PHASE_ENDS` in that file is read off the film. Retune it against the frames whenever the film changes.
+
 ### SEO
 Implant-focused. `/[lang]/implantes-dentales` is a pillar page with five spokes under `[topic]`. Structured data is built in `src/lib/seo-config.ts` — including `hasCredential` from the nine real diplomas in `data.ts`. Per-language metadata comes from `generateMetadata`.
 
 ## Conventions
 - Path alias: `@/*` → `src/*`.
-- **Colour is tokens only.** Never write a hex literal, `rgb()`, `hsl()`, or a stock Tailwind palette class (`text-blue-500`, `bg-slate-100`). Use `bg-canvas`, `text-ink`, `bg-primary`, `text-brass`, `bg-drench`, `border-line`. The palette is OKLCH tokens in `src/app/globals.css`; Tailwind maps them semantically. The one unavoidable exception is `src/app/global-error.tsx`, which replaces the root layout so `globals.css` never loads — its literals are documented in the file.
+- **Colour is tokens only.** Never write a hex literal, `rgb()`, `hsl()`, or a stock Tailwind palette class (`text-blue-500`, `bg-slate-100`). Use `bg-canvas`, `text-ink`, `bg-primary`, `text-brass`, `bg-drench`, `border-line`. The palette is OKLCH tokens in `src/app/globals.css`; Tailwind maps them semantically. The palette is "titanium": bone neutrals, graphite, and a surgical blue (hue 242, chroma 0.11) used only for actions and active states, never as a dark band and never beside gold or brass — navy-and-gold is what made the old site look like the fashion boutique in the same plaza. Nothing glows. Some token names (`brass`, `drench`) predate it and no longer describe their colour; the header of `globals.css` says which. The one unavoidable exception is `src/app/global-error.tsx`, which replaces the root layout so `globals.css` never loads — its literals are documented in the file.
 - **GPU cost is a review criterion.** Animate `transform` and `opacity` only — never width, height, top, left, box-shadow or filter. No `backdrop-filter` on an element that is always on screen. Read `prefers-reduced-motion` inside an effect, never during render.
 - Tailwind 4 is CSS-first; the JS config is opted back in via `@config` in `globals.css`.
 - UI is shadcn/ui (`src/components/ui/`, Radix + CVA); icons are `lucide-react`. Theme is class-based dark mode, storage key `orthoprotesis-theme`, **one** ThemeProvider (there were two, with different keys, so the theme never survived a reload).
 - Comments explain **why** a non-obvious choice was made and name the concrete failure it prevents. They are prose, not labels. Never write a comment that restates the code.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

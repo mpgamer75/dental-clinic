@@ -7,11 +7,12 @@ import { useState } from 'react';
 import { useLanguage } from '@/contexts/language-context';
 import { generalUiStrings } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { DENTAL_ICONS, ToothIcon, type DentalIconName } from '@/components/icons/dental';
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { Reveal, RevealGroup, RevealItem } from '@/components/reveal';
+import SpotlightCard from '@/components/reactbits/spotlight-card';
 
 interface ServicesSectionProps {
   id: string;
@@ -19,6 +20,8 @@ interface ServicesSectionProps {
   description: string;
   servicesList: Service[];
   lead?: string;
+  /** Where the implants card sends a visitor who wants to read more. */
+  implantGuide?: { href: string; label: string };
 }
 
 const MAX_CHARS_BEFORE_TRUNCATE = 200;
@@ -37,11 +40,19 @@ export function ServicesSection({
   description,
   servicesList,
   lead,
+  implantGuide,
 }: ServicesSectionProps) {
   const { lang } = useLanguage();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const ui = generalUiStrings[lang];
   const appointmentsHref = `/${lang}/agendar-cita`;
+
+  /* Implants first and twice as wide: they are the practice's priority, and
+     a grid where all eight weigh the same was hiding that. Matched on the
+     icon, which is language-independent, rather than on the title. */
+  const ordered = [...servicesList].sort(
+    (a, b) => Number(b.iconName === 'Scan') - Number(a.iconName === 'Scan'),
+  );
 
   return (
     <Section id={id} tone="canvas" space="normal">
@@ -53,8 +64,8 @@ export function ServicesSection({
         className="lg:col-span-6"
       />
 
-      <RevealGroup className="grid gap-x-[5%] sm:grid-cols-2 xl:grid-cols-3">
-        {servicesList.map((service) => {
+      <RevealGroup className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {ordered.map((service, index) => {
           const Icon =
             DENTAL_ICONS[service.iconName as DentalIconName] ?? ToothIcon;
           const isOpen = expanded[service.title] ?? false;
@@ -62,8 +73,22 @@ export function ServicesSection({
           const panelId = `svc-${service.title.replace(/\W+/g, '-').toLowerCase()}`;
 
           return (
-            <RevealItem key={service.title}>
-              <article className="border-t border-line py-7">
+            <RevealItem
+              key={service.title}
+              className={cn(index === 0 && 'sm:col-span-2 xl:col-span-2')}
+            >
+              {/* A faint blue light follows the pointer across the card: the
+                  one place the page answers a hover with colour. It only moves
+                  under a fine pointer, and it is a gradient on a card, not a
+                  shadow or a filter, so nothing heavier than a repaint of one
+                  card runs per frame. */}
+              <SpotlightCard
+                theme="light"
+                spotlightColor="oklch(var(--primary-base) / 0.10)"
+                intensity={0.6}
+                className="h-full rounded-xl border border-line"
+              >
+              <article className={cn('p-6', index === 0 && 'lg:p-8')}>
                 <div className="flex items-start gap-4">
                   <Icon className="mt-0.5 h-8 w-8 shrink-0 text-brass-ink" strokeWidth={1.4} />
                   <div className="min-w-0 flex-1">
@@ -105,9 +130,24 @@ export function ServicesSection({
                         />
                       </button>
                     )}
+
+                    {/* Implants are the practice's priority and have a full
+                        guide (candidacy, surgery, healing, cost, risks), so
+                        this card is the one that leads somewhere instead of
+                        only expanding in place. */}
+                    {index === 0 && service.iconName === 'Scan' && implantGuide && (
+                      <Link
+                        href={implantGuide.href}
+                        className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-small font-semibold text-primary underline-offset-4 transition-colors duration-fast hover:text-primary-hover hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        {implantGuide.label}
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    )}
                   </div>
                 </div>
               </article>
+              </SpotlightCard>
             </RevealItem>
           );
         })}

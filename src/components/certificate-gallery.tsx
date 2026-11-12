@@ -104,9 +104,11 @@ export function CertificateGallery({ items, className }: CertificateGalleryProps
       <RevealGroup
         className={cn(
           /* 3-up from `lg` so nine credentials land as exactly three full rows.
-             Below that the column count drops rather than the mat shrinking to
-             a thumbnail nobody can read. */
-          'grid gap-x-7 gap-y-11 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-9 lg:gap-y-14',
+             Two-up on a phone: one per row made this section about 4,000 px of
+             a 19,000 px page, nine screens of thumb-scrolling past paper. At
+             two columns the mat is still big enough to recognise the document,
+             and the lightbox is one tap away for reading it. */
+          'grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-7 sm:gap-y-11 lg:grid-cols-3 lg:gap-x-9 lg:gap-y-14',
           className,
         )}
       >
@@ -152,10 +154,10 @@ export function CertificateGallery({ items, className }: CertificateGalleryProps
                 {/* The card's padding lives here rather than on the button, so
                     that the elevation layer above can use `inset-0` and land on
                     the card's real edge instead of inside its padding. */}
-                <span className="relative block p-2.5 sm:p-3">
+                <span className="relative block p-1.5 sm:p-3">
                   {/* The mount: recessed, one step darker than the frame around
                       it, so a white certificate has something to sit against. */}
-                  <span className="relative block aspect-[4/3] w-full rounded-md bg-canvas-sunk p-3 sm:p-4">
+                  <span className="relative block aspect-[4/3] w-full rounded-md bg-canvas-sunk p-2 sm:p-4">
                     <span className="relative block h-full w-full" style={PAPER_LIFT}>
                       <Image
                         src={d.image}
@@ -196,17 +198,21 @@ export function CertificateGallery({ items, className }: CertificateGalleryProps
                       a phone too. */}
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute bottom-5 right-5 inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-small font-medium text-canvas opacity-0 shadow-e2 transition-opacity duration-base ease-out-quart group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+                    className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-ink p-1.5 text-small sm:bottom-5 sm:right-5 sm:px-3 sm:py-1.5 font-medium text-canvas opacity-0 shadow-e2 transition-opacity duration-base ease-out-quart group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                   >
                     <ZoomIn className="h-4 w-4" />
-                    {t.openHint}
+                    {/* Icon only on a phone: at two columns the label covered
+                        half the document it was inviting you to open. */}
+                    <span className="hidden sm:inline">{t.openHint}</span>
                   </span>
                 </span>
               </button>
 
-              <div className="mt-5 flex-1">
+              <div className="mt-3 flex-1 sm:mt-5">
                 <p className="tabular text-small font-semibold text-brass-ink">{d.year}</p>
-                <h3 className="mt-1.5 font-heading text-h4 text-ink">{d.title}</h3>
+                <h3 className="mt-1 font-heading text-small font-semibold leading-snug text-ink sm:mt-1.5 sm:text-h4 sm:font-medium">
+                  {d.title}
+                </h3>
                 <p className="mt-2 text-small leading-normal text-ink-soft">{d.institution}</p>
                 {/* The description is also the dialog's accessible description,
                     but the dialog is not mounted until it is opened — so
@@ -216,8 +222,11 @@ export function CertificateGallery({ items, className }: CertificateGalleryProps
 
                     ink-soft, not ink-faint: ink-faint measures 3.57:1 on the
                     card surface at this size, under the 4.5 body minimum. */}
+                {/* Kept in the HTML at every width (see above); only hidden
+                    on a phone, where two columns leave no room and the
+                    lightbox shows it. */}
                 {d.description && (
-                  <p className="mt-2.5 max-w-measure text-small leading-relaxed text-ink-soft">
+                  <p className="mt-2.5 hidden max-w-measure text-small leading-relaxed text-ink-soft sm:block">
                     {d.description}
                   </p>
                 )}

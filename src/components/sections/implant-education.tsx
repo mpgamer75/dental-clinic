@@ -15,16 +15,17 @@ import { cn } from '@/lib/utils';
  * How an implant works — the page's hero object.
  *
  * Composition: a STICKY visual paired with a SCROLLING legend. The scroll
- * position of the tall right-hand column drives the 3D assembly, so the
+ * position of the tall right-hand column drives the assembly, so the
  * sequence has the whole column's height to play out in while the object stays
  * pinned in view. Previously the animation was driven by the canvas's own
  * ~480px box, which gave it about one viewport of travel — it completed almost
  * instantly and then sat still, which is why it read as broken.
  *
- * The visual is delegated to <ImplantStage>, which renders the WebGL assembly
- * on capable desktop clients and a static SVG cross-section everywhere else.
- * Both carry the same information; the numbered legend is the authoritative
- * version, so nothing is conveyed by the graphic alone.
+ * The visual is delegated to <ImplantStage>, here always as the static SVG
+ * cross-section: the hero above already plays the rendered implant going in,
+ * so this section explains the parts with a diagram instead of a second film
+ * of the same object. The numbered legend is the authoritative version, so
+ * nothing is conveyed by the graphic alone.
  */
 export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
   const { lang } = useLanguage();
@@ -101,6 +102,7 @@ export function ImplantEducation({ id = 'implantes' }: { id?: string }) {
             driverRef={driverRef}
             scaleNote={scaleNote}
             phases={phases}
+            allow3d={false}
           />
         </div>
 

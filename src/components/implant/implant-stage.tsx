@@ -73,9 +73,22 @@ interface ImplantStageProps {
   scaleNote: string;
   /** Phase captions, in order, shown as the sequence advances. */
   phases: string[];
+  /**
+   * Whether this figure may upgrade to the WebGL scene. The homepage passes
+   * false: its hero already plays the rendered implant sequence, and a second
+   * GPU-backed assembly of the same object one screen later both repeats the
+   * picture and doubles the cost on the devices least able to pay it.
+   */
+  allow3d?: boolean;
 }
 
-export function ImplantStage({ label, driverRef, scaleNote, phases }: ImplantStageProps) {
+export function ImplantStage({
+  label,
+  driverRef,
+  scaleNote,
+  phases,
+  allow3d = true,
+}: ImplantStageProps) {
   const [use3d, setUse3d] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLSpanElement>(null);
@@ -104,7 +117,7 @@ export function ImplantStage({ label, driverRef, scaleNote, phases }: ImplantSta
     if (!host) return;
 
     const promote = () => {
-      if (canRenderWebGL()) setUse3d(true);
+      if (allow3d && canRenderWebGL()) setUse3d(true);
     };
 
     if (typeof IntersectionObserver === 'undefined') {
@@ -122,7 +135,7 @@ export function ImplantStage({ label, driverRef, scaleNote, phases }: ImplantSta
     );
     io.observe(host);
     return () => io.disconnect();
-  }, []);
+  }, [allow3d]);
 
   /* The window must fit INSIDE the pinned window, or the sequence keeps
      advancing after the figure has already scrolled away — which is what it

@@ -160,7 +160,7 @@ export function MobileNavOverlay({
           <Link
             href={appointmentsHref}
             onClick={onClose}
-            className={`inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary text-small uppercase tracking-[0.085em] text-primary-foreground shadow-e1 transition-colors duration-fast ease-out-quart hover:bg-primary-hover ${focusRing}`}
+            className={`inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary text-small font-medium text-primary-foreground shadow-e1 transition-colors duration-fast ease-out-quart hover:bg-primary-hover ${focusRing}`}
           >
             {ui.appointments}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
