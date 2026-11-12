@@ -795,26 +795,24 @@ export const privacyPolicy: Record<Language, {
 };
 
 // General, factual patient education for the implants section (no clinic-specific
-// claims, statistics or guarantees). Rendered beside the scroll-driven implant
-// figure in src/components/sections/implant-education.tsx.
+// claims, statistics or guarantees). Rendered in
+// src/components/sections/implant-education.tsx.
 export const implantEducation: Record<Language, {
   eyebrow: string;
   title: string;
   description: string;
   svgAlt: string;
   /**
-   * In ASSEMBLY order — the order the figure builds itself in as the reader
-   * scrolls: fixture, abutment, crown, then the bone it integrates with.
-   *
-   * It used to run anatomically, crown first, while the figure assembled from
-   * the bottom up, so the caption under the figure named one part while the
-   * legend beside it was still describing another. `key` is the contract with
-   * the figure (src/components/implant/): the phase it is showing lights the
-   * row with the same key.
+   * In ASSEMBLY order — fixture, abutment, crown, then the bone it integrates
+   * with — which is also the order the hero film shows them going in. `key`
+   * picks the glyph drawn on each card.
    */
   parts: { key: 'fixture' | 'abutment' | 'crown' | 'bone'; label: string; desc: string }[];
+  partsTitle: string;
   stepsTitle: string;
-  steps: { title: string; desc: string }[];
+  /** `when` is where the step falls in the treatment, not a promise of a
+   *  date: the healing figure is the one the implant guide states. */
+  steps: { when: string; title: string; desc: string }[];
   ctaLabel: string;
   /** Heading over the links into the implant guide's pages. */
   guideTitle: string;
@@ -831,11 +829,13 @@ export const implantEducation: Record<Language, {
       { key: 'crown', label: "Corona", desc: "La parte visible, hecha a medida para imitar su diente natural." },
       { key: 'bone', label: "Hueso", desc: "El implante se integra con el hueso para dar firmeza (osteointegración)." },
     ],
-    stepsTitle: "El proceso, paso a paso",
+    partsTitle: "Las piezas, en el orden en que se colocan",
+    stepsTitle: "El tratamiento, paso a paso",
     steps: [
-      { title: "Evaluación", desc: "Revisamos su salud bucal y planificamos su tratamiento con usted." },
-      { title: "Colocación", desc: "Se coloca el implante de titanio en el hueso con cuidado." },
-      { title: "Corona definitiva", desc: "Tras la cicatrización, se coloca su corona personalizada." },
+      { when: "Primera visita", title: "Evaluación", desc: "Revisamos su salud bucal y planificamos su tratamiento con usted." },
+      { when: "Día de la cirugía", title: "Colocación", desc: "Se coloca el implante de titanio en el hueso con cuidado." },
+      { when: "De 3 a 6 meses", title: "Cicatrización", desc: "El hueso se une al titanio: unos tres meses en la mandíbula y de cuatro a seis en el maxilar superior." },
+      { when: "Última cita", title: "Corona definitiva", desc: "Con el implante ya firme, se coloca su corona personalizada." },
     ],
     ctaLabel: "Agendar una cita",
     guideTitle: "Para leer con calma",
@@ -852,11 +852,13 @@ export const implantEducation: Record<Language, {
       { key: 'crown', label: "Crown", desc: "The visible part, custom-made to match your natural tooth." },
       { key: 'bone', label: "Bone", desc: "The implant fuses with the bone for stability (osseointegration)." },
     ],
-    stepsTitle: "The process, step by step",
+    partsTitle: "The parts, in the order they go in",
+    stepsTitle: "The treatment, step by step",
     steps: [
-      { title: "Assessment", desc: "We review your oral health and plan your treatment with you." },
-      { title: "Placement", desc: "The titanium implant is carefully placed in the bone." },
-      { title: "Final crown", desc: "After healing, your custom crown is fitted." },
+      { when: "First visit", title: "Assessment", desc: "We review your oral health and plan your treatment with you." },
+      { when: "Day of surgery", title: "Placement", desc: "The titanium implant is carefully placed in the bone." },
+      { when: "3 to 6 months", title: "Healing", desc: "The bone bonds to the titanium: about three months in the lower jaw and four to six in the upper." },
+      { when: "Final visit", title: "Final crown", desc: "Once the implant is firm, your custom crown is fitted." },
     ],
     ctaLabel: "Book an appointment",
     guideTitle: "Read at your own pace",
@@ -1198,15 +1200,20 @@ export const homeContent: Record<
   Language,
   {
     hero: {
-      /** Names the subject the headline gives up: implants, and where. */
+      /** The one hard fact above the headline: who, and for how long. */
       eyebrow: string;
       title: string;
       standfirst: string;
       ctaPrimary: string;
       ctaSecondary: string;
-      /** Caption plate on the photograph — the proof that sits with the place. */
-      photoLead: string;
-      photoPlace: string;
+      /** The implant film that carries the hero. It plays by itself; `phases`
+       *  are captioned in the order the parts go in. */
+      film: {
+        alt: string;
+        pause: string;
+        play: string;
+        phases: { label: string; note: string }[];
+      };
     };
     problem: {
       title: string;
@@ -1218,6 +1225,9 @@ export const homeContent: Record<
       lead: string;
       body: string[];
       credentialsTitle: string;
+      /** Labels for the three figures under the narrative. The numbers are
+       *  not copy: two are read from the diplomas, one is the practice's age. */
+      stats: { practice: string; documents: string; since: string };
       /** The quiet invitation that replaced the empty testimonials band. */
       inviteQuestion: string;
       inviteBody: string;
@@ -1237,21 +1247,34 @@ export const homeContent: Record<
 > = {
   es: {
     hero: {
-      eyebrow: 'Implantes dentales · Santiago de los Caballeros',
-      // Noun phrase, so no terminal period — the house rule elsewhere in this
-      // layer (`Cuando falta una pieza, cambia todo lo demás.` takes one;
-      // `Agende su consulta` does not). The claim is not new: it is
-      // `doctor.body[2]` — "el mismo profesional le evalúa, le planifica el
-      // tratamiento y se lo realiza, de principio a fin" — promoted to the
-      // position where it does the most work. Nothing here is promissory: it
-      // describes who staffs the appointment, not what happens to your bone.
-      title: 'El mismo dentista, de principio a fin',
+      eyebrow: 'Dr. Francis Valerio · Más de 30 años en Santiago',
+      // Names the category and the place, because the hero shows an implant
+      // going in and the headline has to say what that picture is about. The
+      // practice's real difference ("el mismo dentista, de principio a fin",
+      // from `doctor.body[2]`) keeps its job one sentence down, and it is
+      // factual: it describes who staffs the appointment, not what happens to
+      // your bone. Noun phrase, so no terminal period. The standfirst names
+      // the other two specialties so the page does not read as implants-only
+      // to someone who needs a prosthesis.
+      title: 'Implantes dentales en Santiago, de principio a fin',
       standfirst:
-        'Prótesis, implantes y ortodoncia con el Dr. Francis Valerio. Quien le atiende en la primera visita es quien le hace el tratamiento.',
+        'El Dr. Francis Valerio le evalúa, coloca el implante y le pone la corona: quien le atiende en la primera visita es quien le hace el tratamiento. También prótesis y ortodoncia.',
       ctaPrimary: 'Agendar una cita',
       ctaSecondary: 'Cómo funciona un implante',
-      photoLead: 'Más de 30 años ejerciendo en Santiago',
-      photoPlace: 'Plaza Las Ramblas, Módulo 101',
+      // The osseointegration timings are the ones the implant guide on this
+      // site already states (`implantArticles`), so the hero promises nothing
+      // the guide does not.
+      film: {
+        alt: 'Animación de un implante dental: el implante de titanio entra en el hueso, después se coloca el pilar y por último la corona.',
+        pause: 'Pausar la animación',
+        play: 'Reproducir la animación',
+        phases: [
+          { label: 'Implante de titanio', note: 'Sustituye la raíz y se coloca en el hueso.' },
+          { label: 'Pilar', note: 'Une el implante con la corona.' },
+          { label: 'Corona', note: 'Hecha a medida para su mordida y el color de sus dientes.' },
+          { label: 'Osteointegración', note: 'El hueso se une al titanio en unos meses.' },
+        ],
+      },
     },
     problem: {
       title: 'Cuando falta una pieza, cambia todo lo demás.',
@@ -1285,6 +1308,11 @@ export const homeContent: Record<
          the set accurately is a stronger trust signal than one that oversells
          it. */
       credentialsTitle: 'Diplomas y certificados',
+      stats: {
+        practice: 'años ejerciendo en Santiago de los Caballeros',
+        documents: 'diplomas y certificados, que puede leer aquí abajo',
+        since: 'año del primer diploma',
+      },
       inviteQuestion: '¿Ha sido paciente del Dr. Valerio?',
       inviteBody: 'Su experiencia ayuda a quien está decidiendo.',
       inviteCta: 'Dejar un testimonio',
@@ -1323,17 +1351,25 @@ export const homeContent: Record<
   },
   en: {
     hero: {
-      eyebrow: 'Dental implants · Santiago de los Caballeros',
-      // Written, not translated. The old line was ungrammatical: "again"
-      // attached to *thinking about it* rather than to *chew*, so it parsed as
-      // "stop thinking about it a second time".
-      title: 'The same dentist, start to finish',
+      eyebrow: 'Dr. Francis Valerio · Over 30 years in Santiago',
+      // Written, not translated: "start to finish" is the natural English for
+      // "de principio a fin". Same structure as the Spanish.
+      title: 'Dental implants in Santiago, start to finish',
       standfirst:
-        'Prosthetics, implants and orthodontics with Dr. Francis Valerio. The person who sees you at the first visit is the one who does the work.',
+        'Dr. Francis Valerio assesses you, places the implant and fits the crown: the person who sees you at the first visit is the one who does the work. Prosthetics and orthodontics too.',
       ctaPrimary: 'Book an appointment',
       ctaSecondary: 'How an implant works',
-      photoLead: 'Over 30 years in practice in Santiago',
-      photoPlace: 'Plaza Las Ramblas, Module 101',
+      film: {
+        alt: 'Animation of a dental implant: the titanium implant goes into the bone, then the abutment is fitted, then the crown.',
+        pause: 'Pause the animation',
+        play: 'Play the animation',
+        phases: [
+          { label: 'Titanium implant', note: 'Replaces the root and is placed in the bone.' },
+          { label: 'Abutment', note: 'Joins the implant to the crown.' },
+          { label: 'Crown', note: 'Made to fit your bite and match your teeth.' },
+          { label: 'Osseointegration', note: 'The bone bonds to the titanium over a few months.' },
+        ],
+      },
     },
     problem: {
       title: 'When one tooth goes, everything else shifts.',
@@ -1363,6 +1399,11 @@ export const homeContent: Record<
         'In practice this means the same clinician assesses you, plans your treatment and carries it out, from start to finish.',
       ],
       credentialsTitle: 'Diplomas and certificates',
+      stats: {
+        practice: 'years in practice in Santiago de los Caballeros',
+        documents: 'diplomas and certificates, which you can read below',
+        since: 'year of the first diploma',
+      },
       inviteQuestion: 'Have you been a patient of Dr. Valerio?',
       inviteBody: 'Your experience helps someone who is deciding.',
       inviteCta: 'Leave a testimonial',
@@ -1440,7 +1481,7 @@ export const clinicPhotos = {
 } as const;
 
 /**
- * Diploma rail and lightbox — interface copy.
+ * Diploma showcase and lightbox — interface copy.
  *
  * Every label the certificate rail and its lightbox need. The previous version
  * of that section built its two strings inline with a `lang === 'es' ? … : …`

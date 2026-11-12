@@ -1,19 +1,15 @@
-'use client';
-
 import Link from 'next/link';
-import { useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { RevealGroup, RevealItem } from '@/components/reveal';
-import { ImplantStage } from '@/components/implant/implant-stage';
+import SpotlightCard from '@/components/reactbits/spotlight-card';
 import type { implantEducation } from '@/lib/data';
-import type { Language } from '@/lib/types';
-import { cn } from '@/lib/utils';
 
 type ImplantCopy = (typeof implantEducation)['es'];
+type PartKey = ImplantCopy['parts'][number]['key'];
 
 interface GuideLink {
   href: string;
@@ -23,44 +19,25 @@ interface GuideLink {
 
 interface ImplantEducationProps {
   id?: string;
-  lang: Language;
   content: ImplantCopy;
   appointmentHref: string;
-  /** The implant guide's pages, resolved on the server so the guide's prose
-   *  never enters this client component's props or bundle. */
+  /** The implant guide's pages, resolved on the server. */
   guide: { allHref: string; links: GuideLink[] };
 }
 
 /**
- * How an implant works — the page's one authored motion moment.
+ * How an implant works: the parts, then the treatment, then where to read more.
  *
- * A STICKY figure beside a SCROLLING legend: the right-hand column's height is
- * the scroll distance the assembly plays out over, while the figure stays
- * pinned in view. The figure reports which part it is showing
- * (`onPhaseChange`) and the matching legend row lights up, so the picture and
- * the words are always talking about the same thing. They used to disagree: the
- * legend ran crown-first while the figure assembled fixture-first, and the
- * caption under the figure named one part while the row beside it described
- * another. Both now follow assembly order (see `implantEducation.parts`).
+ * This band used to pin a second animated implant beside a scrolling legend —
+ * the same object assembling in the same order as the film in the hero one
+ * screen above it. Two pictures of one thing is one picture too many, and the
+ * second cost a WebGL context to draw. What a visitor does not yet have after
+ * the hero is the part the film cannot show: what each piece is FOR, and how
+ * long the treatment takes. So this is now words and a timeline.
  *
- * The highlight is a state change four times per pass through the section —
- * never per frame — and it is decoration on top of a legend that is complete
- * and readable on its own; nothing is conveyed by the figure alone.
+ * A server component. The cards' pointer light is the only script in it.
  */
-export function ImplantEducation({
-  id = 'implantes',
-  lang,
-  content,
-  appointmentHref,
-  guide,
-}: ImplantEducationProps) {
-  const driverRef = useRef<HTMLDivElement>(null);
-  const [activePart, setActivePart] = useState(0);
-
-  const phases = content.parts.map((part) => part.label);
-  // A dimension, not copy: only the decimal separator is locale-dependent.
-  const scaleNote = `Ø ${lang === 'es' ? '4,1' : '4.1'} × 10 mm`;
-
+export function ImplantEducation({ id = 'implantes', content, appointmentHref, guide }: ImplantEducationProps) {
   /* `tint`: the band the page most wants read, marked with the brand colour at
      tonal weight. Every token inside keeps its ordinary ink ramp on it. */
   return (
@@ -73,140 +50,163 @@ export function ImplantEducation({
         className="lg:col-span-7"
       />
 
-      {/* EVERYTHING in the right-hand column is inside the driver: a sticky
-          element can only travel within its containing block, and when the
-          legend alone sat opposite the figure the column was shorter than the
-          figure, leaving zero room to stick. */}
-      <div ref={driverRef} className="mt-2 grid items-start gap-x-[6%] gap-y-10 lg:grid-cols-12">
-        {/* Pinned at every breakpoint. `relative z-raised`: the legend rows
-            below carry transforms (reveal), and a transformed sibling later in
-            the DOM would otherwise paint over the pinned figure. The opaque
-            backing tracks the band's tone; the gradient foot below it fades the
-            legend as it slides underneath, instead of slicing a line of text
-            in half at the figure's edge. */}
-        <div className="sticky top-[4.5rem] z-raised self-start bg-primary-soft pb-3 lg:top-24 lg:col-span-6 lg:pb-2">
-          <ImplantStage
-            label={content.svgAlt}
-            driverRef={driverRef}
-            scaleNote={scaleNote}
-            phases={phases}
-            onPhaseChange={setActivePart}
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-full h-10 bg-gradient-to-b from-primary-soft to-primary-soft/0 lg:hidden"
-          />
-        </div>
-
-        <div className="lg:col-span-5 lg:col-start-8">
-          {/* The legend — the accessible source of truth for the figure. */}
-          <ol>
-            {content.parts.map((part, index) => {
-              const active = index === activePart;
-              return (
-                <li
-                  key={part.key}
-                  data-active={active}
-                  /* `line-strong`, not `line`: on the tint ground in dark mode
-                     the ordinary hairline (L 0.32) vanishes against L 0.31. */
-                  className="group/part grid grid-cols-[auto_1fr] gap-x-5 border-b border-line-strong py-7 first:pt-0 last:border-b-0"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border font-heading text-small tabular',
-                      'transition-colors duration-base ease-out-quart',
-                      active
-                        ? 'border-brass bg-brass text-brass-on'
-                        : 'border-brass/45 text-brass-ink',
-                    )}
-                  >
-                    {index + 1}
-                  </span>
-                  <div>
-                    <h3
-                      className={cn(
-                        'font-heading text-h4 font-medium transition-colors duration-base ease-out-quart',
-                        active ? 'text-primary' : 'text-ink',
-                      )}
-                    >
-                      {part.label}
-                    </h3>
-                    <p className="mt-1.5 max-w-measure leading-relaxed text-ink-soft">{part.desc}</p>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-
-          {/* The treatment sequence — a real order, so numbering earns it. */}
-          <div className="mt-[clamp(3.5rem,6vw,5rem)]">
-            <h3 className="reveal font-heading text-h3 font-medium text-ink">{content.stepsTitle}</h3>
-            <RevealGroup as="ol" className="mt-8 border-l border-line-strong">
-              {content.steps.map((step, index) => (
-                <RevealItem key={step.title} as="li" index={index} className="relative py-6 pl-7 first:pt-0 last:pb-0">
-                  {/* The tick's offset follows the row's own top padding, which
-                      the first row does not have — so the index decides, not a
-                      `first:` variant on the span (which matched every row). */}
-                  <span
-                    aria-hidden="true"
-                    className={cn('absolute left-0 h-px w-4 bg-brass/60', index === 0 ? 'top-2.5' : 'top-[2.1rem]')}
-                  />
-                  <span className="font-heading text-small font-medium text-brass-ink tabular">
+      {/* ── The parts ─────────────────────────────────────────────── */}
+      <h3 className="font-body text-small font-semibold text-brass-ink">{content.partsTitle}</h3>
+      <RevealGroup as="ol" className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {content.parts.map((part, index) => (
+          <RevealItem key={part.key} as="li" index={index} className="h-full">
+            {/* A faint blue light follows the pointer across the card. A
+                gradient on one card, not a shadow or a filter, and it only
+                runs while a pointer is over the row. */}
+            <SpotlightCard
+              theme="light"
+              spotlightColor="oklch(var(--primary-base) / 0.14)"
+              intensity={0.7}
+              className="h-full rounded-2xl"
+            >
+              <div className="flex h-full flex-col p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <PartGlyph part={part.key} />
+                  <span aria-hidden="true" className="tabular font-heading text-h4 font-semibold text-primary-border">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <h4 className="mt-1.5 font-heading text-h4 font-medium text-ink">{step.title}</h4>
+                </div>
+                <h4 className="mt-6 font-heading text-h4 font-semibold text-ink">{part.label}</h4>
+                <p className="mt-2 leading-relaxed text-ink-soft">{part.desc}</p>
+              </div>
+            </SpotlightCard>
+          </RevealItem>
+        ))}
+      </RevealGroup>
+
+      {/* ── The treatment ─────────────────────────────────────────────
+          A real sequence with real waiting in it, so it is drawn as a line
+          with stops. The line fills as the row scrolls into view (a view
+          timeline, in globals.css); where that is unsupported it is simply
+          drawn whole. */}
+      <div className="mt-[clamp(3.5rem,7vw,6rem)]">
+        <h3 className="reveal font-heading text-h3 font-semibold text-ink">{content.stepsTitle}</h3>
+
+        <div className="relative mt-10">
+          <span
+            aria-hidden="true"
+            className="absolute bottom-3 left-[1.3125rem] top-3 w-px bg-primary-border lg:bottom-auto lg:left-0 lg:right-[calc(25%-2.625rem)] lg:top-[1.3125rem] lg:h-px lg:w-auto"
+          >
+            <span className="journey-fill absolute inset-0 bg-primary" />
+          </span>
+
+          <ol className="relative grid gap-y-9 lg:grid-cols-4 lg:gap-x-8">
+            {content.steps.map((step, index) => (
+              <li key={step.title} className="grid grid-cols-[auto_1fr] gap-x-5 lg:block">
+                <span
+                  aria-hidden="true"
+                  className="tabular flex h-[2.625rem] w-[2.625rem] items-center justify-center rounded-full border border-primary bg-primary-soft font-heading text-small font-semibold text-primary"
+                >
+                  {index + 1}
+                </span>
+                <div className="lg:mt-6 lg:pr-4">
+                  <p className="inline-flex rounded-full bg-primary px-3 py-1 text-small font-medium text-primary-foreground">
+                    {step.when}
+                  </p>
+                  <h4 className="mt-3 font-heading text-h4 font-semibold text-ink">{step.title}</h4>
                   <p className="mt-1.5 max-w-measure leading-relaxed text-ink-soft">{step.desc}</p>
-                </RevealItem>
-              ))}
-            </RevealGroup>
-          </div>
-
-          <div className="mt-11">
-            <Button asChild size="lg">
-              <Link href={appointmentHref}>{content.ctaLabel}</Link>
-            </Button>
-          </div>
-
-          {/* Into the guide. The homepage had no link to any of its pages —
-              price, All-on-4, immediate loading, bone grafts — which are exactly
-              the questions a patient has after this section, and the cluster's
-              only internal route in was the header. */}
-          <nav aria-labelledby="implant-guide-title" className="mt-14 border-t border-line-strong pt-8">
-            <h3 id="implant-guide-title" className="font-heading text-h4 font-medium text-ink">
-              {content.guideTitle}
-            </h3>
-            <ul className="mt-3 divide-y divide-line-strong">
-              {guide.links.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="group/guide flex items-center justify-between gap-4 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-primary-soft"
-                  >
-                    <span className="min-w-0">
-                      <span className="block font-medium text-ink transition-colors duration-fast group-hover/guide:text-primary">
-                        {link.label}
-                      </span>
-                      <span className="mt-0.5 block text-small leading-snug text-ink-soft">{link.summary}</span>
-                    </span>
-                    <ArrowRight
-                      className="h-4 w-4 shrink-0 text-brass-ink transition-transform duration-base ease-out-quart group-hover/guide:translate-x-0.5"
-                      aria-hidden="true"
-                    />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href={guide.allHref}
-              className="mt-4 inline-flex min-h-11 items-center gap-2 font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {content.guideAll}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </nav>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </div>
+
+      {/* ── Into the guide ────────────────────────────────────────────
+          Price, All-on-4, immediate loading, bone grafts: exactly the
+          questions a patient has after this section. */}
+      <div className="mt-[clamp(3.5rem,7vw,6rem)] grid gap-x-[6%] gap-y-10 border-t border-line-strong pt-10 lg:grid-cols-12">
+        <div className="lg:col-span-4">
+          <h3 id="implant-guide-title" className="font-heading text-h3 font-semibold text-ink">
+            {content.guideTitle}
+          </h3>
+          <Button asChild size="lg" className="mt-7">
+            <Link href={appointmentHref}>{content.ctaLabel}</Link>
+          </Button>
+        </div>
+
+        <nav aria-labelledby="implant-guide-title" className="lg:col-span-7 lg:col-start-6">
+          <ul className="grid gap-x-10 border-t border-line-strong sm:grid-cols-2">
+            {guide.links.map((link) => (
+              <li key={link.href} className="border-b border-line-strong">
+                <Link
+                  href={link.href}
+                  className="group/guide flex h-full items-start justify-between gap-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-primary-soft"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-medium text-ink transition-colors duration-fast group-hover/guide:text-primary">
+                      {link.label}
+                    </span>
+                    <span className="mt-0.5 block text-small leading-snug text-ink-soft">{link.summary}</span>
+                  </span>
+                  <ArrowRight
+                    className="mt-1 h-4 w-4 shrink-0 text-brass-ink transition-transform duration-base ease-out-quart group-hover/guide:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link
+            href={guide.allHref}
+            className="mt-4 inline-flex min-h-11 items-center gap-2 font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {content.guideAll}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </nav>
+      </div>
     </Section>
+  );
+}
+
+/**
+ * One line drawing per part, in the stroke weight of the service icons. Drawn
+ * here rather than taken from an icon set because none has an abutment, and a
+ * generic "tooth" on all four cards would say nothing.
+ */
+function PartGlyph({ part }: { part: PartKey }) {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      className="h-12 w-12 text-primary"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {part === 'fixture' && (
+        <>
+          <path d="M17 6h14v5l-1.2 26.5a5.8 5.8 0 0 1-11.6 0L17 11z" />
+          <path d="M17.3 16.5l13.2 3M17.6 23l12.6 3M17.9 29.5l12 3M18.4 36l10.6 2.6M17 11h14" />
+        </>
+      )}
+      {part === 'abutment' && (
+        <>
+          <path d="M14 10h20l-4 15H18z" />
+          <path d="M18 25h12v7H18zM21 32h6v8h-6zM14 10c3 2.2 17 2.2 20 0" />
+        </>
+      )}
+      {part === 'crown' && (
+        <>
+          <path d="M11 20c0-7 4-11 8-11 2.4 0 3.4 1.6 5 1.6S26.6 9 29 9c4 0 8 4 8 11 0 6-2.5 10-4.5 15H15.5C13.5 30 11 26 11 20z" />
+          <path d="M15.5 35c2.2 2 14.8 2 17 0M24 10.6V17" />
+        </>
+      )}
+      {part === 'bone' && (
+        <>
+          <path d="M7 14c5-3 11-3 14 1v24H7zM41 14c-5-3-11-3-14 1v24h14z" />
+          <path d="M21 39h6M11.5 22h.01M15.5 28h.01M12 33.5h.01M32.5 22h.01M36 27.5h.01M32 33.5h.01" strokeWidth="2.4" />
+          <path d="M21 15v24M27 15v24" strokeDasharray="2.5 3" />
+        </>
+      )}
+    </svg>
   );
 }

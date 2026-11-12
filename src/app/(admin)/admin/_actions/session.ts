@@ -25,7 +25,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { recordAudit } from '@/lib/audit';
-import { auth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/auth/server';
 import { db } from '@/lib/db';
 import { formatDatabaseFailure } from '@/lib/db-errors';
 import { staff } from '@/lib/schema';
@@ -142,7 +142,7 @@ export async function signInAction(
   let signedInUserId: string | null = null;
 
   try {
-    const { data, error } = await auth.signIn.email({
+    const { data, error } = await getAuth().signIn.email({
       email: parsed.data.email,
       password: parsed.data.password,
     });
@@ -259,7 +259,7 @@ export async function signOutAction(formData: FormData): Promise<MutationResult>
   });
 
   try {
-    await auth.signOut();
+    await getAuth().signOut();
   } catch (cause) {
     console.error(
       '[admin] sign-out could not reach the auth service: %s',

@@ -21,19 +21,19 @@ import type { Language } from '@/lib/types';
    rule (after global-error.tsx): this is rasterised by Satori, outside the
    page, where CSS custom properties do not exist. The values are the tokens
    resolved to sRGB — re-derive them if the palette changes:
-     drench-deep 0.24 0.07 253 → #021f3f    on-drench 0.985 0.005 250 → #f8fafd
-     drench      0.30 0.09 253 → #022e59    brass-lift 0.775 0.1 71   → #deab6c
+     drench-deep 0.235 0.07 256 → #041d3e   on-drench 0.97 0.006 245 → #f2f6f9
+     drench      0.32 0.085 254 → #0e335d   brass-lift 0.83 0.07 245 → #a2cdf2
    ========================================================================== */
 
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = 'image/png';
 
 const COLOR = {
-  ground: '#021f3f',
-  glow: '#022e59',
-  text: '#f8fafd',
-  muted: 'rgba(248, 250, 253, 0.72)',
-  accent: '#deab6c',
+  ground: '#041d3e',
+  glow: '#0e335d',
+  text: '#f2f6f9',
+  muted: 'rgba(242, 246, 249, 0.72)',
+  accent: '#a2cdf2',
 } as const;
 
 interface OgCardInput {

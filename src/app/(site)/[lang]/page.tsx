@@ -27,6 +27,7 @@ import { testimonials as testimonialsTable } from '@/lib/schema';
 import {
   getBreadcrumbStructuredData,
   getDentalClinicStructuredData,
+  getDoctorStructuredData,
   getFAQStructuredData,
 } from '@/lib/seo-config';
 import { getPublicSiteSettings } from '@/lib/site-settings';
@@ -137,6 +138,10 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
 
   const structuredData = [
     getDentalClinicStructuredData(lang),
+    // The person and his credentials. This page is where the nine diplomas
+    // are shown, so it is where `hasCredential` belongs; it used to be marked
+    // up only on the implant guide, which shows none of them.
+    getDoctorStructuredData(lang),
     getBreadcrumbStructuredData(lang, ''),
     // Only the homepage's own questions: the borrowed implant answers are
     // marked up on the guide pages they belong to, and Google asks for a
@@ -155,16 +160,15 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
           read raw HTML saw no structured data at all. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson }} />
 
-      {/* 1 — the claim, and one action. */}
+      {/* 1 — the claim, one action, and the implant going in. */}
       <Hero lang={lang} content={t.hero} appointmentHref={appointmentHref} implantHref={`${base}#implantes`} />
 
       {/* 2 — why it matters, before anything is offered. */}
       <ProblemSection id="por-que" content={t.problem} />
 
-      {/* 3 — the mechanism, and the page's one authored motion. */}
+      {/* 3 — what each part is for, and how long the treatment takes. */}
       <ImplantEducation
         id="implantes"
-        lang={lang}
         content={implantEducation[lang]}
         appointmentHref={appointmentHref}
         guide={{

@@ -12,84 +12,99 @@
 @config "../../tailwind.config.ts";
 
 /* ============================================================================
-   CLINICAL NAVY — design tokens
+   TITANIUM AND BLUE — design tokens
    ----------------------------------------------------------------------------
-   A deep navy (hue 253) carries the brand, a cyan (218) accents it, and brass
-   (71) is kept for credentials — diplomas, awards, trust marks. Navy and brass
-   is the pairing that stops a blue medical site reading as generic SaaS, and
-   it is why the warm accent survived the move off the previous terracotta
-   palette while everything around it went cool.
+   Bone, machined titanium, and the blue the dentist asked for.
 
-   Colour space is OKLCH so the ramp keeps an even perceptual lightness across
-   the blue band (HSL darkens badly from 200 to 260, which is exactly where the
-   brand sits).
+   The brand has been through two wrong answers. Navy with brass was also the
+   look of the fashion boutique in the same plaza, so the two sites read as one
+   brand. The correction (graphite bands, blue only on buttons) fixed that and
+   overshot: the clinic's owner looked at it and asked where the blue had gone.
+
+   So blue now carries SURFACES as well as actions: the drenched bands are a
+   deep clinical blue (hue 254-256), the inks lean the same way, and the
+   implant explainer keeps its pale tint. What is still forbidden is the thing
+   that actually caused the boutique resemblance — a warm metallic beside the
+   blue. Nothing on a blue band is gold: the metal is cool titanium, and the
+   accent is a paler step of the same blue. Nothing glows.
+
+   The token NAMES are unchanged so no component had to move. Two of them lie
+   about their colour, kept on purpose to avoid a rename across the panel:
+   --brass is cool light titanium (the CTA fill on a blue band) and --brass-ink
+   is blue text on light grounds.
+
+   Colour space is OKLCH so the ramp keeps an even perceptual lightness.
 
    Every foreground/background pair below is verified >= WCAG AA
-   (4.5:1 body, 3:1 large/decorative) in BOTH themes. Do not hand-tune a
-   single channel without re-checking its pairings.
+   (4.5:1 body, 3:1 large/decorative) in BOTH themes — `node
+   scripts/contrast.mjs`. Do not hand-tune a single channel without re-running
+   it.
 
    Two colours deliberately carry INK, not white, as their on-colour:
-   --brass and --warning. They are mid-light; white on them fails AA.
+   --brass and --warning. They are light; white on them fails AA.
    ========================================================================== */
 @layer base {
   :root {
     /* ---- raw palette ------------------------------------------------- */
-    /* Hue 253 carries the brand. The neutrals carry a trace of it (chroma
-       0.005-0.02) rather than being true grey: a neutral-grey card on a
-       blue-cast page reads as slightly yellow, which is the same reason the
-       previous warm palette tinted its greys the other way. */
-    --canvas: 0.972 0.006 250;
-    --canvas-sunk: 0.943 0.009 250;
-    --surface: 0.994 0.003 250;
-    --surface-raised: 1 0 250;
+    /* Light neutrals lean faintly warm (hue 95, chroma <= 0.004) like bone,
+       which is what lets the blue read as colour rather than as a tinted
+       page; inks lean blue so text belongs to the same family as the bands. */
+    --canvas: 0.974 0.003 95;
+    --canvas-sunk: 0.948 0.004 95;
+    --surface: 0.992 0.002 95;
+    --surface-raised: 1 0 0;
 
-    --ink: 0.22 0.03 255;
-    --ink-soft: 0.442 0.028 253;
-    /* Text-safe: >= 4.58:1 on canvas, canvas-sunk, surface and the tint band.
-       It was L 0.578 (3.65:1 at worst) on the theory that the faint step would
-       only ever colour icons — and it ended up on ~30 pieces of small TEXT
-       anyway, from the implant article's disclaimer to every admin label. A
-       step that cannot carry words is a trap; this one now can. */
-    --ink-faint: 0.524 0.022 253;
+    --ink: 0.215 0.022 254;
+    --ink-soft: 0.44 0.022 252;
+    /* Text-safe: >= 4.5:1 on canvas, canvas-sunk, surface and the tint band.
+       It was once L 0.578 (3.65:1 at worst) on the theory that the faint step
+       would only ever colour icons — and it ended up on ~30 pieces of small
+       TEXT anyway, from the implant article's disclaimer to every admin label.
+       A step that cannot carry words is a trap; this one can. */
+    --ink-faint: 0.524 0.018 252;
 
-    --primary-base: 0.42 0.13 253;
-    --primary-hover: 0.36 0.14 253;
-    --primary-soft: 0.945 0.022 253;
-    --primary-border: 0.858 0.055 253;
+    --primary-base: 0.49 0.135 254;
+    --primary-hover: 0.43 0.135 254;
+    --primary-soft: 0.95 0.022 250;
+    --primary-border: 0.86 0.05 250;
 
     /* Drenched full-bleed bands — the Committed half of the colour strategy.
-       Dark in BOTH themes, so they always take a light on-colour. */
-    --drench: 0.30 0.09 253;
-    --drench-deep: 0.24 0.07 253;
-    --on-drench: 0.985 0.005 250;
+       A deep clinical blue, dark in BOTH themes, so they always take a light
+       on-colour. Chroma is held at 0.07-0.085: enough to be unmistakably blue
+       on a phone in daylight, short of the saturated royal blue that reads as
+       a bank. */
+    --drench: 0.32 0.085 254;
+    --drench-deep: 0.235 0.07 256;
+    --on-drench: 0.97 0.006 245;
 
-    /* The cool accent. Held well away from the primary's hue (253 -> 218) so it
-       reads as a different colour rather than as a lighter navy — a 20-degree
-       gap at this chroma is not enough to separate two blues, and the pair has
-       to survive being seen one after the other down a long page. */
-    --cyan: 0.68 0.13 218;
-    --cyan-soft: 0.945 0.028 218;
+    /* The ground of the implant film's display case: the EXACT near-black the
+       film was rendered on (#0f1316), so a frame has no visible edge inside
+       the case. It is a property of the film, not of the palette — re-cut the
+       film on another ground and this is the one value that changes. */
+    --stage-ground: 0.184 0.009 240;
 
-    /* Brass survives the rebrand. Navy and brass is a deliberate pairing: it is
-       what keeps a blue medical site from reading as generic SaaS, and the
-       diploma wall depends on a gold-seal quality that cyan cannot carry.
-       Retuned rather than reused — the old ramp was measured against a warm
-       plaster canvas, and the same values against a cool one lose their warmth
-       to simultaneous contrast. Chroma is up slightly and the hue moved 67.5 ->
-       71 to hold the gold reading against blue surroundings. */
-    --brass: 0.702 0.112 71;
-    --brass-ink: 0.502 0.094 71; /* text-safe brass on LIGHT grounds */
-    /* text-safe brass on DARK grounds. Plain --brass does not clear 4.5:1 on
-       --drench-deep, so small brass text on a drenched band needs this instead. */
-    --brass-lift: 0.775 0.1 71;
-    --brass-soft: 0.945 0.032 71;
-    /* The colour that sits ON a brass fill. Brass is mid-light in light mode
-       and lighter still in dark mode, so this must stay DARK in both — using
-       `--ink` here gave 1.73:1 in dark mode, where ink is near-white. */
-    --on-brass: 0.17 0.02 60;
+    /* The cool accent. Held away from the primary's hue so it reads as a
+       different colour rather than as a lighter step of the same blue. */
+    --cyan: 0.62 0.08 225;
+    --cyan-soft: 0.955 0.02 225;
 
-    --line: 0.886 0.008 250;
-    --line-strong: 0.806 0.014 250;
+    /* "Brass" is a historical name: this ramp is cool titanium and pale blue.
+       --brass       the light metal fill of the main action on a blue band
+       --brass-ink   blue text/figures on LIGHT grounds
+       --brass-lift  pale blue text and icons on DARK (drenched) grounds, where
+                     --primary-base would sink into the band
+       --brass-soft  the faint cool wash behind initials and badges */
+    --brass: 0.945 0.012 245;
+    --brass-ink: 0.47 0.125 254;
+    --brass-lift: 0.83 0.07 245;
+    --brass-soft: 0.948 0.014 250;
+    /* The colour that sits ON a --brass fill. The fill is light in both themes,
+       so this must stay DARK in both — using `--ink` here gave 1.73:1 in dark
+       mode, where ink is near-white. */
+    --on-brass: 0.225 0.06 256;
+
+    --line: 0.885 0.004 95;
+    --line-strong: 0.80 0.006 95;
 
     --danger: 0.515 0.175 26;
     --ok: 0.51 0.098 155;
@@ -146,7 +161,7 @@
     --chart-1: var(--primary-base);
     --chart-2: var(--brass);
     --chart-3: var(--cyan);
-    --chart-4: 0.62 0.09 12;
+    --chart-4: 0.60 0.05 15;
     --chart-5: var(--ink-faint);
 
     /* Same story as the chart ramp: the sidebar is a drenched dark panel, so
@@ -156,10 +171,10 @@
     --sidebar-background: var(--drench-deep);
     --sidebar-foreground: 0.95 0.011 250;
     --sidebar-primary: var(--brass);
-    --sidebar-primary-foreground: 0.2 0.028 62;
+    --sidebar-primary-foreground: var(--on-brass);
     --sidebar-accent: var(--drench);
     --sidebar-accent-foreground: var(--on-drench);
-    --sidebar-border: 0.35 0.055 253;
+    --sidebar-border: 0.37 0.07 254;
     --sidebar-ring: var(--brass);
 
     /* ---- radius ------------------------------------------------------ */
@@ -173,7 +188,7 @@
        track the surface it falls on. Note this token is HSL, not OKLCH — it
        feeds hsl() in the five elevation levels below, so it is invisible to a
        search for oklch values and easy to leave behind on the old brand. */
-    --shadow-color: 225 45% 18%;
+    --shadow-color: 222 30% 18%;
     --e1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.1),
       0 1px 3px hsl(var(--shadow-color) / 0.06);
     --e2: 0 2px 4px -2px hsl(var(--shadow-color) / 0.1),
@@ -187,39 +202,42 @@
   }
 
   .dark {
-    --canvas: 0.188 0.016 255;
-    --canvas-sunk: 0.152 0.014 255;
-    --surface: 0.233 0.018 254;
-    --surface-raised: 0.271 0.02 254;
+    --canvas: 0.185 0.006 235;
+    --canvas-sunk: 0.155 0.006 235;
+    --surface: 0.225 0.007 235;
+    --surface-raised: 0.262 0.008 235;
 
-    --ink: 0.955 0.007 250;
-    --ink-soft: 0.808 0.013 252;
-    --ink-faint: 0.688 0.015 252;
+    --ink: 0.955 0.003 95;
+    --ink-soft: 0.80 0.006 240;
+    --ink-faint: 0.68 0.008 240;
 
-    /* The primary inverts: a 0.42-lightness navy is the right weight ON white
+    /* The primary inverts: a 0.40-lightness steel blue is the right weight ON white
        and disappears INTO a dark canvas, so the dark theme takes the ramp from
        the other end. Hue and chroma hold, which is what keeps it recognisably
        the same brand across the toggle. */
-    --primary-base: 0.702 0.13 250;
-    --primary-hover: 0.762 0.118 250;
-    --primary-soft: 0.305 0.058 253;
-    --primary-border: 0.385 0.078 253;
+    --primary-base: 0.75 0.11 250;
+    --primary-hover: 0.81 0.095 250;
+    --primary-soft: 0.25 0.03 252;
+    --primary-border: 0.40 0.06 252;
 
-    --drench: 0.278 0.078 253;
-    --drench-deep: 0.203 0.058 253;
-    --on-drench: 0.985 0.005 250;
+    /* Still blue on a graphite page: the band is told apart from the canvas by
+       hue, not by lightness, so it does not need to be darker than it. */
+    --drench: 0.29 0.075 254;
+    --drench-deep: 0.215 0.062 256;
+    --on-drench: 0.97 0.006 245;
+    --stage-ground: 0.184 0.009 240;
 
-    --cyan: 0.762 0.115 218;
-    --cyan-soft: 0.302 0.052 218;
+    --cyan: 0.76 0.07 225;
+    --cyan-soft: 0.29 0.03 225;
 
-    --brass: 0.792 0.108 71;
-    --brass-ink: 0.842 0.098 71;
-    --brass-lift: 0.842 0.098 71;
-    --brass-soft: 0.308 0.046 71;
-    --on-brass: 0.17 0.02 60; /* stays dark: brass is light in this theme too */
+    --brass: 0.92 0.014 245;
+    --brass-ink: 0.80 0.09 248;
+    --brass-lift: 0.83 0.07 245;
+    --brass-soft: 0.29 0.025 252;
+    --on-brass: 0.225 0.06 256; /* stays dark: the fill is light in this theme too */
 
-    --line: 0.322 0.016 252;
-    --line-strong: 0.412 0.02 252;
+    --line: 0.31 0.006 235;
+    --line-strong: 0.40 0.008 235;
 
     --danger: 0.66 0.17 26;
     --ok: 0.71 0.115 155;
@@ -245,19 +263,19 @@
     --chart-1: var(--primary-base);
     --chart-2: var(--brass);
     --chart-3: var(--cyan);
-    --chart-4: 0.72 0.11 12;
+    --chart-4: 0.72 0.05 15;
     --chart-5: var(--ink-faint);
 
-    --sidebar-background: 0.148 0.016 255;
+    --sidebar-background: 0.15 0.006 235;
     --sidebar-foreground: 0.9 0.011 250;
     --sidebar-primary: var(--brass);
-    --sidebar-primary-foreground: 0.17 0.02 60;
-    --sidebar-accent: 0.255 0.04 253;
+    --sidebar-primary-foreground: var(--on-brass);
+    --sidebar-accent: 0.25 0.01 240;
     --sidebar-accent-foreground: 0.955 0.007 250;
-    --sidebar-border: 0.3 0.02 253;
+    --sidebar-border: 0.3 0.008 235;
     --sidebar-ring: var(--brass);
 
-    --shadow-color: 228 55% 3%;
+    --shadow-color: 220 20% 3%;
     --e1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.5),
       0 1px 3px hsl(var(--shadow-color) / 0.4);
     --e2: 0 2px 4px -2px hsl(var(--shadow-color) / 0.5),
@@ -412,15 +430,14 @@
   h2,
   h3,
   h4 {
-    font-family: var(--font-heading), ui-serif, Georgia, serif;
-    font-weight: 500;
-    letter-spacing: -0.014em;
-    /* 1.18, not 1.12. Newsreader's accented capitals (Á Ó Í Ñ Ü) reach about
-       0.127em ABOVE its typo ascender while its descenders fall to -0.256em.
-       At 1.12 a two-line Spanish heading leaves ~0.002em between line 2's
-       acute and line 1's descender — they touch. Spanish sets accents on
-       capitals constantly, so this is a floor, not a preference. */
-    line-height: 1.18;
+    font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.022em;
+    /* 1.14 keeps a two-line Spanish heading's capital accents (Á Ó Ñ) clear of
+       the descenders above them. The old serif needed 1.18; this grotesk's
+       accents sit lower, and anything looser makes a large heading fall apart
+       into separate lines. */
+    line-height: 1.14;
     text-wrap: balance;
   }
 
@@ -701,6 +718,179 @@
       animation: reveal-rise linear both;
       animation-timeline: view();
       animation-range: entry calc(var(--reveal-i, 0) * 6%) entry calc(60% + var(--reveal-i, 0) * 6%);
+    }
+  }
+}
+
+/* ============================================================================
+   Hero
+   ----------------------------------------------------------------------------
+   .hero-lattice  A dot lattice over the band, masked so it is densest behind
+                  the film and gone before it reaches the headline. One
+                  background and one mask, painted once.
+   .hero-rise     The copy under the headline settling into place on load.
+                  Time-based, once, 60 ms apart. The headline itself is not
+                  animated (see hero.tsx).
+   .hero-case     The film's display case. `--tilt-x/y` are written by
+                  <ImplantFilm> from the pointer; the easing lives here, so
+                  the script only ever sets two numbers.
+   ========================================================================== */
+.hero-lattice {
+  background-image: radial-gradient(oklch(var(--on-drench) / 0.16) 1px, oklch(var(--on-drench) / 0) 1.5px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse 60% 75% at 78% 45%, black, transparent 78%);
+}
+@media (max-width: 1023.98px) {
+  .hero-lattice {
+    mask-image: radial-gradient(ellipse 90% 45% at 50% 82%, black, transparent 80%);
+  }
+}
+
+.hero-stage {
+  perspective: 1100px;
+}
+.hero-case {
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform var(--dur-slower) var(--ease-out-quint);
+  box-shadow: var(--e5);
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.9rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-rise {
+    animation: hero-rise var(--dur-slower) var(--ease-out-quint) both;
+    animation-delay: calc(var(--rise-i, 0) * 60ms + 60ms);
+  }
+}
+
+/* A single band of light crossing a button on hover — the one place a control
+   answers with more than a colour change, kept for the page's main action.
+   A transform on a pseudo-element: nothing is repainted but the button. */
+.sheen {
+  position: relative;
+  overflow: hidden;
+}
+.sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    105deg,
+    oklch(var(--surface-raised) / 0) 35%,
+    oklch(var(--surface-raised) / 0.55) 50%,
+    oklch(var(--surface-raised) / 0) 65%
+  );
+  transform: translateX(-110%);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sheen:hover::after,
+  .sheen:focus-visible::after {
+    transform: translateX(110%);
+    transition: transform 700ms var(--ease-out-quart);
+  }
+}
+
+/* ============================================================================
+   Treatment timeline (implant section)
+   ----------------------------------------------------------------------------
+   The line between the stops fills as the row scrolls into view — down the
+   left edge on a phone, across the top on wide screens. A view timeline, so
+   the compositor scrubs one transform and no script runs; without support, or
+   under reduced motion, the rule does not apply and the line is drawn whole.
+   ========================================================================== */
+@keyframes journey-fill-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes journey-fill-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .journey-fill {
+      transform-origin: top left;
+      animation: journey-fill-y linear both;
+      animation-timeline: view();
+      animation-range: entry 30% cover 55%;
+    }
+    @media (min-width: 1024px) {
+      .journey-fill {
+        animation-name: journey-fill-x;
+        animation-range: entry 60% cover 45%;
+      }
+    }
+  }
+}
+
+/* ============================================================================
+   Diploma deck (coverflow)
+   ----------------------------------------------------------------------------
+   .coverflow       the scrolling strip. Its inline padding is half the strip
+                    minus half a card, so the first and last cards can reach
+                    the centre line.
+   .coverflow-slot  one card's place in the strip (its width is the snap unit).
+   .coverflow-item  the card itself. Its transform is an animation on its OWN
+                    inline view timeline: progress 0 as it enters at one edge
+                    of the strip, 50% on the centre line, 100% as it leaves at
+                    the other. So the centred card faces the visitor and its
+                    neighbours turn away, with no script and no scroll handler.
+
+   The timeline tracks the SLOT's layout box through its child, and transforms
+   do not affect layout, so rotating the card never moves its own timeline.
+
+   Without view-timeline support, or under reduced motion, none of this
+   applies and the strip is flat.
+   ========================================================================== */
+.coverflow {
+  --card: min(78vw, 27rem);
+  /* The strip is bled past the shell by --gap on each side, but a percentage
+     padding resolves against the SHELL (the containing block), not against
+     the bled strip — hence the extra --gap. */
+  padding-inline: calc(50% + var(--gap) - var(--card) / 2);
+}
+.coverflow-slot {
+  width: var(--card);
+}
+@keyframes coverflow {
+  0% {
+    opacity: 0.45;
+    transform: perspective(64rem) translate3d(-14%, 0, 0) rotateY(-42deg) scale(0.78);
+  }
+  38%,
+  62% {
+    opacity: 1;
+    transform: perspective(64rem) translate3d(0, 0, 0) rotateY(0deg) scale(1);
+  }
+  100% {
+    opacity: 0.45;
+    transform: perspective(64rem) translate3d(14%, 0, 0) rotateY(42deg) scale(0.78);
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .coverflow-item {
+      animation: coverflow linear both;
+      animation-timeline: view(inline);
+      animation-range: cover 0% cover 100%;
     }
   }
 }

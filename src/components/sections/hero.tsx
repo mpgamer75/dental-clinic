@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { getImageProps } from 'next/image';
 import { ArrowRight, Phone } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { WhatsAppIcon } from '@/components/icons/whatsapp';
+import { ImplantFilm } from '@/components/implant/implant-film';
 import { TEL_HREF, contactLinkLabels, whatsappHref } from '@/lib/contact';
-import { clinicPhotos, type homeContent } from '@/lib/data';
+import type { homeContent } from '@/lib/data';
 import type { Language } from '@/lib/types';
 
 type HeroCopy = (typeof homeContent)['es']['hero'];
@@ -18,74 +18,71 @@ interface HeroProps {
 }
 
 /**
- * Hero.
+ * Hero: the claim, one action, and the implant going in.
  *
- * One claim, one action, and the place. Three things the previous version did
- * are gone on purpose:
+ * Two earlier versions of this band are worth remembering, because each fixed
+ * the other's fault and brought its own:
  *
- *  - The three-number trust strip (30+ / 3 / AOD). It sat at the very bottom
- *    of a band 1019px tall, so on a 1440×900 screen the numbers were sliced in
- *    half by the fold, and "AOD" set as a statistic meant nothing to anyone who
- *    did not already know the acronym. The one fact worth a hero — thirty
- *    years in Santiago — now sits on the photograph as its caption, and the
- *    association membership is stated in words in the doctor band.
- *  - The full-bleed photo. It was a 16:9 file cropped into a near-square box
- *    and stretched about 2.4× (the browser picked the 750w variant for a box
- *    1018px tall), which is why it looked soft and why "Dr. F…" was cut at the
- *    edge. Wide screens now get the PORTRAIT shot of the door in a tall panel
- *    it actually fits; phones get the landscape front. One <picture>, so each
- *    device downloads exactly one of them.
- *  - The ambient "drift" animation: two gradient layers looping every 26 s for
- *    as long as the page was open, including off screen.
+ *  - A photograph of the clinic's glass door on a navy band. The door was the
+ *    only photograph there was, it is the same composition the boutique two
+ *    doors down uses, and it says nothing about implants.
+ *  - The implant film scrubbed by scroll through a pinned band three screens
+ *    tall. The picture was right; the mechanism made a visitor scroll 300svh
+ *    before the page said anything else, and showed a still to anyone who did
+ *    not think to scroll.
  *
- * Server component: nothing here needs the client.
+ * This keeps the picture and drops the mechanism: the film plays by itself in
+ * a case beside the copy (see <ImplantFilm>), and the band is one screen tall.
+ *
+ * A server component. The headline, the standfirst and every action are in the
+ * first HTML; only the case hydrates.
  */
 export function Hero({ lang, content, appointmentHref, implantHref }: HeroProps) {
   const links = contactLinkLabels(lang);
-  const { door, front } = clinicPhotos;
-  const alt = front.alt[lang];
-
-  /* Art direction. `sizes` is the width each source is DRAWN at: the portrait
-     panel is ~5 of 12 columns on wide screens; the landscape front spans the
-     column on phones and tablets. */
-  const {
-    props: { srcSet: wideSrcSet },
-  } = getImageProps({ src: door.src, width: door.width, height: door.height, quality: 82, alt, sizes: '(min-width: 1024px) 38vw' });
-  const {
-    props: { srcSet: narrowSrcSet, ...img },
-  } = getImageProps({ src: front.src, width: front.width, height: front.height, quality: 80, alt, sizes: '100vw' });
 
   return (
     <section className="drenched-deep relative isolate overflow-hidden">
-      {/* Static light wash. Pre-blurred into the gradient itself (no `filter`),
-          and fading to the same hue at zero alpha rather than to `transparent`,
+      {/* The band's light. Three static layers, each painted once: a wash of
+          the brand blue from the top-left, a dot lattice that fades out before
+          it reaches the copy, and a hairline closing the band. Every gradient
+          fades to its own hue at zero alpha rather than to `transparent`,
           which interpolates through grey and leaves a muddy ring. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -left-1/4 top-[-30%] -z-10 h-[70vw] w-[70vw]"
+        className="pointer-events-none absolute -left-[20%] -top-[45%] -z-10 h-[78vw] w-[78vw]"
         style={{
           backgroundImage:
-            'radial-gradient(closest-side, oklch(var(--brass) / 0.14), oklch(var(--brass) / 0))',
+            'radial-gradient(closest-side, oklch(var(--primary-base) / 0.5), oklch(var(--primary-base) / 0))',
         }}
       />
+      <div aria-hidden="true" className="hero-lattice pointer-events-none absolute inset-0 -z-10" />
 
-      <div className="shell items-center gap-y-10 py-[clamp(3rem,7vw,6.5rem)] lg:min-h-[min(calc(100svh-4.5rem),54rem)]">
+      {/* Three grid children — copy, film, direct channels — so their ORDER
+          can differ by screen. On a phone the film comes straight after the
+          main action and the channels follow it: with the channels inside the
+          copy block the film started a full screen down, and most visitors
+          arrive on phones. On wide screens the film spans both rows beside
+          the copy and the channels sit under the copy as before. */}
+      <div className="shell content-center gap-y-9 py-[clamp(2.25rem,5vw,4.5rem)] lg:min-h-[min(calc(100svh-4.5rem),54rem)] lg:grid-rows-[auto_auto] lg:gap-y-0">
         {/* ── Copy ─────────────────────────────────────────────── */}
-        <div className="lg:col-span-7 xl:col-span-6">
-          <p className="font-body text-small font-medium tracking-[0.02em] text-brass-lift">
+        <div className="lg:col-span-7 lg:row-start-1 xl:col-span-6">
+          <p className="hero-rise inline-flex items-center gap-2.5 rounded-full border border-drench-on/20 bg-drench-on/[0.07] px-3.5 py-1.5 text-small font-medium text-brass-lift">
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-brass-lift" />
             {content.eyebrow}
           </p>
 
-          <h1 className="mt-4 max-w-[15ch] font-heading text-h1 font-medium text-drench-on">
+          {/* Not animated: it is the largest text in the first viewport, and
+              an element that starts at opacity 0 is not counted as painted. */}
+          <h1 className="mt-6 max-w-[17ch] font-heading text-[clamp(2.55rem,1.5rem+4.1vw,4.5rem)] font-semibold leading-[1.05] tracking-[-0.035em] text-drench-on">
             {content.title}
           </h1>
 
-          <p className="mt-6 max-w-measure text-body leading-relaxed text-drench-on/80">
+          <p className="hero-rise mt-6 max-w-measure text-body leading-relaxed text-drench-on/80 [--rise-i:1]">
             {content.standfirst}
           </p>
 
-          <div className="mt-9 flex flex-col gap-x-7 gap-y-4 sm:flex-row sm:items-center">
-            <Button asChild size="xl" variant="brass">
+          <div className="hero-rise mt-9 flex flex-col gap-x-7 gap-y-4 [--rise-i:2] sm:flex-row sm:items-center">
+            <Button asChild size="xl" variant="brass" className="sheen">
               <Link href={appointmentHref}>{content.ctaPrimary}</Link>
             </Button>
             {/* A text link, not a second button: two equal buttons side by side
@@ -103,10 +100,24 @@ export function Hero({ lang, content, appointmentHref, implantHref }: HeroProps)
             </Link>
           </div>
 
+        </div>
+
+        {/* ── The film ─────────────────────────────────────────── */}
+        <div className="lg:col-span-5 lg:col-start-8 lg:row-span-2 lg:row-start-1 lg:self-center">
+          <ImplantFilm
+            alt={content.film.alt}
+            pauseLabel={content.film.pause}
+            playLabel={content.film.play}
+            phases={content.film.phases}
+          />
+        </div>
+
+        {/* ── Direct channels ──────────────────────────────────── */}
+        <div className="lg:col-span-7 lg:row-start-2 xl:col-span-6">
           {/* The two direct channels, at a size a thumb can hit (44px). Phone
               first because the clinic answers it; WhatsApp because that is how
               most Dominican patients would rather ask. */}
-          <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-drench-on/15 pt-5 text-drench-on/80">
+          <ul className="hero-rise flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-drench-on/15 pt-5 text-drench-on/80 [--rise-i:3] lg:mt-8">
             <li>
               <a
                 href={TEL_HREF}
@@ -131,49 +142,9 @@ export function Hero({ lang, content, appointmentHref, implantHref }: HeroProps)
             </li>
           </ul>
         </div>
-
-        {/* ── Photograph ───────────────────────────────────────── */}
-        <figure className="relative m-0 lg:col-span-5 lg:col-start-8 xl:col-span-5 xl:col-start-8">
-          <div className="relative aspect-[16/10] overflow-hidden rounded-2xl sm:aspect-[16/9] lg:aspect-[4/5] lg:max-h-[min(calc(100svh-10rem),46rem)]">
-            <picture>
-              <source media="(min-width: 1024px)" srcSet={wideSrcSet} sizes="38vw" />
-              {/* A plain <img> inside <picture> is the documented art-direction
-                  pattern; its props come from getImageProps, so it is still
-                  optimised, sized and given a srcset. */}
-              <img
-                {...img}
-                src={img.src}
-                srcSet={narrowSrcSet}
-                sizes="100vw"
-                alt={alt}
-                fetchPriority="high"
-                loading="eager"
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover object-[62%_50%] lg:object-[50%_42%]"
-              />
-            </picture>
-            {/* Seats the caption plate on wide screens: a short scrim at the
-                foot only, so the photograph keeps its own light elsewhere. */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-0 bottom-0 hidden h-2/5 bg-gradient-to-t from-drench-deep/85 to-drench-deep/0 lg:block"
-            />
-          </div>
-          {/* Overlaid on the portrait panel, where the lower third of the door
-              shot is plain glass; BELOW the landscape crop on smaller screens,
-              where the clinic's own lettering sits exactly where an overlay
-              would go and the two texts would read on top of each other. */}
-          <figcaption className="mt-4 lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:p-6">
-            <p className="font-heading text-h4 font-medium leading-snug text-drench-on">
-              {content.photoLead}
-            </p>
-            <p className="mt-1 text-small text-drench-on/80">{content.photoPlace}</p>
-          </figcaption>
-        </figure>
       </div>
 
-      {/* Brass hairline closing the band. */}
-      <div aria-hidden="true" className="h-px w-full bg-brass/30" />
+      <div aria-hidden="true" className="h-px w-full bg-drench-on/15" />
     </section>
   );
 }

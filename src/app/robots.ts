@@ -22,7 +22,28 @@ import { SITE_URL } from '@/lib/site';
  * equity to index a URL on, and there is nothing there a crawler should spend
  * budget fetching. `/admin-dashboard` was dropped from the list because that
  * route does not exist.
+ *
+ * The AI crawlers are named, although `*` already lets them in. Several of
+ * them (GPTBot, ClaudeBot, Google-Extended) look for a rule addressed to them
+ * by name and some site owners' tooling adds a blanket block for exactly these
+ * agents; an explicit `allow` is the unambiguous statement that this clinic
+ * WANTS to be read by the assistants its patients ask. The site's own summary
+ * for them is /llms.txt.
  */
+const AI_CRAWLERS = [
+  'GPTBot',
+  'OAI-SearchBot',
+  'ChatGPT-User',
+  'ClaudeBot',
+  'Claude-SearchBot',
+  'Claude-User',
+  'PerplexityBot',
+  'Perplexity-User',
+  'Google-Extended',
+  'Applebot-Extended',
+  'Bingbot',
+];
+
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = SITE_URL;
 
@@ -38,6 +59,11 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
         disallow: ['/api/'],
         crawlDelay: 0,
+      },
+      {
+        userAgent: AI_CRAWLERS,
+        allow: '/',
+        disallow: ['/api/'],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

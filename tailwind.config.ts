@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Warm Consulta.
+ * Titanium and blue.
  *
  * Colours resolve to `oklch(var(--token) / <alpha-value>)`, so every opacity
  * utility (`bg-primary/10`, `border-line/60`, …) keeps working while the
@@ -54,6 +54,8 @@ export default {
         surface: { DEFAULT: ok("surface"), raised: ok("surface-raised") },
         ink: { DEFAULT: ok("ink"), soft: ok("ink-soft"), faint: ok("ink-faint") },
         drench: { DEFAULT: ok("drench"), deep: ok("drench-deep"), on: ok("on-drench") },
+        /* The implant film's case. See --stage-ground in globals.css. */
+        stage: ok("stage-ground"),
         cyan: { DEFAULT: ok("cyan"), soft: ok("cyan-soft") },
         brass: {
           DEFAULT: ok("brass"),
@@ -86,7 +88,7 @@ export default {
       fontFamily: {
         sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
         body: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
-        heading: ["var(--font-heading)", "ui-serif", "Georgia", "serif"],
+        heading: ["var(--font-heading)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
 
       /* Semantic type scale. Use `text-h1`…`text-eyebrow` rather than picking a
@@ -94,7 +96,7 @@ export default {
          keeps the scale coherent as it goes fluid. Steps are defined in
          globals.css so the clamp() maths lives in one place. */
       fontSize: {
-        h1: ["var(--step-h1)", { lineHeight: "1.18", letterSpacing: "-0.02em" }],
+        h1: ["var(--step-h1)", { lineHeight: "1.04", letterSpacing: "-0.035em" }],
         h2: ["var(--step-h2)", { lineHeight: "1.2", letterSpacing: "-0.015em" }],
         h3: ["var(--step-h3)", { lineHeight: "1.28", letterSpacing: "-0.008em" }],
         h4: ["var(--step-h4)", { lineHeight: "1.34", letterSpacing: "-0.005em" }],

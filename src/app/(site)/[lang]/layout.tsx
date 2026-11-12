@@ -78,9 +78,9 @@ export async function generateMetadata({
  *  as a <meta> tag where tokens do not exist: it is `--canvas` (light) resolved
  *  to sRGB. One value, not a prefers-color-scheme pair — the theme here is a
  *  class the visitor toggles (system detection is off), so an OS-dark pair
- *  would paint navy chrome above the light site most visitors see. */
+ *  would paint dark chrome above the light site most visitors see. */
 export const viewport: Viewport = {
-  themeColor: '#f3f6fa',
+  themeColor: '#f7f6f4',
 };
 
 export default async function SiteLayout({

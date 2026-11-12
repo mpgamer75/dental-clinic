@@ -32,7 +32,7 @@ import { redirect } from 'next/navigation';
 
 import { and, eq, isNull } from 'drizzle-orm';
 
-import { auth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/auth/server';
 import { db } from '@/lib/db';
 import { formatDatabaseFailure } from '@/lib/db-errors';
 import { staff } from '@/lib/schema';
@@ -91,7 +91,7 @@ function describeAuthFailure(error: {
  */
 export async function readAdminSession(): Promise<SessionCheck> {
   try {
-    const { data, error } = await auth.getSession();
+    const { data, error } = await getAuth().getSession();
 
     if (error) {
       const detail = describeAuthFailure(error);

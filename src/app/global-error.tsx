@@ -15,13 +15,13 @@ import { useEffect } from 'react'
    one that will silently keep the old brand. These are the current palette,
    converted from the OKLCH tokens in globals.css:
 
-       #004D91  --primary-base   0.42  0.13  253
-       #F3F6FA  --canvas         0.972 0.006 250
-       #E8EDF2  --canvas-sunk    0.943 0.009 250
-       #111B28  --ink            0.22  0.03  255
-       #485463  --ink-soft       0.442 0.028 253
-       #717B87  --ink-faint      0.578 0.022 253
-       #B9C1C9  --line-strong    0.806 0.014 250
+       #1D61AA  --primary-base   0.49  0.135 254
+       #F7F6F4  --canvas         0.974 0.003 95
+       #EEEEEB  --canvas-sunk    0.948 0.004 95
+       #121A24  --ink            0.215 0.022 254
+       #4A545F  --ink-soft       0.44  0.022 252
+       #636B74  --ink-faint      0.524 0.018 252
+       #BFBEB9  --line-strong    0.80  0.006 95
 
    If the palette moves again, re-run:
        node scripts/contrast.mjs
@@ -82,8 +82,8 @@ export default function GlobalError({
     padding: '0 1.75rem',
     borderRadius: '0.5rem',
     border: '1px solid transparent',
-    background: '#004D91',
-    color: '#F3F6FA',
+    background: '#1D61AA',
+    color: '#F7F6F4',
     font: 'inherit',
     fontWeight: 500,
     fontSize: '1rem',
@@ -103,8 +103,8 @@ export default function GlobalError({
             justifyContent: 'center',
             padding: '2rem 1.25rem',
             textAlign: 'center',
-            background: '#E8EDF2',
-            color: '#111B28',
+            background: '#EEEEEB',
+            color: '#121A24',
             fontFamily:
               'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
             lineHeight: 1.6,
@@ -121,7 +121,7 @@ export default function GlobalError({
             {t.title}
           </h1>
 
-          <p style={{ margin: '1rem 0 2rem', maxWidth: '38ch', color: '#485463' }}>{t.body}</p>
+          <p style={{ margin: '1rem 0 2rem', maxWidth: '38ch', color: '#4A545F' }}>{t.body}</p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
             <button type="button" onClick={() => reset()} style={button}>
@@ -132,8 +132,8 @@ export default function GlobalError({
               style={{
                 ...button,
                 background: 'transparent',
-                color: '#111B28',
-                borderColor: '#B9C1C9',
+                color: '#121A24',
+                borderColor: '#BFBEB9',
               }}
             >
               {t.home}
@@ -143,7 +143,7 @@ export default function GlobalError({
           {/* The digest is what Vercel's logs key on; showing it lets a patient
               quote something actionable when they phone the clinic. */}
           {error.digest && (
-            <p style={{ marginTop: '2rem', fontSize: '0.8125rem', color: '#717B87' }}>
+            <p style={{ marginTop: '2rem', fontSize: '0.8125rem', color: '#636B74' }}>
               {t.ref}: <code>{error.digest}</code>
             </p>
           )}

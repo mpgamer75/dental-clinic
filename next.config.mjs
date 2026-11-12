@@ -12,12 +12,11 @@ const nextConfig = {
     // unlisted value — "Invalid quality prop (80) … does not match
     // images.qualities" — which 500s the whole route. Keep this in sync with:
     //   78  contact section (Cómo llegar)
-    //   80  hero, narrow source (getImageProps)
-    //   82  hero, wide source (getImageProps)
+    //   80  hero film posters
     //   88  diploma rail cards
     //   92  diploma lightbox
     // 75 is next/image's own default and is required for any unannotated <Image>.
-    qualities: [75, 78, 80, 82, 88, 92],
+    qualities: [75, 78, 80, 88, 92],
     // The optimiser keeps a variant for max(this, the source's max-age), and
     // /images/* is served with a one-day max-age below — so a replaced photo
     // propagates within a day instead of a year.

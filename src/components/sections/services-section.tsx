@@ -5,6 +5,7 @@ import { DENTAL_ICONS, ToothIcon, type DentalIconName } from '@/components/icons
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { RevealGroup, RevealItem } from '@/components/reveal';
+import SpotlightCard from '@/components/reactbits/spotlight-card';
 import type { contactDetails } from '@/lib/data';
 import type { Service } from '@/lib/types';
 
@@ -25,8 +26,9 @@ interface ServicesSectionProps {
  * Eight services used to sit in one grid at one weight, each truncated to
  * three lines behind a "Leer Más" toggle — the template every clinic site
  * ships, and the reason implants (the practice's priority) read as one option
- * in eight. Now the three specialties are an editorial index with their full
- * summary, and general dentistry is a compact list under them.
+ * in eight. Now the three specialties are three cards with their full summary
+ * — implants the filled one — and general dentistry is a compact list under
+ * them.
  *
  * The long descriptions are behind native <details>, not a scripted toggle:
  * no JavaScript, Ctrl+F still finds text inside a closed one, and the open
@@ -42,32 +44,53 @@ export function ServicesSection({ id, copy, description, services, implantGuideH
       <SectionHeading title={copy.title} description={description} align="left" className="lg:col-span-7" />
 
       <h3 className="font-body text-small font-semibold text-brass-ink">{copy.specialtiesTitle}</h3>
-      <RevealGroup as="ul" className="mt-4 border-t border-line-strong">
+      {/* Three cards, and they are not equal. Implants are the practice's
+          priority, so that card is the one filled with the brand blue and the
+          one that leads somewhere — to the guide, six pages of it, which is
+          where the real answer lives. The other two answer the pointer with a
+          faint light and keep their long description behind a disclosure. */}
+      <RevealGroup as="ul" className="mt-4 grid gap-4 lg:grid-cols-3">
         {specialties.map((service, index) => (
-          <RevealItem key={service.key} as="li" index={index} className="border-b border-line py-7 md:py-8">
-            <div className="grid gap-x-[5%] gap-y-3 md:grid-cols-12 md:items-baseline">
-              <div className="flex items-center gap-4 md:col-span-4">
-                <ServiceIcon service={service} className="h-9 w-9" />
-                <h4 className="font-heading text-h3 font-medium text-ink">{service.title}</h4>
+          <RevealItem key={service.key} as="li" index={index} className="h-full">
+            {service.key === 'implants' ? (
+              <div className="drenched relative isolate flex h-full flex-col overflow-hidden rounded-2xl p-7 shadow-e3 md:p-8">
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-1/4 -top-1/2 -z-10 h-[150%] w-[90%]"
+                  style={{
+                    backgroundImage:
+                      'radial-gradient(closest-side, oklch(var(--primary-base) / 0.7), oklch(var(--primary-base) / 0))',
+                  }}
+                />
+                <ServiceIcon service={service} className="h-10 w-10" tone="text-brass-lift" />
+                <h4 className="mt-6 font-heading text-h3 font-semibold text-drench-on">{service.title}</h4>
+                <p className="mt-3 leading-relaxed text-drench-on/80">{service.summary}</p>
+                <Link
+                  href={implantGuideHref}
+                  className="group/guide mt-auto inline-flex min-h-11 items-center gap-2 pt-6 font-medium text-drench-on underline-offset-[6px] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-lift focus-visible:ring-offset-2 focus-visible:ring-offset-drench"
+                >
+                  {copy.implantGuide}
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform duration-base ease-out-quart group-hover/guide:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </Link>
               </div>
-              <div className="md:col-span-5">
-                <p className="max-w-measure leading-relaxed text-ink-soft">{service.summary}</p>
-                {/* Implants get the guide — six pages of it — instead of a
-                    paragraph: that is where the real answer lives. */}
-                {service.key !== 'implants' && <DetailsBody service={service} label={copy.moreLabel} />}
-              </div>
-              {service.key === 'implants' && (
-                <div className="md:col-span-3 md:justify-self-end">
-                  <Link
-                    href={implantGuideHref}
-                    className="inline-flex min-h-11 items-center gap-2 font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    {copy.implantGuide}
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
+            ) : (
+              <SpotlightCard
+                theme="light"
+                spotlightColor="oklch(var(--primary-base) / 0.12)"
+                intensity={0.7}
+                className="h-full rounded-2xl"
+              >
+                <div className="flex h-full flex-col p-7 md:p-8">
+                  <ServiceIcon service={service} className="h-10 w-10" />
+                  <h4 className="mt-6 font-heading text-h3 font-semibold text-ink">{service.title}</h4>
+                  <p className="mt-3 leading-relaxed text-ink-soft">{service.summary}</p>
+                  <DetailsBody service={service} label={copy.moreLabel} />
                 </div>
-              )}
-            </div>
+              </SpotlightCard>
+            )}
           </RevealItem>
         ))}
       </RevealGroup>
@@ -101,9 +124,17 @@ export function ServicesSection({ id, copy, description, services, implantGuideH
   );
 }
 
-function ServiceIcon({ service, className }: { service: Service; className: string }) {
+function ServiceIcon({
+  service,
+  className,
+  tone = 'text-brass-ink',
+}: {
+  service: Service;
+  className: string;
+  tone?: string;
+}) {
   const Icon = DENTAL_ICONS[service.iconName as DentalIconName] ?? ToothIcon;
-  return <Icon className={`${className} shrink-0 text-brass-ink`} strokeWidth={1.4} aria-hidden="true" />;
+  return <Icon className={`${className} shrink-0 ${tone}`} strokeWidth={1.4} aria-hidden="true" />;
 }
 
 function DetailsBody({ service, label }: { service: Service; label: string }) {

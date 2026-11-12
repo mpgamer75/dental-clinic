@@ -37,11 +37,15 @@
    404 and the admin can no longer log in.
    ========================================================================== */
 
-import { auth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/auth/server';
 import { checkAdminLoginLimit } from '@/lib/rate-limit';
 import { getRequestContext } from '@/lib/request-context';
 
-const handlers = auth.handler();
+/* Resolved per request rather than at import, so loading this route (which
+   `next build` does while collecting page data) never needs the auth
+   variables. Without them, the first request throws and the route errors:
+   it fails closed. */
+const handlers = () => getAuth().handler();
 
 /**
  * The only auth endpoints this application uses.
@@ -125,7 +129,7 @@ export async function GET(
 ): Promise<Response> {
   const path = (await context.params).path.join('/');
   if (!ALLOWED_GET_PATHS.has(path)) return notFound();
-  return handlers.GET(request, context);
+  return handlers().GET(request, context);
 }
 
 /**
@@ -158,5 +162,5 @@ export async function POST(
     if (!limit.allowed) return tooManyRequests(limit.retryAfterSeconds);
   }
 
-  return handlers.POST(request, context);
+  return handlers().POST(request, context);
 }

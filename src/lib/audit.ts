@@ -25,7 +25,7 @@
 
 import 'server-only';
 
-import { auth } from './auth/server';
+import { getAuth } from './auth/server';
 import { db } from './db';
 import { getRequestContext } from './request-context';
 import { auditLog, type AuditSnapshot } from './schema';
@@ -102,7 +102,7 @@ export async function recordAudit({
     const [actor, { ipHash, userAgent }] = await Promise.all([
       verifiedActor
         ? Promise.resolve(verifiedActor)
-        : auth.getSession().then(({ data }) => data?.user ?? null),
+        : getAuth().getSession().then(({ data }) => data?.user ?? null),
       getRequestContext(),
     ]);
 

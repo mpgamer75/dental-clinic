@@ -136,7 +136,7 @@ export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
                   </th>
 
                   <td className="hidden max-w-0 px-4 py-3 md:table-cell">
-                    <p className="line-clamp-3 text-small italic text-ink-soft">“{row.quote}”</p>
+                    <p className="line-clamp-3 text-small text-ink-soft">“{row.quote}”</p>
                   </td>
 
                   <td className="hidden px-4 py-3 lg:table-cell">
@@ -253,7 +253,7 @@ export function TestimonialsTable({ rows }: { rows: TestimonialRow[] }) {
                   it will take once published, not in a styled box that exists
                   only here. */}
               <figure className="border-y border-line py-5">
-                <blockquote className="font-heading text-[1.15rem] font-normal italic leading-relaxed text-ink">
+                <blockquote className="font-heading text-[1.15rem] font-medium leading-relaxed text-ink">
                   <p>&ldquo;{detail.quote}&rdquo;</p>
                 </blockquote>
               </figure>

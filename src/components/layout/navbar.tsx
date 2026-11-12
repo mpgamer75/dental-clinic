@@ -27,7 +27,7 @@ const FOCUS_RING =
  * one visual weight in one flat row, which is why it read as scaffolding:
  *
  *   1. the wordmark, alone at full ink weight;
- *   2. the destinations — tracked uppercase, ink-soft, and the only things in
+ *   2. the destinations — sentence case, ink-soft, and the only things in
  *      the bar that can be *active*;
  *   3. the utilities — telephone, theme, language — fenced off behind a
  *      hairline, because none of them is a place you can go. They are demoted
@@ -202,7 +202,11 @@ export function Navbar() {
                       onClick={() => pin(item.key)}
                       className={cn(
                         'group/link relative inline-flex h-11 shrink-0 items-center rounded-sm px-3.5',
-                        'text-small uppercase tracking-[0.085em] text-ink-soft',
+                        /* Sentence case, normal tracking. Wide-tracked
+                           uppercase links are the fashion-boutique register
+                           (and the boutique two doors down uses them), so the
+                           clinic's nav reads as plain words instead. */
+                        'text-small font-medium text-ink-soft',
                         'transition-colors duration-fast ease-out-quart hover:text-ink data-[active=true]:text-ink',
                         FOCUS_RING,
                       )}
@@ -286,7 +290,9 @@ export function Navbar() {
                        Narrower padding below `sm` so it still fits beside the
                        wordmark and the menu button. */
                     'group/cta ml-2 inline-flex h-11 shrink-0 items-center gap-2 rounded-lg px-3 sm:px-4',
-                    'border border-primary/45 text-small uppercase tracking-[0.085em] text-primary',
+                    /* Solid blue: it is the one action the whole site asks
+                       for, and blue marks actions everywhere else. */
+                    'border border-primary bg-primary text-small font-medium text-primary-foreground',
                     // Colour only. The hover used to raise an `e1` shadow as
                     // well, which put box-shadow in the transition list — a
                     // repaint of a blurred spread on every frame, on the one
@@ -294,12 +300,12 @@ export function Navbar() {
                     // outlined control filling solid is already the loudest
                     // hover on the page; it does not also need to lift.
                     'transition-[color,background-color,border-color] duration-base ease-out-quart',
-                    'hover:border-primary hover:bg-primary hover:text-primary-foreground',
+                    'hover:border-primary-hover hover:bg-primary-hover',
                     FOCUS_RING,
                   )}
                 >
                   {/* Two labels, one control. The full label is ~13 characters of
-                      wide-tracked uppercase; beside the wordmark and the menu
+                      medium-weight text; beside the wordmark and the menu
                       button at 390px it pushed the clinic name into an ellipsis.
                       English is worse — "Schedule Appointment" is 20. Rendering
                       both and toggling with a breakpoint keeps a single link in
