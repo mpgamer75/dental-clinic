@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
@@ -5,11 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { RevealGroup, RevealItem } from '@/components/reveal';
-import SpotlightCard from '@/components/reactbits/spotlight-card';
+import { TiltCard } from '@/components/tilt-card';
 import type { implantEducation } from '@/lib/data';
 
 type ImplantCopy = (typeof implantEducation)['es'];
-type PartKey = ImplantCopy['parts'][number]['key'];
 
 interface GuideLink {
   href: string;
@@ -35,7 +35,7 @@ interface ImplantEducationProps {
  * the hero is the part the film cannot show: what each piece is FOR, and how
  * long the treatment takes. So this is now words and a timeline.
  *
- * A server component. The cards' pointer light is the only script in it.
+ * A server component. The cards' tilt is the only script in it.
  */
 export function ImplantEducation({ id = 'implantes', content, appointmentHref, guide }: ImplantEducationProps) {
   /* `tint`: the band the page most wants read, marked with the brand colour at
@@ -55,26 +55,34 @@ export function ImplantEducation({ id = 'implantes', content, appointmentHref, g
       <RevealGroup as="ol" className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {content.parts.map((part, index) => (
           <RevealItem key={part.key} as="li" index={index} className="h-full">
-            {/* A faint blue light follows the pointer across the card. A
-                gradient on one card, not a shadow or a filter, and it only
-                runs while a pointer is over the row. */}
-            <SpotlightCard
-              theme="light"
-              spotlightColor="oklch(var(--primary-base) / 0.14)"
-              intensity={0.7}
-              className="h-full rounded-2xl"
-            >
-              <div className="flex h-full flex-col p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <PartGlyph part={part.key} />
+            {/* The card leans towards the pointer and the render lifts off
+                it (see <TiltCard>). The disc behind the render is its
+                plinth: a pool of the brand blue it visibly rises out of. */}
+            <TiltCard className="h-full rounded-2xl border border-line bg-surface">
+              <div className="tilt-layer flex h-full flex-col p-6">
+                <div className="tilt-layer flex items-start justify-between gap-4">
+                  <span className="tilt-layer relative flex h-28 w-28 items-center justify-center">
+                    <span aria-hidden="true" className="icon-plinth" />
+                    {/* A render of the part itself, in the same light as the
+                        hero film, on a transparent ground so it sits on the
+                        card in either theme. Decorative: the heading names it. */}
+                    <Image
+                      src={`/images/icons/${part.key}.webp`}
+                      alt=""
+                      width={112}
+                      height={112}
+                      loading="lazy"
+                      className="tilt-pop relative h-24 w-24 object-contain"
+                    />
+                  </span>
                   <span aria-hidden="true" className="tabular font-heading text-h4 font-semibold text-primary-border">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                 </div>
-                <h4 className="mt-6 font-heading text-h4 font-semibold text-ink">{part.label}</h4>
+                <h4 className="mt-5 font-heading text-h4 font-semibold text-ink">{part.label}</h4>
                 <p className="mt-2 leading-relaxed text-ink-soft">{part.desc}</p>
               </div>
-            </SpotlightCard>
+            </TiltCard>
           </RevealItem>
         ))}
       </RevealGroup>
@@ -162,51 +170,5 @@ export function ImplantEducation({ id = 'implantes', content, appointmentHref, g
         </nav>
       </div>
     </Section>
-  );
-}
-
-/**
- * One line drawing per part, in the stroke weight of the service icons. Drawn
- * here rather than taken from an icon set because none has an abutment, and a
- * generic "tooth" on all four cards would say nothing.
- */
-function PartGlyph({ part }: { part: PartKey }) {
-  return (
-    <svg
-      viewBox="0 0 48 48"
-      className="h-12 w-12 text-primary"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {part === 'fixture' && (
-        <>
-          <path d="M17 6h14v5l-1.2 26.5a5.8 5.8 0 0 1-11.6 0L17 11z" />
-          <path d="M17.3 16.5l13.2 3M17.6 23l12.6 3M17.9 29.5l12 3M18.4 36l10.6 2.6M17 11h14" />
-        </>
-      )}
-      {part === 'abutment' && (
-        <>
-          <path d="M14 10h20l-4 15H18z" />
-          <path d="M18 25h12v7H18zM21 32h6v8h-6zM14 10c3 2.2 17 2.2 20 0" />
-        </>
-      )}
-      {part === 'crown' && (
-        <>
-          <path d="M11 20c0-7 4-11 8-11 2.4 0 3.4 1.6 5 1.6S26.6 9 29 9c4 0 8 4 8 11 0 6-2.5 10-4.5 15H15.5C13.5 30 11 26 11 20z" />
-          <path d="M15.5 35c2.2 2 14.8 2 17 0M24 10.6V17" />
-        </>
-      )}
-      {part === 'bone' && (
-        <>
-          <path d="M7 14c5-3 11-3 14 1v24H7zM41 14c-5-3-11-3-14 1v24h14z" />
-          <path d="M21 39h6M11.5 22h.01M15.5 28h.01M12 33.5h.01M32.5 22h.01M36 27.5h.01M32 33.5h.01" strokeWidth="2.4" />
-          <path d="M21 15v24M27 15v24" strokeDasharray="2.5 3" />
-        </>
-      )}
-    </svg>
   );
 }

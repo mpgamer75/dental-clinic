@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 
@@ -5,7 +6,7 @@ import { DENTAL_ICONS, ToothIcon, type DentalIconName } from '@/components/icons
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { RevealGroup, RevealItem } from '@/components/reveal';
-import SpotlightCard from '@/components/reactbits/spotlight-card';
+import { TiltCard } from '@/components/tilt-card';
 import type { contactDetails } from '@/lib/data';
 import type { Service } from '@/lib/types';
 
@@ -47,49 +48,51 @@ export function ServicesSection({ id, copy, description, services, implantGuideH
       {/* Three cards, and they are not equal. Implants are the practice's
           priority, so that card is the one filled with the brand blue and the
           one that leads somewhere — to the guide, six pages of it, which is
-          where the real answer lives. The other two answer the pointer with a
-          faint light and keep their long description behind a disclosure. */}
+          where the real answer lives. All three lean towards the pointer with
+          their render lifting off the surface (see <TiltCard>); the other two
+          keep their long description behind a disclosure. */}
       <RevealGroup as="ul" className="mt-4 grid gap-4 lg:grid-cols-3">
         {specialties.map((service, index) => (
           <RevealItem key={service.key} as="li" index={index} className="h-full">
             {service.key === 'implants' ? (
-              <div className="drenched relative isolate flex h-full flex-col overflow-hidden rounded-2xl p-7 shadow-e3 md:p-8">
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -right-1/4 -top-1/2 -z-10 h-[150%] w-[90%]"
-                  style={{
-                    backgroundImage:
-                      'radial-gradient(closest-side, oklch(var(--primary-base) / 0.7), oklch(var(--primary-base) / 0))',
-                  }}
-                />
-                <ServiceIcon service={service} className="h-10 w-10" tone="text-brass-lift" />
-                <h4 className="mt-6 font-heading text-h3 font-semibold text-drench-on">{service.title}</h4>
-                <p className="mt-3 leading-relaxed text-drench-on/80">{service.summary}</p>
-                <Link
-                  href={implantGuideHref}
-                  className="group/guide mt-auto inline-flex min-h-11 items-center gap-2 pt-6 font-medium text-drench-on underline-offset-[6px] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-lift focus-visible:ring-offset-2 focus-visible:ring-offset-drench"
-                >
-                  {copy.implantGuide}
-                  <ArrowRight
-                    className="h-4 w-4 transition-transform duration-base ease-out-quart group-hover/guide:translate-x-0.5"
-                    aria-hidden="true"
+              <TiltCard className="drenched h-full rounded-2xl shadow-e3">
+                {/* The wash is clipped in its OWN box. Clipping the card
+                    itself would flatten it and press the lifted render back
+                    into the surface. */}
+                <span aria-hidden="true" className="absolute inset-0 overflow-hidden rounded-[inherit]">
+                  <span
+                    className="absolute -right-1/4 -top-1/2 h-[150%] w-[90%]"
+                    style={{
+                      backgroundImage:
+                        'radial-gradient(closest-side, oklch(var(--primary-base) / 0.7), oklch(var(--primary-base) / 0))',
+                    }}
                   />
-                </Link>
-              </div>
+                </span>
+                <div className="tilt-layer relative flex h-full flex-col p-7 md:p-8">
+                  <SpecialtyRender serviceKey={service.key} onDrench />
+                  <h4 className="mt-5 font-heading text-h3 font-semibold text-drench-on">{service.title}</h4>
+                  <p className="mt-3 leading-relaxed text-drench-on/80">{service.summary}</p>
+                  <Link
+                    href={implantGuideHref}
+                    className="group/guide mt-auto inline-flex min-h-11 items-center gap-2 pt-6 font-medium text-drench-on underline-offset-[6px] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-lift focus-visible:ring-offset-2 focus-visible:ring-offset-drench"
+                  >
+                    {copy.implantGuide}
+                    <ArrowRight
+                      className="h-4 w-4 transition-transform duration-base ease-out-quart group-hover/guide:translate-x-0.5"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </div>
+              </TiltCard>
             ) : (
-              <SpotlightCard
-                theme="light"
-                spotlightColor="oklch(var(--primary-base) / 0.12)"
-                intensity={0.7}
-                className="h-full rounded-2xl"
-              >
-                <div className="flex h-full flex-col p-7 md:p-8">
-                  <ServiceIcon service={service} className="h-10 w-10" />
-                  <h4 className="mt-6 font-heading text-h3 font-semibold text-ink">{service.title}</h4>
+              <TiltCard className="h-full rounded-2xl border border-line bg-surface">
+                <div className="tilt-layer relative flex h-full flex-col p-7 md:p-8">
+                  <SpecialtyRender serviceKey={service.key} />
+                  <h4 className="mt-5 font-heading text-h3 font-semibold text-ink">{service.title}</h4>
                   <p className="mt-3 leading-relaxed text-ink-soft">{service.summary}</p>
                   <DetailsBody service={service} label={copy.moreLabel} />
                 </div>
-              </SpotlightCard>
+              </TiltCard>
             )}
           </RevealItem>
         ))}
@@ -124,17 +127,37 @@ export function ServicesSection({ id, copy, description, services, implantGuideH
   );
 }
 
-function ServiceIcon({
-  service,
-  className,
-  tone = 'text-brass-ink',
-}: {
-  service: Service;
-  className: string;
-  tone?: string;
-}) {
+function ServiceIcon({ service, className }: { service: Service; className: string }) {
   const Icon = DENTAL_ICONS[service.iconName as DentalIconName] ?? ToothIcon;
-  return <Icon className={`${className} shrink-0 ${tone}`} strokeWidth={1.4} aria-hidden="true" />;
+  return <Icon className={`${className} shrink-0 text-brass-ink`} strokeWidth={1.4} aria-hidden="true" />;
+}
+
+/**
+ * The three specialties get a render of the thing itself — an implant, a
+ * bridge, a set of braces — in the same light as the hero film; general
+ * dentistry below keeps the small line icons. The difference in weight is the
+ * point: it is the page saying which three the practice specialises in.
+ *
+ * The files are named by service KEY (`public/images/icons/<key>.webp`), which
+ * is stable; a title is not. Transparent, so one file serves the white cards,
+ * the blue one and the dark theme. Decorative: the heading names the service.
+ */
+function SpecialtyRender({ serviceKey, onDrench = false }: { serviceKey: string; onDrench?: boolean }) {
+  return (
+    <span className="tilt-layer relative flex h-32 w-32 items-center justify-center">
+      {/* The plinth: a pool of light the render rises out of when the card
+          tilts. Paler on the blue card, where the brand blue would vanish. */}
+      <span aria-hidden="true" className={onDrench ? 'icon-plinth icon-plinth-on-drench' : 'icon-plinth'} />
+      <Image
+        src={`/images/icons/${serviceKey}.webp`}
+        alt=""
+        width={128}
+        height={128}
+        loading="lazy"
+        className="tilt-pop relative h-28 w-28 object-contain"
+      />
+    </span>
+  );
 }
 
 function DetailsBody({ service, label }: { service: Service; label: string }) {

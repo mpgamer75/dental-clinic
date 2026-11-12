@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Pause, Play } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -122,9 +122,12 @@ interface ImplantFilmProps {
   pauseLabel: string;
   playLabel: string;
   phases: { label: string; note: string }[];
+  /** Rendered inside the tilting case, in front of the film: the hero's
+   *  floating facts. Server-rendered by the caller. */
+  children?: ReactNode;
 }
 
-export function ImplantFilm({ alt, pauseLabel, playLabel, phases }: ImplantFilmProps) {
+export function ImplantFilm({ alt, pauseLabel, playLabel, phases, children }: ImplantFilmProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -370,20 +373,32 @@ export function ImplantFilm({ alt, pauseLabel, playLabel, phases }: ImplantFilmP
     let frame = 0;
     let x = 0;
     let y = 0;
+    /** Pointer position in the band's own pixels, for the spotlight. */
+    let px = 0;
+    let py = 0;
     const apply = () => {
       frame = 0;
-      card.style.setProperty('--tilt-x', `${(-y * 5).toFixed(2)}deg`);
-      card.style.setProperty('--tilt-y', `${(x * 7).toFixed(2)}deg`);
+      card.style.setProperty('--tilt-x', `${(-y * 6).toFixed(2)}deg`);
+      card.style.setProperty('--tilt-y', `${(x * 9).toFixed(2)}deg`);
+      /* The spotlight (`.hero-spot`, in hero.tsx) reads these as a TRANSLATE,
+         not as a gradient position: moving a layer is composited, re-drawing
+         a gradient across a band this size every frame is not. */
+      band.style.setProperty('--spot-x', `${px.toFixed(1)}px`);
+      band.style.setProperty('--spot-y', `${py.toFixed(1)}px`);
     };
     const onMove = (event: PointerEvent) => {
       const rect = band.getBoundingClientRect();
-      x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
+      px = event.clientX - rect.left;
+      py = event.clientY - rect.top;
+      x = (px / rect.width) * 2 - 1;
+      y = (py / rect.height) * 2 - 1;
+      band.setAttribute('data-pointer', '');
       if (!frame) frame = requestAnimationFrame(apply);
     };
     const onLeave = () => {
       x = 0;
       y = 0;
+      band.removeAttribute('data-pointer');
       if (!frame) frame = requestAnimationFrame(apply);
     };
     band.addEventListener('pointermove', onMove, { passive: true });
@@ -395,10 +410,32 @@ export function ImplantFilm({ alt, pauseLabel, playLabel, phases }: ImplantFilmP
     };
   }, [tier]);
 
+  /* The band's decorative loops (the aurora, the light on the case's border,
+     the floating facts) are CSS, and CSS has no idea whether anyone can see
+     them. This tells it: `data-offscreen` while the band is scrolled away,
+     so nothing animates for a visitor reading the footer. Every tier, the
+     static one included — those loops are not the film. */
+  useEffect(() => {
+    const band = stageRef.current?.closest('section');
+    if (!band || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([entry]) => {
+      band.toggleAttribute('data-offscreen', !entry.isIntersecting);
+    });
+    io.observe(band);
+    return () => {
+      io.disconnect();
+      band.removeAttribute('data-offscreen');
+    };
+  }, []);
+
   const togglePaused = () => {
     const next = !pausedRef.current;
     pausedRef.current = next;
     setPaused(next);
+    /* The pause control stops EVERYTHING that moves in the band, not only the
+       film: a visitor who asked for stillness and still had lights drifting
+       behind the headline has not been given it (WCAG 2.2.2). */
+    stageRef.current?.closest('section')?.toggleAttribute('data-paused', next);
     if (!next) resumeRef.current();
   };
 
@@ -423,7 +460,15 @@ export function ImplantFilm({ alt, pauseLabel, playLabel, phases }: ImplantFilmP
         }}
       />
 
-      <div ref={cardRef} className="hero-case relative overflow-hidden rounded-[1.75rem] bg-stage">
+      {/* The tilting element. NOT clipped: `overflow: hidden` flattens a 3D
+          context, and the facts floating in front of the case would be
+          pressed back into it. The clipping lives on the body inside. */}
+      <div ref={cardRef} className="hero-case relative">
+        {/* The border is a light travelling round the case: a conic gradient
+            far larger than the case, rotating behind a body that covers all
+            of it but a hairline. One transform, on one layer. */}
+        <div className="hero-beam relative overflow-hidden rounded-[1.75rem] p-[1.5px]">
+        <div className="relative overflow-hidden rounded-[calc(1.75rem-1.5px)] bg-stage">
         <div role="img" aria-label={alt} className="relative aspect-[4/5] w-full">
           <Image
             src={isStatic ? '/implant/poster-end.webp' : '/implant/poster-start.webp'}
@@ -455,13 +500,6 @@ export function ImplantFilm({ alt, pauseLabel, playLabel, phases }: ImplantFilmP
             />
           )}
         </div>
-
-        {/* Hairline and inner highlight on top of the picture, so the case has
-            an edge on a band nearly as dark as it is. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-[1.75rem] border border-drench-on/15"
-        />
 
         {/* The caption, UNDER the picture rather than over it: laid over the
             foot of the frame it covered the bone, which is the part the last
@@ -514,6 +552,10 @@ export function ImplantFilm({ alt, pauseLabel, playLabel, phases }: ImplantFilmP
             )}
           </button>
         )}
+        </div>
+        </div>
+
+        {children}
       </div>
     </div>
   );

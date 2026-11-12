@@ -723,38 +723,150 @@
 }
 
 /* ============================================================================
-   Hero
+   Hero — the stage
    ----------------------------------------------------------------------------
-   .hero-lattice  A dot lattice over the band, masked so it is densest behind
-                  the film and gone before it reaches the headline. One
-                  background and one mask, painted once.
-   .hero-rise     The copy under the headline settling into place on load.
-                  Time-based, once, 60 ms apart. The headline itself is not
-                  animated (see hero.tsx).
-   .hero-case     The film's display case. `--tilt-x/y` are written by
-                  <ImplantFilm> from the pointer; the easing lives here, so
-                  the script only ever sets two numbers.
+   The layers, back to front (markup in sections/hero.tsx and
+   implant/implant-film.tsx):
+
+   .hero-aurora   three pools of blue light, drifting. Each is ONE radial
+                  gradient that is already soft — no `filter: blur`, which
+                  would re-rasterise a 900px layer every frame — and each
+                  animates `transform` only.
+   .hero-grid     a fine lattice, masked so it is strongest behind the film
+                  and gone before it reaches the headline. Static.
+   .hero-spot     a soft light under the pointer. <ImplantFilm> writes the
+                  pointer's position to --spot-x/--spot-y and this layer is
+                  TRANSLATED to it; it fades in while a pointer is over the
+                  band (`data-pointer`).
+   .hero-word     the headline, word by word: each word is clipped to its own
+                  line box and its inner span rises into it, once, on load.
+   .hero-rise     the rest of the copy settling into place after it.
+   .hero-pill     the eyebrow, with one band of light crossing it on a loop.
+   .hero-case     the film's case. --tilt-x/--tilt-y come from the pointer; the
+                  easing lives here, so the script only ever sets numbers.
+   .hero-beam     the case's border: a conic gradient much larger than the
+                  case, rotating behind a body that covers all but a hairline.
+   .hero-chip     the two facts floating in front of the case. The offset
+                  (Tailwind's `translate`) and the depth (`transform`) are
+                  separate CSS properties, so they compose without a wrapper.
+
+   EVERYTHING THAT LOOPS STOPS when the band is off screen or the visitor has
+   paused the film: `.hero-band[data-offscreen]` and `[data-paused]`, both set
+   by <ImplantFilm>. Reduced motion removes all of it through the global rule
+   at the foot of this file, and the band is then a complete still.
    ========================================================================== */
-.hero-lattice {
-  background-image: radial-gradient(oklch(var(--on-drench) / 0.16) 1px, oklch(var(--on-drench) / 0) 1.5px);
-  background-size: 26px 26px;
-  mask-image: radial-gradient(ellipse 60% 75% at 78% 45%, black, transparent 78%);
+.hero-aurora {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
 }
-@media (max-width: 1023.98px) {
-  .hero-lattice {
-    mask-image: radial-gradient(ellipse 90% 45% at 50% 82%, black, transparent 80%);
+.hero-aurora-a {
+  left: -18%;
+  top: -42%;
+  width: 78vw;
+  height: 78vw;
+  background-image: radial-gradient(closest-side, oklch(var(--primary-base) / 0.62), oklch(var(--primary-base) / 0));
+  animation: aurora-a 22s ease-in-out infinite alternate;
+}
+.hero-aurora-b {
+  right: -22%;
+  top: -10%;
+  width: 62vw;
+  height: 62vw;
+  background-image: radial-gradient(closest-side, oklch(var(--cyan) / 0.34), oklch(var(--cyan) / 0));
+  animation: aurora-b 27s ease-in-out infinite alternate;
+}
+.hero-aurora-c {
+  left: 24%;
+  bottom: -58%;
+  width: 70vw;
+  height: 70vw;
+  background-image: radial-gradient(closest-side, oklch(var(--brass-lift) / 0.2), oklch(var(--brass-lift) / 0));
+  animation: aurora-c 31s ease-in-out infinite alternate;
+}
+@keyframes aurora-a {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(9%, 7%, 0) scale(1.14);
+  }
+}
+@keyframes aurora-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+  to {
+    transform: translate3d(-12%, 9%, 0) scale(0.92);
+  }
+}
+@keyframes aurora-c {
+  from {
+    transform: translate3d(0, 0, 0) scale(0.94);
+  }
+  to {
+    transform: translate3d(-8%, -10%, 0) scale(1.1);
   }
 }
 
-.hero-stage {
-  perspective: 1100px;
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to right, oklch(var(--on-drench) / 0.075) 1px, oklch(var(--on-drench) / 0) 1px),
+    linear-gradient(to bottom, oklch(var(--on-drench) / 0.075) 1px, oklch(var(--on-drench) / 0) 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 62% 78% at 76% 44%, black, transparent 76%);
 }
-.hero-case {
-  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
-  transition: transform var(--dur-slower) var(--ease-out-quint);
-  box-shadow: var(--e5);
+@media (max-width: 1023.98px) {
+  .hero-grid {
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 95% 46% at 50% 78%, black, transparent 80%);
+  }
 }
 
+.hero-spot {
+  position: absolute;
+  left: -22rem;
+  top: -22rem;
+  width: 44rem;
+  height: 44rem;
+  border-radius: 50%;
+  background-image: radial-gradient(closest-side, oklch(var(--brass-lift) / 0.16), oklch(var(--brass-lift) / 0));
+  transform: translate3d(var(--spot-x, 50vw), var(--spot-y, 20rem), 0);
+  opacity: 0;
+  transition: opacity var(--dur-slower) var(--ease-out-quart);
+}
+.hero-band[data-pointer] .hero-spot {
+  opacity: 1;
+}
+
+/* The headline. `.hero-word` is the clip; the padding and the matching
+   negative margin give descenders (g, p, j) and accents room inside it without
+   changing the line height. The gradient is on the inner span because
+   `background-clip: text` clips to the element that owns the glyphs. */
+.hero-word {
+  display: inline-block;
+  overflow: hidden;
+  padding-block: 0.12em;
+  margin-block: -0.12em;
+  vertical-align: bottom;
+}
+.hero-word-inner {
+  display: inline-block;
+  color: oklch(var(--on-drench));
+  background-image: linear-gradient(180deg, oklch(var(--surface-raised)) 18%, oklch(var(--brass-lift)) 118%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+@keyframes hero-word {
+  from {
+    transform: translate3d(0, 108%, 0);
+  }
+  to {
+    transform: none;
+  }
+}
 @keyframes hero-rise {
   from {
     opacity: 0;
@@ -766,10 +878,221 @@
   }
 }
 @media (prefers-reduced-motion: no-preference) {
+  .hero-word-inner {
+    animation: hero-word 820ms var(--ease-out-expo) both;
+    animation-delay: calc(var(--word-i, 0) * 55ms + 80ms);
+  }
   .hero-rise {
     animation: hero-rise var(--dur-slower) var(--ease-out-quint) both;
-    animation-delay: calc(var(--rise-i, 0) * 60ms + 60ms);
+    animation-delay: calc(var(--rise-i, 0) * 70ms + 120ms);
   }
+}
+
+/* The eyebrow's light: one band crossing the pill, then a long rest. */
+.hero-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    105deg,
+    oklch(var(--surface-raised) / 0) 30%,
+    oklch(var(--surface-raised) / 0.3) 50%,
+    oklch(var(--surface-raised) / 0) 70%
+  );
+  transform: translateX(-120%);
+  animation: pill-sweep 5.5s var(--ease-out-quart) 1.4s infinite;
+  pointer-events: none;
+}
+@keyframes pill-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  32%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.hero-stage {
+  perspective: 1100px;
+}
+.hero-case {
+  transform-style: preserve-3d;
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform var(--dur-slower) var(--ease-out-quint);
+}
+.hero-beam {
+  background-color: oklch(var(--on-drench) / 0.16);
+  box-shadow: var(--e5);
+}
+.hero-beam::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 190%;
+  aspect-ratio: 1;
+  margin-left: -95%;
+  margin-top: -95%;
+  background-image: conic-gradient(
+    from 0deg,
+    oklch(var(--brass-lift) / 0) 0deg,
+    oklch(var(--brass-lift) / 0) 250deg,
+    oklch(var(--brass-lift) / 0.9) 318deg,
+    oklch(var(--surface-raised)) 342deg,
+    oklch(var(--brass-lift) / 0) 360deg
+  );
+  animation: beam-turn 7s linear infinite;
+}
+@keyframes beam-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.hero-chip {
+  position: absolute;
+  z-index: var(--z-raised);
+  margin: 0;
+  transform: translateZ(4.5rem);
+  pointer-events: none;
+}
+.hero-chip-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  /* Narrow enough that two of them fit side by side under a phone-width
+     case; the label wraps to a second line rather than the chip growing. */
+  max-width: 9.75rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid oklch(var(--on-drench) / 0.22);
+  /* Opaque, not a blurred glass: `backdrop-filter` over a moving film
+     re-blurs the pixels behind it on every frame. */
+  background-color: oklch(var(--drench) / 0.94);
+  box-shadow: var(--e4);
+  animation: chip-bob 6s ease-in-out calc(var(--chip-i, 0) * -3s) infinite alternate;
+}
+@media (min-width: 640px) {
+  .hero-chip-inner {
+    gap: 0.7rem;
+    max-width: 13.5rem;
+    padding: 0.6rem 0.95rem 0.6rem 0.85rem;
+  }
+}
+@keyframes chip-bob {
+  from {
+    transform: translate3d(0, -5px, 0);
+  }
+  to {
+    transform: translate3d(0, 6px, 0);
+  }
+}
+
+/* The main action carries a soft ring of the band's own light. Static. */
+.hero-cta {
+  box-shadow: 0 0 0 1px oklch(var(--surface-raised) / 0.5), 0 0 2.6rem -0.4rem oklch(var(--brass-lift) / 0.6);
+}
+
+.hero-band[data-offscreen] *,
+.hero-band[data-offscreen] *::before,
+.hero-band[data-offscreen] *::after,
+.hero-band[data-paused] *,
+.hero-band[data-paused] *::before,
+.hero-band[data-paused] *::after {
+  animation-play-state: paused;
+}
+
+/* ============================================================================
+   Tilt card (the icon cards)
+   ----------------------------------------------------------------------------
+   The CSS half of <TiltCard> (src/components/tilt-card.tsx), which writes
+   --tilt-rx/--tilt-ry (the lean) and --glare-x/--glare-y (the pointer) and
+   sets `data-active` while a fine pointer is over the card.
+
+   .tilt-card     leans. While active it follows the pointer on a short
+                  transition; on leaving it settles back on a long one.
+   .tilt-layer    passes the 3D context down. Every wrapper between the card
+                  and a `.tilt-pop` needs it — one flat ancestor and the
+                  lifted child is drawn in the plane again.
+   .tilt-pop      rises off the surface while the card is active.
+   .icon-plinth   the disc of light a render sits on; it widens as the render
+                  lifts, which is what reads as the object leaving the card.
+   .tilt-glare    light under the pointer. Its POSITION is a gradient
+                  argument, so it repaints — but only this one card, and only
+                  while a pointer is moving over it.
+
+   The lifted shadow is a pseudo-element faded by opacity: animating
+   `box-shadow` itself would repaint a blurred spread on every frame.
+   ========================================================================== */
+.tilt-card {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: perspective(62rem) rotateX(var(--tilt-rx, 0deg)) rotateY(var(--tilt-ry, 0deg));
+  transition: transform var(--dur-slower) var(--ease-out-quint), border-color var(--dur-base) var(--ease-out-quart);
+}
+.tilt-card[data-active] {
+  transition-duration: 110ms, var(--dur-base);
+  border-color: oklch(var(--primary-border));
+}
+.tilt-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--e5);
+  opacity: 0;
+  transform: translateZ(-1px);
+  transition: opacity var(--dur-slow) var(--ease-out-quart);
+  pointer-events: none;
+}
+.tilt-card[data-active]::before {
+  opacity: 1;
+}
+.tilt-layer {
+  transform-style: preserve-3d;
+}
+.tilt-pop {
+  transition: transform var(--dur-slower) var(--ease-out-quint);
+}
+.tilt-card[data-active] .tilt-pop {
+  transform: translateZ(3.25rem) scale(1.1);
+}
+.tilt-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(
+    circle 17rem at var(--glare-x, 50%) var(--glare-y, 50%),
+    oklch(var(--primary-base) / 0.16),
+    oklch(var(--primary-base) / 0) 72%
+  );
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-out-quart);
+  pointer-events: none;
+}
+.drenched.tilt-card .tilt-glare {
+  background-image: radial-gradient(
+    circle 17rem at var(--glare-x, 50%) var(--glare-y, 50%),
+    oklch(var(--surface-raised) / 0.2),
+    oklch(var(--surface-raised) / 0) 72%
+  );
+}
+.tilt-card[data-active] .tilt-glare {
+  opacity: 1;
+}
+.icon-plinth {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  background-image: radial-gradient(closest-side, oklch(var(--primary-base) / 0.2), oklch(var(--primary-base) / 0));
+  transition: transform var(--dur-slower) var(--ease-out-quint);
+}
+.icon-plinth-on-drench {
+  background-image: radial-gradient(closest-side, oklch(var(--brass-lift) / 0.34), oklch(var(--brass-lift) / 0));
+}
+.tilt-card[data-active] .icon-plinth {
+  transform: scale(1.28);
 }
 
 /* A single band of light crossing a button on hover — the one place a control

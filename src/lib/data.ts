@@ -1206,6 +1206,10 @@ export const homeContent: Record<
       standfirst: string;
       ctaPrimary: string;
       ctaSecondary: string;
+      /** Labels for the two figures floating in front of the film. The
+       *  figures themselves are not copy: one is the practice's age, the
+       *  other is counted from `diplomas`. */
+      facts: { practice: string; documents: string };
       /** The implant film that carries the hero. It plays by itself; `phases`
        *  are captioned in the order the parts go in. */
       film: {
@@ -1215,6 +1219,9 @@ export const homeContent: Record<
         phases: { label: string; note: string }[];
       };
     };
+    /** The photo band under the hero. The body says only what the photographs
+     *  show: the glass front and the lettering on it. */
+    clinic: { lead: string; title: string; body: string; directions: string };
     problem: {
       title: string;
       description: string;
@@ -1261,6 +1268,7 @@ export const homeContent: Record<
         'El Dr. Francis Valerio le evalúa, coloca el implante y le pone la corona: quien le atiende en la primera visita es quien le hace el tratamiento. También prótesis y ortodoncia.',
       ctaPrimary: 'Agendar una cita',
       ctaSecondary: 'Cómo funciona un implante',
+      facts: { practice: 'años ejerciendo', documents: 'diplomas y certificados' },
       // The osseointegration timings are the ones the implant guide on this
       // site already states (`implantArticles`), so the hero promises nothing
       // the guide does not.
@@ -1275,6 +1283,12 @@ export const homeContent: Record<
           { label: 'Osteointegración', note: 'El hueso se une al titanio en unos meses.' },
         ],
       },
+    },
+    clinic: {
+      lead: 'La consulta',
+      title: 'En Plaza Las Ramblas, en Santiago',
+      body: 'Una fachada de cristal con el rótulo «Dr. Francis Valerio Paulino · Odontología especializada». Detrás está la recepción, y es el propio doctor quien le atiende.',
+      directions: 'Cómo llegar',
     },
     problem: {
       title: 'Cuando falta una pieza, cambia todo lo demás.',
@@ -1359,6 +1373,7 @@ export const homeContent: Record<
         'Dr. Francis Valerio assesses you, places the implant and fits the crown: the person who sees you at the first visit is the one who does the work. Prosthetics and orthodontics too.',
       ctaPrimary: 'Book an appointment',
       ctaSecondary: 'How an implant works',
+      facts: { practice: 'years in practice', documents: 'diplomas and certificates' },
       film: {
         alt: 'Animation of a dental implant: the titanium implant goes into the bone, then the abutment is fitted, then the crown.',
         pause: 'Pause the animation',
@@ -1370,6 +1385,12 @@ export const homeContent: Record<
           { label: 'Osseointegration', note: 'The bone bonds to the titanium over a few months.' },
         ],
       },
+    },
+    clinic: {
+      lead: 'The practice',
+      title: 'At Plaza Las Ramblas, in Santiago',
+      body: 'A glass front lettered “Dr. Francis Valerio Paulino · Odontología especializada”. Reception is just behind it, and the doctor himself is the one who sees you.',
+      directions: 'Finding us',
     },
     problem: {
       title: 'When one tooth goes, everything else shifts.',

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { and, desc, eq } from 'drizzle-orm';
 
 import { Hero } from '@/components/sections/hero';
+import { ClinicSection } from '@/components/sections/clinic';
 import { ProblemSection } from '@/components/sections/problem';
 import { ImplantEducation } from '@/components/sections/implant-education';
 import { DoctorSection } from '@/components/sections/doctor';
@@ -161,7 +162,23 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson }} />
 
       {/* 1 — the claim, one action, and the implant going in. */}
-      <Hero lang={lang} content={t.hero} appointmentHref={appointmentHref} implantHref={`${base}#implantes`} />
+      <Hero
+        lang={lang}
+        content={t.hero}
+        appointmentHref={appointmentHref}
+        implantHref={`${base}#implantes`}
+        diplomaCount={diplomas[lang].length}
+      />
+
+      {/* The place, in photographs: a real door, straight after the film. */}
+      <ClinicSection
+        id="la-clinica"
+        lang={lang}
+        content={t.clinic}
+        address={contactDetails.address[lang]}
+        schedule={contactDetails.schedule[lang]}
+        directionsHref={`${base}#contacto`}
+      />
 
       {/* 2 — why it matters, before anything is offered. */}
       <ProblemSection id="por-que" content={t.problem} />
