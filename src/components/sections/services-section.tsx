@@ -12,6 +12,7 @@ import { DENTAL_ICONS, ToothIcon, type DentalIconName } from '@/components/icons
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { Reveal, RevealGroup, RevealItem } from '@/components/reveal';
+import SpotlightCard from '@/components/reactbits/spotlight-card';
 
 interface ServicesSectionProps {
   id: string;
@@ -43,6 +44,13 @@ export function ServicesSection({
   const ui = generalUiStrings[lang];
   const appointmentsHref = `/${lang}/agendar-cita`;
 
+  /* Implants first and twice as wide: they are the practice's priority, and
+     a grid where all eight weigh the same was hiding that. Matched on the
+     icon, which is language-independent, rather than on the title. */
+  const ordered = [...servicesList].sort(
+    (a, b) => Number(b.iconName === 'Scan') - Number(a.iconName === 'Scan'),
+  );
+
   return (
     <Section id={id} tone="canvas" space="normal">
       <SectionHeading
@@ -53,8 +61,8 @@ export function ServicesSection({
         className="lg:col-span-6"
       />
 
-      <RevealGroup className="grid gap-x-[5%] sm:grid-cols-2 xl:grid-cols-3">
-        {servicesList.map((service) => {
+      <RevealGroup className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {ordered.map((service, index) => {
           const Icon =
             DENTAL_ICONS[service.iconName as DentalIconName] ?? ToothIcon;
           const isOpen = expanded[service.title] ?? false;
@@ -62,8 +70,22 @@ export function ServicesSection({
           const panelId = `svc-${service.title.replace(/\W+/g, '-').toLowerCase()}`;
 
           return (
-            <RevealItem key={service.title}>
-              <article className="border-t border-line py-7">
+            <RevealItem
+              key={service.title}
+              className={cn(index === 0 && 'sm:col-span-2 xl:col-span-2')}
+            >
+              {/* A faint blue light follows the pointer across the card: the
+                  one place the page answers a hover with colour. It only moves
+                  under a fine pointer, and it is a gradient on a card, not a
+                  shadow or a filter, so nothing heavier than a repaint of one
+                  card runs per frame. */}
+              <SpotlightCard
+                theme="light"
+                spotlightColor="oklch(var(--primary-base) / 0.10)"
+                intensity={0.6}
+                className="h-full rounded-xl border border-line"
+              >
+              <article className={cn('p-6', index === 0 && 'lg:p-8')}>
                 <div className="flex items-start gap-4">
                   <Icon className="mt-0.5 h-8 w-8 shrink-0 text-brass-ink" strokeWidth={1.4} />
                   <div className="min-w-0 flex-1">
@@ -108,6 +130,7 @@ export function ServicesSection({
                   </div>
                 </div>
               </article>
+              </SpotlightCard>
             </RevealItem>
           );
         })}

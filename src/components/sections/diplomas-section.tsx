@@ -5,6 +5,7 @@ import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
 import { Reveal } from '@/components/reveal';
 import { CertificateGallery } from '@/components/certificate-gallery';
+import LogoLoop from '@/components/reactbits/logo-loop';
 import { diplomasUi } from '@/lib/data';
 import type { Diploma } from '@/lib/types';
 
@@ -77,6 +78,34 @@ export function DiplomasSection({ id, title, description, diplomasList }: Diplom
       <Reveal className="mb-11 md:mb-14">
         <p className="max-w-measure text-small text-ink-soft">{t.photoNote}</p>
       </Reveal>
+
+      {/* Twenty-three years of training as one moving line, oldest first,
+          before the documents themselves. Text, not logos: drawing an
+          institution's mark from memory would be a forgery of it. The loop
+          pauses on hover, stops under reduced motion, and the gallery below
+          carries the same facts, so the line is never the only place a
+          credential is stated. */}
+      {sorted.length > 0 && (
+        <div className="col-wide mb-10 border-y border-line py-4 md:mb-12">
+          <LogoLoop
+            logos={[...sorted].reverse().map((d) => ({
+              title: `${d.year} · ${d.institution}`,
+              node: (
+                <span className="flex items-baseline gap-3 whitespace-nowrap text-small text-ink-soft">
+                  <span className="font-mono tabular text-brass-ink">{d.year}</span>
+                  <span>{d.institution}</span>
+                </span>
+              ),
+            }))}
+            speed={36}
+            gap={56}
+            logoHeight={24}
+            pauseOnHover
+            fadeOut
+            ariaLabel={title}
+          />
+        </div>
+      )}
 
       {sorted.length === 0 ? (
         <Reveal>

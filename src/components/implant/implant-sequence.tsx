@@ -122,6 +122,7 @@ export function ImplantSequence({ children, alt, scrollHint, phases }: ImplantSe
   const pinRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLSpanElement>(null);
   /* The tier is read from the device, not held as state: the server snapshot
      is 'pending' (it cannot know the device), and the client reads it on
      hydration. Re-read when reduced motion is toggled mid-visit. */
@@ -196,6 +197,7 @@ export function ImplantSequence({ children, alt, scrollHint, phases }: ImplantSe
       const idx = PHASE_ENDS.findIndex((end) => p <= end);
       setPhase(idx < 0 ? PHASE_ENDS.length - 1 : idx);
       if (hintRef.current) hintRef.current.style.opacity = p > 0.03 ? '0' : '1';
+      if (barRef.current) barRef.current.style.transform = `scaleX(${p})`;
     };
 
     const onScroll = () => {
@@ -324,7 +326,7 @@ export function ImplantSequence({ children, alt, scrollHint, phases }: ImplantSe
           >
             {/* Phone: one line at a time, over the stage's foot. */}
             <p className="lg:hidden" aria-live="polite">
-              <span className="block font-mono text-eyebrow uppercase tracking-[0.14em] text-drench-on/60">
+              <span className="block font-mono text-eyebrow uppercase tracking-[0.14em] text-brass-lift">
                 {String(phase + 1).padStart(2, '0')} / {String(phases.length).padStart(2, '0')}
               </span>
               <span className="mt-1 block font-heading text-h4 font-semibold">{active.label}</span>
@@ -333,7 +335,15 @@ export function ImplantSequence({ children, alt, scrollHint, phases }: ImplantSe
 
             {/* Desktop: all four, the current one lit. The order is real (the
                 parts go in in this order), so the numbering is information. */}
-            <ol className="hidden border-t border-drench-on/15 lg:grid lg:grid-cols-4">
+            {/* Progress through the film, in the one blue on this band. A
+                transform on a 1px line: nothing is repainted as it fills. */}
+            <span aria-hidden="true" className="relative block h-px w-full bg-drench-on/15">
+              <span
+                ref={barRef}
+                className="absolute inset-0 origin-left scale-x-0 bg-brass-lift"
+              />
+            </span>
+            <ol className="-mt-4 hidden lg:grid lg:grid-cols-4">
               {phases.map((p, i) => (
                 <li
                   key={p.label}
@@ -343,7 +353,12 @@ export function ImplantSequence({ children, alt, scrollHint, phases }: ImplantSe
                     i === phase ? 'opacity-100' : 'opacity-45',
                   )}
                 >
-                  <span className="font-mono text-eyebrow tabular text-drench-on/60">
+                  <span
+                    className={cn(
+                      'font-mono text-eyebrow tabular',
+                      i === phase ? 'text-brass-lift' : 'text-drench-on/60',
+                    )}
+                  >
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <span className="mt-1 block font-heading text-small font-semibold leading-snug">
@@ -361,7 +376,7 @@ export function ImplantSequence({ children, alt, scrollHint, phases }: ImplantSe
               aria-hidden="true"
               className="flex items-center gap-3 font-mono text-eyebrow uppercase tracking-[0.14em] text-drench-on/55 transition-opacity duration-300"
             >
-              <span className="h-px w-8 bg-drench-on/40" />
+              <span className="h-px w-8 bg-brass-lift/70" />
               {scrollHint}
             </div>
           </div>

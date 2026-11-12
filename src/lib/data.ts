@@ -1304,7 +1304,7 @@ export const homeContent: Record<
       description:
         'Testimonios enviados por pacientes de la consulta. Se publican tras revisarse.',
     },
-    servicesLead: 'Además de implantes y prótesis',
+    servicesLead: 'Lo que hacemos en la consulta',
   },
   en: {
     hero: {
@@ -1391,7 +1391,7 @@ export const homeContent: Record<
       title: 'What patients say',
       description: 'Testimonials submitted by patients of the practice. Published after review.',
     },
-    servicesLead: 'Beyond implants and prosthetics',
+    servicesLead: 'What we do at the practice',
   },
 };
 

@@ -17,9 +17,14 @@
    Bone, graphite and machined titanium. The brand used to be navy and brass,
    which is also the look of the fashion boutique in the same plaza, so the two
    sites read as one brand. The clinic's own material is titanium: neutrals
-   carry almost no chroma, the primary is a steel blue held under 0.06 chroma,
-   and nothing glows. A saturated accent was the other half of the problem:
-   vivid colour on a medical site reads as generated, not as care.
+   carry almost no chroma and nothing glows.
+
+   Blue stays, at the dentist's request, but as the colour of surgical drapes
+   (hue 242, chroma 0.11) used only where something can be done or is active:
+   buttons, links, the current step, icons, figures. It never fills a band and
+   never sits next to a warm metallic. Navy bands with gold accents are exactly
+   what made the old site read like the boutique, so that pairing is the one
+   thing this palette must not drift back into.
 
    The token NAMES are unchanged so no component had to move. Two of them now
    lie about their colour, kept on purpose to avoid a rename across the panel:
@@ -51,10 +56,10 @@
     --ink-soft: 0.435 0.01 240;
     --ink-faint: 0.565 0.01 240;
 
-    --primary-base: 0.40 0.055 245;
-    --primary-hover: 0.34 0.055 245;
-    --primary-soft: 0.948 0.01 245;
-    --primary-border: 0.86 0.025 245;
+    --primary-base: 0.50 0.11 242;
+    --primary-hover: 0.44 0.11 242;
+    --primary-soft: 0.955 0.018 240;
+    --primary-border: 0.86 0.045 240;
 
     /* Drenched full-bleed bands — the Committed half of the colour strategy.
        Dark in BOTH themes, so they always take a light on-colour. */
@@ -66,8 +71,8 @@
        reads as a different colour rather than as a lighter navy — a 20-degree
        gap at this chroma is not enough to separate two blues, and the pair has
        to survive being seen one after the other down a long page. */
-    --cyan: 0.60 0.045 220;
-    --cyan-soft: 0.948 0.012 220;
+    --cyan: 0.62 0.08 225;
+    --cyan-soft: 0.955 0.02 225;
 
     /* Brass survives the rebrand. Navy and brass is a deliberate pairing: it is
        what keeps a blue medical site from reading as generic SaaS, and the
@@ -77,10 +82,10 @@
        to simultaneous contrast. Chroma is up slightly and the hue moved 67.5 ->
        71 to hold the gold reading against blue surroundings. */
     --brass: 0.90 0.006 95;
-    --brass-ink: 0.46 0.04 245; /* text-safe brass on LIGHT grounds */
+    --brass-ink: 0.48 0.11 242; /* text-safe brass on LIGHT grounds */
     /* text-safe brass on DARK grounds. Plain --brass does not clear 4.5:1 on
        --drench-deep, so small brass text on a drenched band needs this instead. */
-    --brass-lift: 0.80 0.01 240;
+    --brass-lift: 0.80 0.075 235;
     --brass-soft: 0.948 0.006 240;
     /* The colour that sits ON a brass fill. Brass is mid-light in light mode
        and lighter still in dark mode, so this must stay DARK in both — using
@@ -199,21 +204,21 @@
        and disappears INTO a dark canvas, so the dark theme takes the ramp from
        the other end. Hue and chroma hold, which is what keeps it recognisably
        the same brand across the toggle. */
-    --primary-base: 0.74 0.05 245;
-    --primary-hover: 0.80 0.045 245;
-    --primary-soft: 0.29 0.025 245;
-    --primary-border: 0.38 0.03 245;
+    --primary-base: 0.74 0.10 240;
+    --primary-hover: 0.80 0.09 240;
+    --primary-soft: 0.29 0.04 242;
+    --primary-border: 0.40 0.05 242;
 
     --drench: 0.24 0.006 230;
     --drench-deep: 0.184 0.009 240;
     --on-drench: 0.965 0.003 95;
 
-    --cyan: 0.74 0.045 220;
-    --cyan-soft: 0.29 0.02 220;
+    --cyan: 0.76 0.07 225;
+    --cyan-soft: 0.29 0.03 225;
 
     --brass: 0.88 0.006 95;
-    --brass-ink: 0.80 0.03 245;
-    --brass-lift: 0.80 0.01 240;
+    --brass-ink: 0.79 0.08 238;
+    --brass-lift: 0.80 0.075 235;
     --brass-soft: 0.29 0.006 240;
     --on-brass: 0.2 0.008 240; /* stays dark: brass is light in this theme too */
 
