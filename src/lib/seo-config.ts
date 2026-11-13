@@ -4,6 +4,7 @@ import { SITE_URL, absoluteUrl, hreflangAlternates, localePath } from './site';
 import {
   contactDetails,
   diplomas,
+  doctorDirectoryProfile,
   implantCluster,
   implantClusterPath,
   services,
@@ -453,6 +454,11 @@ export function getDoctorStructuredData(lang: Language) {
       ? ['Implantología oral', 'Prótesis dental', 'Ortodoncia', 'Rehabilitación oral']
       : ['Oral implantology', 'Dental prosthetics', 'Orthodontics', 'Oral rehabilitation'],
     knowsLanguage: ['es', 'en'],
+    // His directory profile describes the PERSON, so it is asserted on this
+    // node and not on the clinic's `sameAs`: the listing carries its own
+    // office details, and attaching it to the practice would tell a crawler
+    // the two records are one entity. Absent while the constant is null.
+    ...(doctorDirectoryProfile.url ? { sameAs: [doctorDirectoryProfile.url] } : {}),
     hasCredential: diplomas[lang].map((diploma) => ({
       '@type': 'EducationalOccupationalCredential',
       name: diploma.title,

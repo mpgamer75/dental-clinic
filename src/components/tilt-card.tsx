@@ -30,8 +30,23 @@ import { cn } from '@/lib/utils';
  * Fine pointers only. A touch has no hover, and a card that lurches when a
  * thumb lands on it to scroll is a fault, not an effect; reduced motion skips
  * it too. In both cases the card is simply a card.
+ *
+ * `onClick` makes the whole surface a pointer target, for cards that open
+ * something. It is a convenience for mouse and touch only: the card stays a
+ * <div>, so it MUST also contain a real <button> or link that does the same
+ * thing, or the action does not exist for a keyboard or a screen reader. (The
+ * card cannot itself be the <button>: these cards hold headings and
+ * paragraphs, which a button may not contain.)
  */
-export function TiltCard({ className, children }: { className?: string; children: ReactNode }) {
+export function TiltCard({
+  className,
+  children,
+  onClick,
+}: {
+  className?: string;
+  children: ReactNode;
+  onClick?: () => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,7 +94,7 @@ export function TiltCard({ className, children }: { className?: string; children
   }, []);
 
   return (
-    <div ref={ref} className={cn('tilt-card', className)}>
+    <div ref={ref} onClick={onClick} className={cn('tilt-card', className)}>
       {children}
       <span aria-hidden="true" className="tilt-glare" />
     </div>

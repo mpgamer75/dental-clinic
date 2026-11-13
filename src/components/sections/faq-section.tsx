@@ -29,7 +29,7 @@ interface FaqSectionProps {
  */
 export function FaqSection({ id, copy, items, guideHref }: FaqSectionProps) {
   return (
-    <Section id={id} tone="sunk" space="normal">
+    <Section id={id} tone="tint" space="normal">
       <div className="grid gap-x-[6%] gap-y-8 lg:col-span-12 lg:grid-cols-12">
         {/* Sticky: the list is long and the heading should stay with it. */}
         <div className="lg:sticky lg:top-28 lg:col-span-4 lg:self-start">

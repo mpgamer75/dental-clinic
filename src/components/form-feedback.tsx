@@ -133,12 +133,17 @@ export function FormSuccess({
   responseTime,
   resetLabel,
   onReset,
+  children,
 }: {
   title: string;
   message: string;
   responseTime?: string;
   resetLabel?: string;
   onReset?: () => void;
+  /** Extra detail under the message — the booking form's summary and next
+   *  steps. Left-aligned by its own wrapper: a centred list of sentences is
+   *  hard to read, and only the headline benefits from being centred. */
+  children?: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -159,7 +164,7 @@ export function FormSuccess({
       // announcement is meaningful.
       aria-labelledby="form-success-title"
       tabIndex={-1}
-      className="flex animate-fade-up flex-col items-center gap-4 rounded-xl border border-success/30 bg-success/5 p-8 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="flex animate-fade-up flex-col items-center gap-4 rounded-xl border border-success/30 bg-success/5 p-5 text-center sm:p-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <span className="flex h-16 w-16 items-center justify-center rounded-full bg-success/15 text-success">
         <CheckCircle2 className="h-9 w-9" aria-hidden="true" />
@@ -169,6 +174,7 @@ export function FormSuccess({
       </h3>
       <p className="max-w-measure text-ink-soft">{message}</p>
       {responseTime ? <p className="text-small font-medium text-success">{responseTime}</p> : null}
+      {children ? <div className="w-full text-left">{children}</div> : null}
       {onReset && resetLabel ? (
         <Button variant="outline" onClick={onReset} className="mt-2">
           {resetLabel}

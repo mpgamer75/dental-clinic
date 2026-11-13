@@ -728,12 +728,22 @@
    The layers, back to front (markup in sections/hero.tsx and
    implant/implant-film.tsx):
 
-   .hero-aurora   three pools of blue light, drifting. Each is ONE radial
-                  gradient that is already soft — no `filter: blur`, which
-                  would re-rasterise a 900px layer every frame — and each
-                  animates `transform` only.
-   .hero-grid     a fine lattice, masked so it is strongest behind the film
-                  and gone before it reaches the headline. Static.
+   .hero-grid     a fine lattice, strongest behind the film and gone before it
+                  reaches the headline. Static, and UNDER the aurora: it is
+                  the first thing painted, so it lives in the band's own
+                  layer and costs nothing while the lights above it move.
+                  Its fade is a gradient of the ground colour laid over the
+                  lines, not a `mask-image`. Sitting above the drifting
+                  aurora with a mask, it was a band-sized offscreen pass plus
+                  a mask pass on every composited frame, for a still picture.
+   .hero-aurora   three pools of blue light. Each is ONE radial gradient that
+                  is already soft — no `filter: blur`, which would
+                  re-rasterise a 900px layer every frame — and each animates
+                  `transform` only. They drift from 1024px up. Below that
+                  they are still: on a phone the drift is some thirty pixels
+                  over twenty seconds, which nobody sees, and it kept three
+                  screen-sized layers blending on every frame on the devices
+                  least able to afford it.
    .hero-spot     a soft light under the pointer. <ImplantFilm> writes the
                   pointer's position to --spot-x/--spot-y and this layer is
                   TRANSLATED to it; it fades in while a pointer is over the
@@ -758,7 +768,6 @@
 .hero-aurora {
   position: absolute;
   border-radius: 50%;
-  will-change: transform;
 }
 .hero-aurora-a {
   left: -18%;
@@ -766,15 +775,16 @@
   width: 78vw;
   height: 78vw;
   background-image: radial-gradient(closest-side, oklch(var(--primary-base) / 0.62), oklch(var(--primary-base) / 0));
-  animation: aurora-a 22s ease-in-out infinite alternate;
 }
+/* The resting scales are each pool's first keyframe, so the still band on a
+   phone is composed exactly as the drifting one is at the start of its loop. */
 .hero-aurora-b {
   right: -22%;
   top: -10%;
   width: 62vw;
   height: 62vw;
   background-image: radial-gradient(closest-side, oklch(var(--cyan) / 0.34), oklch(var(--cyan) / 0));
-  animation: aurora-b 27s ease-in-out infinite alternate;
+  transform: scale(1.08);
 }
 .hero-aurora-c {
   left: 24%;
@@ -782,7 +792,23 @@
   width: 70vw;
   height: 70vw;
   background-image: radial-gradient(closest-side, oklch(var(--brass-lift) / 0.2), oklch(var(--brass-lift) / 0));
-  animation: aurora-c 31s ease-in-out infinite alternate;
+  transform: scale(0.94);
+}
+/* `will-change` only where the pools move: on a still element it would keep
+   three layers alive for nothing. */
+@media (min-width: 1024px) {
+  .hero-aurora {
+    will-change: transform;
+  }
+  .hero-aurora-a {
+    animation: aurora-a 22s ease-in-out infinite alternate;
+  }
+  .hero-aurora-b {
+    animation: aurora-b 27s ease-in-out infinite alternate;
+  }
+  .hero-aurora-c {
+    animation: aurora-c 31s ease-in-out infinite alternate;
+  }
 }
 @keyframes aurora-a {
   from {
@@ -812,15 +838,22 @@
 .hero-grid {
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(to right, oklch(var(--on-drench) / 0.075) 1px, oklch(var(--on-drench) / 0) 1px),
-    linear-gradient(to bottom, oklch(var(--on-drench) / 0.075) 1px, oklch(var(--on-drench) / 0) 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 62% 78% at 76% 44%, black, transparent 76%);
+  /* First layer: the fade. The band's ground (`.drenched-deep`) from clear at
+     the centre to solid where the lattice ends — over that same ground, the
+     identical picture a mask of the opposite alpha gave. The lines are a
+     touch stronger than the 0.075 they had above the aurora, because the
+     pools of light now pass over them. */
+  --grid-fade: radial-gradient(ellipse 62% 78% at 76% 44%, oklch(var(--drench-deep) / 0), oklch(var(--drench-deep)) 76%);
+  --grid-cell: 56px;
+  background-image: var(--grid-fade),
+    linear-gradient(to right, oklch(var(--on-drench) / 0.085) 1px, oklch(var(--on-drench) / 0) 1px),
+    linear-gradient(to bottom, oklch(var(--on-drench) / 0.085) 1px, oklch(var(--on-drench) / 0) 1px);
+  background-size: auto, var(--grid-cell) var(--grid-cell), var(--grid-cell) var(--grid-cell);
 }
 @media (max-width: 1023.98px) {
   .hero-grid {
-    background-size: 40px 40px;
-    mask-image: radial-gradient(ellipse 95% 46% at 50% 78%, black, transparent 80%);
+    --grid-fade: radial-gradient(ellipse 95% 46% at 50% 78%, oklch(var(--drench-deep) / 0), oklch(var(--drench-deep)) 80%);
+    --grid-cell: 40px;
   }
 }
 
@@ -1027,9 +1060,23 @@
    ========================================================================== */
 .tilt-card {
   position: relative;
-  transform-style: preserve-3d;
-  transform: perspective(62rem) rotateX(var(--tilt-rx, 0deg)) rotateY(var(--tilt-ry, 0deg));
+  /* What the 3D transform below also gives the card: its own stacking
+     context, so a child with a negative z-index stays inside it on a phone. */
+  isolation: isolate;
   transition: transform var(--dur-slower) var(--ease-out-quint), border-color var(--dur-base) var(--ease-out-quart);
+}
+/* The 3D context exists only where the script can use it — the same query it
+   tests before listening. A `perspective()` transform promotes an element to
+   its own GPU layer even at zero degrees, so on a phone every card on the
+   page (and its shadow layer) was held as a separate texture for an effect a
+   touch screen never shows. `isolation` goes because it flattens a 3D
+   context, exactly as `overflow: hidden` does. */
+@media (hover: hover) and (pointer: fine) {
+  .tilt-card {
+    isolation: auto;
+    transform-style: preserve-3d;
+    transform: perspective(62rem) rotateX(var(--tilt-rx, 0deg)) rotateY(var(--tilt-ry, 0deg));
+  }
 }
 .tilt-card[data-active] {
   transition-duration: 110ms, var(--dur-base);
@@ -1042,9 +1089,13 @@
   border-radius: inherit;
   box-shadow: var(--e5);
   opacity: 0;
-  transform: translateZ(-1px);
   transition: opacity var(--dur-slow) var(--ease-out-quart);
   pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tilt-card::before {
+    transform: translateZ(-1px);
+  }
 }
 .tilt-card[data-active]::before {
   opacity: 1;
@@ -1215,6 +1266,102 @@
       animation-timeline: view(inline);
       animation-range: cover 0% cover 100%;
     }
+  }
+}
+
+/* ============================================================================
+   Diploma wall (justified hang)
+   ----------------------------------------------------------------------------
+   The same nine documents, all at once, each at its real shape. In one row
+   every paper has the SAME HEIGHT and a width that follows its own aspect
+   ratio, the way frames are hung on a wall — a shared-size grid cell made the
+   portrait certificates half the size of the landscape ones.
+
+   How a row comes out exact: an item is `content-box` with a flex-basis of 0
+   and a flex-grow equal to its aspect ratio (`--ratio`, set inline), so the
+   row's free width is shared in proportion to the ratios and width / ratio is
+   the same height for all of them. The frame and mat are a FIXED thickness, so
+   they are the item's inline padding, outside that sum; were they inside it, a
+   narrow portrait would lose a larger share of its width to its frame and come
+   out shorter than its neighbours.
+
+   Where rows end is decided in the component, per breakpoint, and marked by
+   zero-height `.diploma-wall-break` items — a wrap left to the browser moved
+   with every viewport width and could strand one document on the last line.
+   A break is a flex line of its own, so the visible distance between two rows
+   is TWICE `row-gap`.
+
+   `--row-max` caps a row that has too few documents to fill the width (the
+   last one, usually): they stop growing and sit centred instead of becoming
+   posters.
+   ========================================================================== */
+.diploma-wall {
+  --frame: 0.625rem;
+  --frame-edge: 0.25rem;
+  --row-max: 11rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  column-gap: 0.75rem;
+  row-gap: 0.875rem;
+}
+.diploma-wall-item {
+  box-sizing: content-box;
+  flex: var(--ratio) 1 0px;
+  min-width: 0;
+  max-width: calc(var(--ratio) * var(--row-max));
+  padding-inline: var(--frame);
+}
+/* The frame is drawn over the item's inline padding (see above), and the
+   caption lines up with the frame's outer edge rather than the paper's. */
+.diploma-wall-frame {
+  margin-inline: calc(-1 * var(--frame));
+  padding: var(--frame-edge);
+}
+.diploma-wall-mat {
+  padding: calc(var(--frame) - var(--frame-edge));
+}
+.diploma-wall-caption {
+  margin-inline: calc(-1 * var(--frame));
+}
+.diploma-wall-break {
+  display: none;
+  flex-basis: 100%;
+  height: 0;
+}
+@media (max-width: 639.98px) {
+  /* On a phone the newest document has a row to itself, so it may be taller
+     than a shared row is allowed to be. */
+  .diploma-wall-item[data-lead] {
+    --row-max: 20rem;
+  }
+  .diploma-wall-break[data-phone] {
+    display: block;
+  }
+}
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .diploma-wall {
+    --frame: 0.875rem;
+    --frame-edge: 0.3125rem;
+    --row-max: 15rem;
+    column-gap: 1.25rem;
+    row-gap: 1.125rem;
+  }
+  .diploma-wall-break[data-mid] {
+    display: block;
+  }
+}
+@media (min-width: 1024px) {
+  .diploma-wall {
+    --frame: 1rem;
+    --frame-edge: 0.375rem;
+    --row-max: 18rem;
+    column-gap: 1.75rem;
+    row-gap: 1.5rem;
+  }
+  .diploma-wall-break[data-wide] {
+    display: block;
   }
 }
 

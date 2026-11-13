@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { ChevronLeft, ChevronRight, ExternalLink, X, ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, GalleryHorizontal, LayoutGrid, X, ZoomIn } from 'lucide-react';
 
 import LogoLoop from '@/components/reactbits/logo-loop';
 import type { diplomasUi } from '@/lib/data';
@@ -11,35 +11,38 @@ import type { Diploma } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 type ShowcaseCopy = (typeof diplomasUi)['es'];
+type ImageSizes = Record<string, { width: number; height: number }>;
+type View = 'wall' | 'deck';
 
 /* ───────────────────────────────────────────────────────────────────────────
    The diploma showcase
 
-   Nine documents, twenty-three years. They have been shown two ways before:
+   Nine documents, twenty-three years. They have been shown three ways before:
    a 3-up grid of large cards (2,300px of desktop page, five and a half screens
-   on a phone) and then a flat strip of thumbnails that solved the length and
-   made the documents look like an afterthought — the same weight as a row of
-   partner logos.
+   on a phone), a flat strip of thumbnails that solved the length and made the
+   documents look like an afterthought, and a deck that faces one certificate
+   at the visitor while its neighbours turn away. The deck is a good way to
+   read ONE document and a poor way to see the record: eight of the nine are
+   off to the side or off screen, and the answer to "how much training is
+   there?" is a counter that says 01 / 09.
 
-   This is a deck. One certificate faces the visitor at full size while its
-   neighbours turn away into depth on either side, so the row reads as "one
-   document at a time, and there are more" instead of "nine small pictures".
-   Underneath it a row of years is both the index and the control: it shows
-   where in the record the centred document sits, and pressing a year brings
-   that document forward.
+   So the band now has two views of the same documents and a switch between
+   them:
 
-   How the depth is drawn: each card's rotation is a CSS animation on its own
-   inline VIEW TIMELINE (`.coverflow-item`, in globals.css) — its progress is
-   the card's position across the strip, scrubbed by the compositor as the
-   strip scrolls. No scroll handler, no per-frame script, nothing to hydrate.
-   Where view timelines are unsupported, or under reduced motion, the rule
-   does not apply and the deck is an ordinary flat, snapping strip.
+     wall  (the default) every certificate at once, hung in rows like frames
+           on a wall — one height per row, each at its own real shape. This is
+           the view that answers "show me the diplomas".
+     deck  one at a time, larger, with the year row as index and control.
 
-   Why a fixed mat and `object-contain`: every file is a handheld photograph of
-   paper — keystone distortion, glass glare, aspect ratios from 0.62 to 1.49.
+   Either way a press opens the same full-screen lightbox, and only the view
+   being looked at is mounted, so the other one's images are never requested.
+
+   Why a mat and never a crop: every file is a handheld photograph of paper —
+   keystone distortion, glass glare, aspect ratios from 0.62 to 1.49.
    `object-cover` in a shared box crops each landscape certificate to a sliver
-   of its middle; a uniform mat with the document floating inside it at its
-   real shape neither crops nor leaves ragged holes.
+   of its middle. The wall gives each document a frame of its own shape; the
+   deck, whose cards must share one size, floats the document in a uniform mat
+   with `object-contain`.
 
    It sits on a blue band: paper is the lightest thing on the page, and against
    the pale grounds it used to sit on it had no edge.
@@ -76,21 +79,279 @@ const FOCUS_ON_BAND =
 interface DiplomaShowcaseProps {
   /** Already sorted by the caller — newest first. */
   items: Diploma[];
+  /** Pixel size of each photograph, by diploma id. */
+  sizes: ImageSizes;
   ui: ShowcaseCopy;
   title: string;
   description: string;
 }
 
-export function DiplomaShowcase({ items, ui, title, description }: DiplomaShowcaseProps) {
+/** What both views need in order to hand a document to the lightbox. */
+interface ViewProps {
+  items: Diploma[];
+  ui: ShowcaseCopy;
+  onOpen: (index: number) => void;
+  /** Registers the trigger of document `index`, so focus can go back to it. */
+  registerCard: (index: number, node: HTMLButtonElement | null) => void;
+}
+
+export function DiplomaShowcase({ items, sizes, ui, title, description }: DiplomaShowcaseProps) {
+  const [view, setView] = useState<View>('wall');
   const [opened, setOpened] = useState<number | null>(null);
-  /** The card on the strip's centre line. */
-  const [centred, setCentred] = useState(0);
-  const scrollerRef = useRef<HTMLUListElement>(null);
   const cardRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const lastOpened = useRef(0);
 
   const years = items.map((d) => Number.parseInt(d.year, 10)).filter(Number.isFinite);
   const range = years.length > 0 ? `${Math.min(...years)}–${Math.max(...years)}` : null;
+
+  const openAt = useCallback((index: number) => {
+    lastOpened.current = index;
+    setOpened(index);
+  }, []);
+
+  const registerCard = useCallback((index: number, node: HTMLButtonElement | null) => {
+    cardRefs.current[index] = node;
+  }, []);
+
+  if (items.length === 0) {
+    return <p className="text-drench-on/80">{ui.empty}</p>;
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+        <div className="reveal min-w-0">
+          {range && (
+            <p className="tabular mb-3 text-small font-medium text-brass-lift">{fillTokens(ui.rail, { range })}</p>
+          )}
+          <h2 className="font-heading text-h2 font-semibold text-drench-on">{title}</h2>
+          <p className="mt-4 max-w-measure leading-relaxed text-drench-on/80">{description}</p>
+        </div>
+
+        {/* Two toggle buttons in a named group rather than a radiogroup or
+            tabs: both of those promise arrow-key behaviour that then has to be
+            scripted, and a pressed/not-pressed pair is announced correctly by
+            every screen reader as it is. */}
+        {items.length > 1 && (
+          <div
+            role="group"
+            aria-label={ui.viewLabel}
+            className="flex shrink-0 gap-1 rounded-full border border-drench-on/30 p-1"
+          >
+            <ViewButton pressed={view === 'wall'} onClick={() => setView('wall')}>
+              <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+              {ui.viewWall}
+            </ViewButton>
+            <ViewButton pressed={view === 'deck'} onClick={() => setView('deck')}>
+              <GalleryHorizontal className="h-4 w-4" aria-hidden="true" />
+              {ui.viewDeck}
+            </ViewButton>
+          </div>
+        )}
+      </div>
+
+      {view === 'wall' ? (
+        <DiplomaWall items={items} sizes={sizes} ui={ui} onOpen={openAt} registerCard={registerCard} />
+      ) : (
+        <DiplomaDeck items={items} ui={ui} onOpen={openAt} registerCard={registerCard} />
+      )}
+
+      <CertificateLightbox
+        items={items}
+        ui={ui}
+        index={opened}
+        onIndexChange={openAt}
+        onClose={() => setOpened(null)}
+        restoreFocus={() => cardRefs.current[lastOpened.current]?.focus({ preventScroll: true })}
+      />
+    </div>
+  );
+}
+
+function ViewButton({
+  pressed,
+  onClick,
+  children,
+}: {
+  pressed: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={cn(
+        'flex min-h-11 items-center gap-2 rounded-full px-4 text-small font-semibold transition-colors duration-base ease-out-quart',
+        FOCUS_ON_BAND,
+        pressed ? 'bg-brass text-brass-on' : 'text-drench-on/80 hover:bg-drench-on/10 hover:text-drench-on',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   The wall
+
+   Rows of documents that share a height and keep their own widths (the layout
+   itself is `.diploma-wall` in globals.css, and explains how a row comes out
+   exact). What is decided here is WHERE ROWS END, once per breakpoint, from
+   the aspect ratios alone — so the hang is the same on every screen of a
+   given class, cannot shift as images load, and is already in the server's
+   HTML. Nothing is measured in the browser.
+
+   A row's height is its width divided by the sum of its documents' aspect
+   ratios, so "how many per row" is really "how large a ratio sum": about 2.75
+   on a phone (two documents — three would put a certificate at postage-stamp
+   size), 3 on a tablet, 4.3 on a desktop (three or four).
+
+   On a phone the newest document also gets a row to itself. Two-up is what
+   keeps nine documents to about two screens instead of five, but it shows
+   none of them large enough to recognise at a glance; one full-width
+   certificate at the top makes the band read as "these are real documents"
+   before the visitor has pressed anything.
+
+   No tilt, no parallax: nine independently tilting frames would be nine
+   composited layers reacting to one pointer. A frame lifts a few pixels on
+   hover and gives slightly under the finger — transform only.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/** Used when a photograph's size is not on file: an ordinary landscape
+ *  certificate, so an unmeasured document still hangs sensibly. */
+const FALLBACK_RATIO = 4 / 3;
+
+/** Indexes after which a row ends: a row takes documents until the next one
+ *  would push its ratio sum past `limit`. The last index is never included —
+ *  nothing follows it. */
+function rowEnds(ratios: number[], limit: number, leadAlone: boolean): Set<number> {
+  const ends = new Set<number>();
+  let sum = 0;
+  ratios.forEach((ratio, i) => {
+    sum += ratio;
+    const next = ratios[i + 1];
+    if (next === undefined) return;
+    if ((leadAlone && i === 0) || sum + next > limit) {
+      ends.add(i);
+      sum = 0;
+    }
+  });
+  return ends;
+}
+
+function DiplomaWall({ items, sizes, ui, onOpen, registerCard }: ViewProps & { sizes: ImageSizes }) {
+  const ratios = items.map((d) => {
+    const size = sizes[d.id];
+    return size && size.height > 0 ? size.width / size.height : FALLBACK_RATIO;
+  });
+  const phone = rowEnds(ratios, 2.75, true);
+  const mid = rowEnds(ratios, 3, false);
+  const wide = rowEnds(ratios, 4.3, false);
+
+  return (
+    <ul aria-label={ui.stripLabel} className="diploma-wall mt-10 sm:mt-12">
+      {items.flatMap((d, i) => {
+        const ratio = ratios[i] ?? FALLBACK_RATIO;
+        const item = (
+          <li
+            key={d.id}
+            className="diploma-wall-item"
+            data-lead={i === 0 ? '' : undefined}
+            style={{ '--ratio': ratio.toFixed(4) } as CSSProperties}
+          >
+            <button
+              ref={(node) => registerCard(i, node)}
+              type="button"
+              onClick={() => onOpen(i)}
+              aria-label={fillTokens(ui.openLabel, { title: d.title, institution: d.institution, year: d.year })}
+              className={cn('group block w-full cursor-zoom-in rounded-md text-left', FOCUS_ON_BAND, 'focus-visible:ring-offset-4')}
+            >
+              {/* Frame, mat, paper. Frame and mat use tokens that are LIGHT in
+                  both themes (`brass`, `drench-on`): a mat that followed the
+                  theme turned near-black in dark mode, behind paper. */}
+              <span className="diploma-wall-frame block rounded-md bg-brass shadow-e3 transition-transform duration-base ease-out-quart group-hover:-translate-y-1 group-active:translate-y-0 group-active:scale-[0.985] motion-reduce:transition-none">
+                <span className="diploma-wall-mat relative block rounded-sm bg-drench-on">
+                  <span className="relative block w-full" style={{ aspectRatio: ratio.toFixed(4) }}>
+                    <Image
+                      src={d.image}
+                      /* Decorative: the button's accessible name already names
+                         the document, and the caption repeats it. */
+                      alt=""
+                      fill
+                      /* The largest a document is drawn at each breakpoint: the
+                         phone's full-width lead, a two-up tablet row, a capped
+                         desktop row. Over-stating it only costs bytes; under-
+                         stating it would blur the type. */
+                      sizes="(min-width: 1024px) 420px, (min-width: 640px) 46vw, 88vw"
+                      /* Text-bearing documents: JPEG ringing around 8pt type
+                         is far more destructive than on a photo of a room. */
+                      quality={88}
+                      loading="lazy"
+                      className="object-contain"
+                    />
+                  </span>
+                  <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-sm" style={MAT_INSET} />
+                </span>
+              </span>
+
+              {/* `hyphens-auto`: beside a landscape certificate, a portrait
+                  one is barely a hundred pixels wide on a phone, and
+                  "Implantología" does not fit on one line of that. */}
+              <span className="diploma-wall-caption mt-3 block hyphens-auto break-words">
+                <span className="tabular block text-small font-semibold text-brass-lift">{d.year}</span>
+                <span className="mt-0.5 block font-heading text-small font-semibold leading-snug text-drench-on line-clamp-3 lg:text-body">
+                  {d.title}
+                </span>
+                <span className="mt-1 block text-small leading-snug text-drench-on/75 line-clamp-2">
+                  {d.institution}
+                </span>
+              </span>
+            </button>
+          </li>
+        );
+
+        const endsRow = phone.has(i) || mid.has(i) || wide.has(i);
+        if (!endsRow) return [item];
+        return [
+          item,
+          <li
+            key={`${d.id}-break`}
+            role="presentation"
+            aria-hidden="true"
+            className="diploma-wall-break"
+            data-phone={phone.has(i) ? '' : undefined}
+            data-mid={mid.has(i) ? '' : undefined}
+            data-wide={wide.has(i) ? '' : undefined}
+          />,
+        ];
+      })}
+    </ul>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   The deck
+
+   One certificate faces the visitor at full size while its neighbours turn
+   away into depth on either side. Underneath it a row of years is both the
+   index and the control: it shows where in the record the centred document
+   sits, and pressing a year brings that document forward.
+
+   How the depth is drawn: each card's rotation is a CSS animation on its own
+   inline VIEW TIMELINE (`.coverflow-item`, in globals.css) — its progress is
+   the card's position across the strip, scrubbed by the compositor as the
+   strip scrolls. No scroll handler, no per-frame script. Where view timelines
+   are unsupported, or under reduced motion, the rule does not apply and the
+   deck is an ordinary flat, snapping strip.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+function DiplomaDeck({ items, ui, onOpen, registerCard }: ViewProps) {
+  /** The card on the strip's centre line. */
+  const [centred, setCentred] = useState(0);
+  const scrollerRef = useRef<HTMLUListElement>(null);
+  const total = items.length;
 
   /* Which card is centred, from one observer whose root is the strip narrowed
      to a sliver down its middle: a card "intersects" exactly while it crosses
@@ -112,7 +373,7 @@ export function DiplomaShowcase({ items, ui, title, description }: DiplomaShowca
     );
     for (const child of Array.from(scroller.children)) io.observe(child);
     return () => io.disconnect();
-  }, [items.length]);
+  }, [total]);
 
   const bringForward = useCallback((index: number) => {
     const scroller = scrollerRef.current;
@@ -133,58 +394,40 @@ export function DiplomaShowcase({ items, ui, title, description }: DiplomaShowca
     });
   }, []);
 
-  const openAt = useCallback((index: number) => {
-    lastOpened.current = index;
-    setOpened(index);
-  }, []);
-
-  if (items.length === 0) {
-    return <p className="text-drench-on/80">{ui.empty}</p>;
-  }
-
-  const total = items.length;
-
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
-        <div className="reveal min-w-0">
-          {range && (
-            <p className="tabular mb-3 text-small font-medium text-brass-lift">{fillTokens(ui.rail, { range })}</p>
-          )}
-          <h2 className="font-heading text-h2 font-semibold text-drench-on">{title}</h2>
-          <p className="mt-4 max-w-measure leading-relaxed text-drench-on/80">{description}</p>
-        </div>
-
-        {total > 1 && (
-          <div className="flex shrink-0 items-center gap-4">
-            {/* Decorative duplicate of the year row's current state. */}
-            <p aria-hidden="true" className="tabular font-heading text-h4 font-semibold text-drench-on">
-              {String(centred + 1).padStart(2, '0')}
-              <span className="text-drench-on/45"> / {String(total).padStart(2, '0')}</span>
-            </p>
-            <div className="flex items-center gap-2">
-              <DeckButton label={ui.scrollBack} disabled={centred === 0} onClick={() => bringForward(centred - 1)}>
-                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-              </DeckButton>
-              <DeckButton
-                label={ui.scrollForward}
-                disabled={centred === total - 1}
-                onClick={() => bringForward(centred + 1)}
-              >
-                <ChevronRight className="h-5 w-5" aria-hidden="true" />
-              </DeckButton>
-            </div>
+      {total > 1 && (
+        <div className="mt-8 flex items-center justify-end gap-4">
+          {/* Decorative duplicate of the year row's current state. */}
+          <p aria-hidden="true" className="tabular font-heading text-h4 font-semibold text-drench-on">
+            {String(centred + 1).padStart(2, '0')}
+            <span className="text-drench-on/45"> / {String(total).padStart(2, '0')}</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <DeckButton label={ui.scrollBack} disabled={centred === 0} onClick={() => bringForward(centred - 1)}>
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            </DeckButton>
+            <DeckButton
+              label={ui.scrollForward}
+              disabled={centred === total - 1}
+              onClick={() => bringForward(centred + 1)}
+            >
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
+            </DeckButton>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Twenty-three years of training as one moving line, before the
           documents themselves. Text, not logos: drawing an institution's mark
           from memory would be a forgery of it. Hidden from assistive tech —
           the deck below states every one of these facts — and the loop stops
-          off screen, on hover and under reduced motion. */}
+          off screen, on hover and under reduced motion. It belongs to this
+          view only: on the wall every year and institution is already on
+          screen, and a perpetual animation above nine still documents would
+          be motion for nothing. */}
       {total > 2 && (
-        <div aria-hidden="true" className="mt-10 border-y border-drench-on/15 py-3.5">
+        <div aria-hidden="true" className="mt-6 border-y border-drench-on/15 py-3.5">
           <LogoLoop
             logos={[...items].reverse().map((d) => ({
               node: (
@@ -222,11 +465,9 @@ export function DiplomaShowcase({ items, ui, title, description }: DiplomaShowca
           <li key={d.id} data-index={i} className="coverflow-slot shrink-0 snap-center">
             <div className="coverflow-item">
               <button
-                ref={(node) => {
-                  cardRefs.current[i] = node;
-                }}
+                ref={(node) => registerCard(i, node)}
                 type="button"
-                onClick={() => openAt(i)}
+                onClick={() => onOpen(i)}
                 onFocus={() => bringForward(i)}
                 aria-label={fillTokens(ui.openLabel, { title: d.title, institution: d.institution, year: d.year })}
                 className={cn('group block w-full rounded-2xl text-left', FOCUS_ON_BAND, 'focus-visible:ring-offset-4')}
@@ -309,15 +550,6 @@ export function DiplomaShowcase({ items, ui, title, description }: DiplomaShowca
           </ol>
         </div>
       )}
-
-      <CertificateLightbox
-        items={items}
-        ui={ui}
-        index={opened}
-        onIndexChange={openAt}
-        onClose={() => setOpened(null)}
-        restoreFocus={() => cardRefs.current[lastOpened.current]?.focus({ preventScroll: true })}
-      />
     </div>
   );
 }

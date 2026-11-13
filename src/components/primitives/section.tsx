@@ -40,6 +40,21 @@ interface SectionProps {
   space?: keyof typeof SPACE;
   /** Adds the plaster grain overlay. Only meaningful on canvas/drench tones. */
   grain?: boolean;
+  /**
+   * Draws the band as a sheet laid over the one before it: rounded top
+   * corners, pulled up so the previous band's colour shows in the corners.
+   *
+   * Use it where a blue band meets a light one, in either direction. Those
+   * joins used to be a hard horizontal line across the full width, the
+   * strongest contrast on the page spent on a seam; a rounded sheet turns the
+   * seam into an edge that belongs to something. Do NOT use it between two
+   * light bands — a curve between two near-whites is invisible and only adds
+   * an overlap to get wrong.
+   *
+   * The band before must not keep anything in its last 3rem: that strip is
+   * covered. Every band's own vertical padding already guarantees it.
+   */
+  sheet?: boolean;
   className?: string;
   /** Extra classes on the inner grid, e.g. row gaps. */
   shellClassName?: string;
@@ -70,13 +85,21 @@ export function Section({
   tone = 'canvas',
   space = 'normal',
   grain = false,
+  sheet = false,
   className,
   shellClassName,
 }: SectionProps) {
   return (
     <section
       id={id}
-      className={cn('relative isolate', TONE[tone], SPACE[space], grain && 'grain', className)}
+      className={cn(
+        'relative isolate',
+        TONE[tone],
+        SPACE[space],
+        grain && 'grain',
+        sheet && '-mt-8 rounded-t-[2rem] sm:-mt-12 sm:rounded-t-[3rem]',
+        className,
+      )}
     >
       {/* No `w-full` here. Tailwind utilities are emitted after the components
           layer, so `w-full` beat `.shell`'s own

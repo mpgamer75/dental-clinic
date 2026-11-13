@@ -34,7 +34,7 @@ export function BookingSection({ id, lang, content, appointmentHref, schedule }:
   const links = contactLinkLabels(lang);
 
   return (
-    <Section id={id} tone="drench" space="loose">
+    <Section id={id} tone="drench" space="loose" sheet>
       <div className="grid gap-x-[6%] gap-y-12 lg:col-span-12 lg:grid-cols-12">
         <div className="lg:col-span-5">
           <Reveal>

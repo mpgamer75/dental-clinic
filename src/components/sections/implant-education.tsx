@@ -5,11 +5,11 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Section } from '@/components/primitives/section';
 import { SectionHeading } from '@/components/section-heading';
-import { RevealGroup, RevealItem } from '@/components/reveal';
-import { TiltCard } from '@/components/tilt-card';
-import type { implantEducation } from '@/lib/data';
+import { ImplantPartExplorer } from '@/components/implant-part-explorer';
+import type { ImplantPartKey, implantEducation, implantPartDetails } from '@/lib/data';
 
 type ImplantCopy = (typeof implantEducation)['es'];
+type ImplantPartCopy = (typeof implantPartDetails)['es'];
 
 interface GuideLink {
   href: string;
@@ -20,9 +20,12 @@ interface GuideLink {
 interface ImplantEducationProps {
   id?: string;
   content: ImplantCopy;
+  /** The long explanation behind each part's card, in the active language. */
+  details: ImplantPartCopy;
   appointmentHref: string;
-  /** The implant guide's pages, resolved on the server. */
-  guide: { allHref: string; links: GuideLink[] };
+  /** The implant guide's pages, resolved on the server. `partHrefs` is where
+   *  each part's explanation sends the reader for more. */
+  guide: { allHref: string; links: GuideLink[]; partHrefs: Record<ImplantPartKey, string> };
 }
 
 /**
@@ -35,9 +38,10 @@ interface ImplantEducationProps {
  * the hero is the part the film cannot show: what each piece is FOR, and how
  * long the treatment takes. So this is now words and a timeline.
  *
- * A server component. The cards' tilt is the only script in it.
+ * A server component. The script in it is the parts row: the cards' tilt, and
+ * the dialog a card opens (<ImplantPartExplorer>).
  */
-export function ImplantEducation({ id = 'implantes', content, appointmentHref, guide }: ImplantEducationProps) {
+export function ImplantEducation({ id = 'implantes', content, details, appointmentHref, guide }: ImplantEducationProps) {
   /* `tint`: the band the page most wants read, marked with the brand colour at
      tonal weight. Every token inside keeps its ordinary ink ramp on it. */
   return (
@@ -52,40 +56,48 @@ export function ImplantEducation({ id = 'implantes', content, appointmentHref, g
 
       {/* ── The parts ─────────────────────────────────────────────── */}
       <h3 className="font-body text-small font-semibold text-brass-ink">{content.partsTitle}</h3>
-      <RevealGroup as="ol" className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {content.parts.map((part, index) => (
-          <RevealItem key={part.key} as="li" index={index} className="h-full">
-            {/* The card leans towards the pointer and the render lifts off
-                it (see <TiltCard>). The disc behind the render is its
-                plinth: a pool of the brand blue it visibly rises out of. */}
-            <TiltCard className="h-full rounded-2xl border border-line bg-surface">
-              <div className="tilt-layer flex h-full flex-col p-6">
-                <div className="tilt-layer flex items-start justify-between gap-4">
-                  <span className="tilt-layer relative flex h-28 w-28 items-center justify-center">
-                    <span aria-hidden="true" className="icon-plinth" />
-                    {/* A render of the part itself, in the same light as the
-                        hero film, on a transparent ground so it sits on the
-                        card in either theme. Decorative: the heading names it. */}
-                    <Image
-                      src={`/images/icons/${part.key}.webp`}
-                      alt=""
-                      width={112}
-                      height={112}
-                      loading="lazy"
-                      className="tilt-pop relative h-24 w-24 object-contain"
-                    />
-                  </span>
-                  <span aria-hidden="true" className="tabular font-heading text-h4 font-semibold text-primary-border">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                </div>
-                <h4 className="mt-5 font-heading text-h4 font-semibold text-ink">{part.label}</h4>
-                <p className="mt-2 leading-relaxed text-ink-soft">{part.desc}</p>
+      {/* Each card opens the full explanation of its part. The faces are
+          rendered here and handed to the client component as nodes, so the
+          only thing that hydrates is the press and the dialog. The card leans
+          towards the pointer and the render lifts off it (see <TiltCard>);
+          the disc behind the render is its plinth, a pool of the brand blue
+          it visibly rises out of. */}
+      <ImplantPartExplorer
+        items={content.parts.map((part, index) => ({
+          key: part.key,
+          label: part.label,
+          face: (
+            <>
+              <div className="tilt-layer flex items-start justify-between gap-4">
+                <span className="tilt-layer relative flex h-28 w-28 items-center justify-center">
+                  <span aria-hidden="true" className="icon-plinth" />
+                  {/* A render of the part itself, in the same light as the
+                      hero film, on a transparent ground so it sits on the
+                      card in either theme. Decorative: the heading names it. */}
+                  <Image
+                    src={`/images/icons/${part.key}.webp`}
+                    alt=""
+                    width={112}
+                    height={112}
+                    loading="lazy"
+                    className="tilt-pop relative h-24 w-24 object-contain"
+                  />
+                </span>
+                <span aria-hidden="true" className="tabular font-heading text-h4 font-semibold text-primary-border">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
               </div>
-            </TiltCard>
-          </RevealItem>
-        ))}
-      </RevealGroup>
+              <h4 className="mt-5 font-heading text-h4 font-semibold text-ink">{part.label}</h4>
+              <p className="mt-2 leading-relaxed text-ink-soft">{part.desc}</p>
+            </>
+          ),
+        }))}
+        details={details.parts}
+        ui={details.ui}
+        guideHrefs={guide.partHrefs}
+        appointmentHref={appointmentHref}
+        ctaLabel={content.ctaLabel}
+      />
 
       {/* ── The treatment ─────────────────────────────────────────────
           A real sequence with real waiting in it, so it is drawn as a line

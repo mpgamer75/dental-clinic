@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useForm, useFormContext, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,6 +17,7 @@ import {
   Check,
   Clock,
   Loader2,
+  Phone,
   PhoneCall,
   ShieldCheck,
   type LucideIcon,
@@ -35,13 +37,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { WhatsAppIcon } from '@/components/icons/whatsapp';
 import { useToast } from '@/hooks/use-toast';
 import { submitAppointmentForm } from '@/app/actions';
 import type {
@@ -52,7 +48,14 @@ import type {
   ZodMessages,
 } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
-import { actionMessages, appointmentBooking, formCommon, formTranslations } from '@/lib/data';
+import { TEL_HREF, contactLinkLabels, whatsappHref } from '@/lib/contact';
+import {
+  actionMessages,
+  appointmentBooking,
+  appointmentFormExtras,
+  formCommon,
+  formTranslations,
+} from '@/lib/data';
 import { cn } from '@/lib/utils';
 import {
   CharacterCounter,
@@ -178,6 +181,32 @@ function formatShortDate(date: Date, lang: Language): string {
   // reads as a stray mark inside a sentence-shaped button label; English wants
   // to keep it ("Monday, August 10").
   return lang === 'es' ? formatted.replace(',', '') : formatted;
+}
+
+/** "lunes 16" / "Monday 16" for the shortcut buttons under the date field.
+ *  Built from two parts rather than one format call because the separator Intl
+ *  puts between weekday and day differs by locale ("lun, 16" / "Mon 16") and a
+ *  button label wants none. */
+function formatChipDate(date: Date, lang: Language): string {
+  const weekday = new Intl.DateTimeFormat(localeTag(lang), { weekday: 'long' }).format(date);
+  return `${weekday} ${date.getDate()}`;
+}
+
+/**
+ * The next few days the clinic is open, starting TOMORROW.
+ *
+ * Today is left out on purpose. A request sent at four in the afternoon for
+ * "today" cannot be honoured by a callback the next morning, and the page
+ * already tells anyone who needs to be seen today to phone instead.
+ */
+function upcomingOpenDays(from: Date, count: number): Date[] {
+  const days: Date[] = [];
+  const cursor = new Date(from);
+  while (days.length < count) {
+    cursor.setDate(cursor.getDate() + 1);
+    if (!isClinicClosed(cursor)) days.push(new Date(cursor));
+  }
+  return days;
 }
 
 /* ============================================================================
@@ -372,18 +401,46 @@ const REASSURANCE_ICON: Record<'call' | 'reply' | 'cost', LucideIcon> = {
   cost: ShieldCheck,
 };
 
+/**
+ * The services that have a render in `public/images/icons/<key>.webp` — the
+ * same three the homepage weights above general dentistry. Listed here rather
+ * than read off `services` because that export carries every description and
+ * must not be pulled into this client bundle; a key missing from this list
+ * simply falls into the general group, without a picture.
+ */
+const SPECIALTY_KEYS: readonly ServiceKey[] = ['implants', 'prosthetics', 'orthodontics'];
+
 /* ============================================================================
    Presentation helpers
    ========================================================================== */
 
 /* The shared field chrome (see form-feedback.tsx) plus this form's ground.
    `ring-offset-card` overrides the `ring-offset-background` baked into the base
-   Input/Textarea/SelectTrigger: this form sits on `bg-card`, not
+   Input/Textarea: this form sits on `bg-card`, not
    `bg-background`, so the 2px focus-ring offset was drawn in canvas tone on top
    of a near-white card — a faint mismatched halo around every focused control. */
 const fieldClass = cn(baseFieldClass, 'ring-offset-card');
 const textareaClass = cn(baseTextareaClass, 'ring-offset-card');
 const labelClass = fieldLabelClass;
+
+/* Focus ring for a choice card whose real control is the visually hidden radio
+   beside it (`peer`). Both `peer-focus` and `peer-focus-visible`: a hidden
+   radio that is clicked through its label reports :focus but, in Safari, not
+   :focus-visible, and with only the latter the card a patient just tapped
+   showed no sign of holding focus. */
+const choiceFocusClass = cn(
+  'peer-focus:ring-2 peer-focus:ring-ring peer-focus:ring-offset-2 peer-focus:ring-offset-card',
+  'peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card',
+);
+
+/** What the confirmation panel repeats back, captured before the form is
+ *  reset — after `form.reset()` the values it would read are gone. */
+interface SubmittedRequest {
+  message: string;
+  service: string;
+  day: string;
+  time: string;
+}
 
 /**
  * The step chip in a fieldset legend, and the form's only progress affordance.
@@ -450,6 +507,145 @@ function GroupStatus({
         {'. '}
       </span>
     </>
+  );
+}
+
+type GroupKey = keyof typeof GROUPS;
+const GROUP_KEYS = Object.keys(GROUPS) as GroupKey[];
+const REQUIRED_FIELDS = GROUP_KEYS.flatMap((key) => GROUPS[key] as readonly AppointmentField[]);
+
+/**
+ * Which of the three groups currently pass the live schema.
+ *
+ * Same honesty rule as `GroupStatus`: a group is done when its values would
+ * validate, not when its boxes are non-empty. One `useWatch` over every
+ * required field, so only the small leaf that calls this re-renders while the
+ * patient types — the form body never does.
+ */
+function useGroupCompletion(schema: AppointmentSchema): Record<GroupKey, boolean> {
+  const { control } = useFormContext<AppointmentFormValues>();
+  const values = useWatch({ control, name: [...REQUIRED_FIELDS] }) as unknown[];
+  const passes = (field: AppointmentField) =>
+    (schema.shape[field] as z.ZodTypeAny).safeParse(values[REQUIRED_FIELDS.indexOf(field)]).success;
+
+  return {
+    who: GROUPS.who.every(passes),
+    what: GROUPS.what.every(passes),
+    when: GROUPS.when.every(passes),
+  };
+}
+
+/**
+ * The form at a glance: three named parts, each filling in as it is finished.
+ *
+ * This is NOT the wizard bar the note on `GroupStatus` rejects — nothing is
+ * hidden behind it and it does not move. It answers the question a long form
+ * raises before the first field is touched ("how much is this?") with "three
+ * short parts", which the step chips cannot do because the second and third
+ * are below the fold on a phone.
+ *
+ * `aria-hidden`: every fact here is already announced by the fieldset legends
+ * ("Paso 2 de 3. Completado."), so exposing the strip as well would read the
+ * whole structure of the form twice before reaching the first field.
+ *
+ * Only colour changes on completion — no width or transform animation, so
+ * there is nothing for `prefers-reduced-motion` to switch off.
+ */
+function FormProgress({ schema, labels }: { schema: AppointmentSchema; labels: Record<GroupKey, string> }) {
+  const completion = useGroupCompletion(schema);
+
+  return (
+    <ol aria-hidden="true" className="grid grid-cols-3 gap-2 sm:gap-3">
+      {GROUP_KEYS.map((key, index) => {
+        const complete = completion[key];
+        return (
+          <li key={key} className="min-w-0">
+            <span
+              className={cn(
+                'block h-1.5 rounded-full transition-colors duration-base',
+                complete ? 'bg-success' : 'bg-line-strong',
+              )}
+            />
+            <span className="mt-2 flex items-start gap-1.5 text-small leading-snug">
+              <span
+                className={cn(
+                  'shrink-0 font-heading font-medium tabular',
+                  complete ? 'text-success' : 'text-brass-ink',
+                )}
+              >
+                {complete ? <Check className="mt-0.5 h-4 w-4" /> : index + 1}
+              </span>
+              <span className={cn('min-w-0', complete ? 'font-medium text-ink' : 'text-ink-soft')}>
+                {labels[key]}
+              </span>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * One line above the submit button: what is still missing, or that nothing is.
+ *
+ * Without it the only way to learn that a required answer was skipped is to
+ * press the button and be sent back up the page. It names the PART rather than
+ * the field — the part's chip is what the patient scrolls back to find.
+ *
+ * Not a live region. It changes as fields are filled in, and announcing each
+ * change would interrupt the field being typed into; the error summary is the
+ * thing that speaks when a submission actually fails.
+ */
+function SubmitReadiness({
+  schema,
+  labels,
+  lang,
+  missingLabel,
+  readyLabel,
+}: {
+  schema: AppointmentSchema;
+  labels: Record<GroupKey, string>;
+  lang: Language;
+  /** Carries `{{parts}}`. */
+  missingLabel: string;
+  readyLabel: string;
+}) {
+  const completion = useGroupCompletion(schema);
+  const missing = GROUP_KEYS.filter((key) => !completion[key]).map((key) =>
+    // The legends are sentence case with no proper nouns, so they can be
+    // lowered to sit inside a sentence: "Falta por completar: qué necesita…".
+    labels[key].toLocaleLowerCase(localeTag(lang)),
+  );
+
+  if (missing.length === 0) {
+    return (
+      <p className="flex items-start gap-2 text-small font-medium text-success">
+        <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        {readyLabel}
+      </p>
+    );
+  }
+
+  const parts = new Intl.ListFormat(localeTag(lang), { style: 'long', type: 'conjunction' }).format(missing);
+  return <p className="text-small text-ink-soft">{missingLabel.replace('{{parts}}', parts)}</p>;
+}
+
+/** The radio dot drawn inside a choice card. Decorative: the real radio is the
+ *  visually hidden <input> beside it, and this shows its state to the eye —
+ *  a tinted border alone is easy to miss for someone with low contrast
+ *  sensitivity, which is common in this practice's age group. */
+function ChoiceDot({ selected }: { selected: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-fast',
+        selected ? 'border-primary bg-primary text-primary-foreground' : 'border-line-strong bg-background',
+      )}
+    >
+      {selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+    </span>
   );
 }
 
@@ -532,9 +728,10 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
   const messages = actionMessages[lang];
   const c = formCommon[lang];
   const t = appointmentBooking[lang];
+  const x = appointmentFormExtras[lang];
 
   const uid = useId();
-  const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<SubmittedRequest | null>(null);
   const [formAlert, setFormAlert] = useState<string | null>(null);
   const [liveMessage, setLiveMessage] = useState('');
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -635,8 +832,18 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
       if (result.success) {
         setLiveMessage('');
         toast({ title: strings.successToastTitle, description: result.message });
+        const day = parseCalendarDate(values.preferredDate);
+        setSubmitted({
+          message: result.message,
+          // Labels, not the submitted key: this is read by the patient.
+          service:
+            serviceOptions.find((option) => option.value === values.serviceType)?.label ??
+            values.serviceType,
+          day: day ? formatLongDate(day, lang) : values.preferredDate,
+          time:
+            t.timeOptions.find((option) => option.value === values.timePreference)?.label ?? '',
+        });
         form.reset();
-        setSubmittedMessage(result.message);
         return;
       }
 
@@ -681,9 +888,9 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
 
   /* react-hook-form moves focus to the first invalid control itself
      (`shouldFocusError`), which now actually reaches every control: the
-     <Select> gets `field.ref`, the calendar trigger gets `field.ref` on the
-     pointer path and the native input gets it on the touch path, and the radio
-     group hands `field.ref` to its first option. The summary is here so the
+     service picker and the time-of-day group each hand `field.ref` to their
+     first radio, the calendar trigger gets it on the pointer path and the
+     native input gets it on the touch path. The summary is here so the
      failure is also *stated*, not only indicated by a red field somewhere below
      the fold. */
   function onInvalid(errors: FieldErrors<AppointmentFormValues>) {
@@ -697,17 +904,90 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
     setLiveMessage('');
   }
 
-  if (submittedMessage) {
+  if (submitted) {
+    const links = contactLinkLabels(lang);
+    const summary = [
+      { label: x.successService, value: submitted.service },
+      { label: x.successDay, value: submitted.day },
+      { label: x.successTime, value: submitted.time },
+    ];
+
+    /* The panel used to be a tick, one sentence and a reset button. That left
+       the two questions a patient has at this moment unanswered — "did they get
+       what I meant?" and "what do I do now?" — so it now repeats the request
+       back, says what happens next in order, and keeps the two direct channels
+       in reach for a change of plan. No name, phone or reason is echoed: the
+       panel stays on screen, and this is often a shared or borrowed phone. */
     return (
       <FormSuccess
         title={c.successTitle}
-        message={submittedMessage}
+        message={submitted.message}
         responseTime={c.responseTime}
         resetLabel={c.successAnother}
-        onReset={() => setSubmittedMessage(null)}
-      />
+        onReset={() => setSubmitted(null)}
+      >
+        <div className="mt-2 space-y-7">
+          <div>
+            <h4 className="text-small font-medium text-ink">{x.successSummaryTitle}</h4>
+            <dl className="mt-2 divide-y divide-line rounded-lg border border-line bg-surface">
+              {summary.map((row) => (
+                <div
+                  key={row.label}
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-3"
+                >
+                  <dt className="text-small text-ink-soft">{row.label}</dt>
+                  <dd className="text-base font-medium text-ink first-letter:uppercase">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          <div>
+            <h4 className="text-small font-medium text-ink">{x.successNextTitle}</h4>
+            <ol className="mt-3 space-y-3">
+              {x.successNext.map((step, index) => (
+                <li key={step} className="flex items-start gap-3 text-small leading-relaxed text-ink-soft">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brass/45 bg-brass-soft font-heading font-medium text-brass-ink tabular"
+                  >
+                    {index + 1}
+                  </span>
+                  <span className="pt-0.5">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div>
+            <h4 className="text-small font-medium text-ink">{x.successContactTitle}</h4>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="outline" className="focus-visible:ring-offset-card">
+                <a href={TEL_HREF} aria-label={links.callAria}>
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                  {links.call}
+                  <span className="tabular">{links.phone}</span>
+                </a>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="focus-visible:ring-offset-card">
+                <a
+                  href={whatsappHref(lang)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={links.whatsappAria}
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  {links.whatsapp}
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </FormSuccess>
     );
   }
+
+  const groupLabels = { who: t.groupWho, what: t.groupWhat, when: t.groupWhen };
 
   const stepLabel = (step: number) =>
     t.stepOf.replace('{{step}}', String(step)).replace('{{total}}', String(TOTAL_STEPS));
@@ -751,7 +1031,10 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
               It used to sit under the submit button, where it explains a
               convention the patient has already had to work out for themselves
               across eight controls. */}
-          <RequiredFieldsNote lang={lang} />
+          <div className="space-y-4">
+            <FormProgress schema={schema} labels={groupLabels} />
+            <RequiredFieldsNote lang={lang} />
+          </div>
 
           {/* ── 1. Who you are ─────────────────────────────────────────────── */}
           <FieldGroup
@@ -776,6 +1059,11 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
                     <Input
                       placeholder={strings.namePlaceholder}
                       autoComplete="name"
+                      // A phone keyboard that capitalises each word and offers
+                      // "next" instead of "go": "go" on the first field submits
+                      // a form with six answers still missing.
+                      autoCapitalize="words"
+                      enterKeyHint="next"
                       maxLength={100}
                       aria-required="true"
                       className={fieldClass}
@@ -803,6 +1091,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
                         inputMode="tel"
                         placeholder={strings.phonePlaceholder}
                         autoComplete="tel"
+                        enterKeyHint="next"
                         maxLength={25}
                         aria-required="true"
                         className={fieldClass}
@@ -830,6 +1119,12 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
                         inputMode="email"
                         placeholder={strings.emailPlaceholder}
                         autoComplete="email"
+                        // An address is not prose: iOS otherwise capitalises
+                        // the first letter and "corrects" the part before @.
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        enterKeyHint="next"
                         maxLength={255}
                         className={fieldClass}
                         {...field}
@@ -856,47 +1151,166 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
             completeLabel={t.stepComplete}
             divided
           >
+            {/* Service: eight cards to tap, not a dropdown.
+
+                It was a Radix <Select>. On a phone that is a 48px trigger that
+                opens a floating list the patient then has to scroll inside, and
+                the options are invisible until it is opened — so "what do you
+                treat?" was answered only for someone who thought to tap it.
+                Every option is now on the page, each a full-width target, with
+                the three specialties first and pictured (the same renders the
+                homepage uses), because those are what the practice is for.
+
+                The contract is unchanged: each radio's value is the service
+                KEY, which is what `submitAppointmentForm` resolves.
+
+                Real radios sharing one `name`, as in the time-of-day group
+                below: arrow keys walk all eight across both sub-headings, and
+                required/invalid sit on the group, not on each option. */}
             <FormField
               control={control}
               name="serviceType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className={labelClass}>
-                    {strings.serviceTypeLabel}
-                    <RequiredMark />
-                  </FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={(value) => {
-                      field.onChange(value);
+              render={({ field, fieldState }) => {
+                const labelId = `${uid}-service-label`;
+                const helpId = `${uid}-service-help`;
+                const errorId = `${uid}-service-error`;
+                const describedBy = fieldState.error ? `${helpId} ${errorId}` : helpId;
+
+                const specialties = serviceOptions.filter((option) =>
+                  SPECIALTY_KEYS.includes(option.value),
+                );
+                const general = serviceOptions.filter(
+                  (option) => !SPECIALTY_KEYS.includes(option.value),
+                );
+                // Focus-to-first-error lands on the first option in reading
+                // order, whichever group that is.
+                const firstValue = (specialties[0] ?? general[0])?.value;
+
+                const radio = (option: AppointmentServiceOption) => (
+                  <input
+                    type="radio"
+                    id={`${uid}-service-${option.value}`}
+                    name={field.name}
+                    value={option.value}
+                    checked={field.value === option.value}
+                    onChange={() => {
+                      field.onChange(option.value);
                       field.onBlur();
                     }}
-                  >
-                    <FormControl>
-                      {/* `ref` and `onBlur` were both missing here. Without the
-                          ref, react-hook-form's focus-to-first-error skipped the
-                          one control a keyboard user is least likely to find on
-                          their own; without onBlur the field never became
-                          "touched", so onTouched validation never ran for it. */}
-                      <SelectTrigger
-                        ref={field.ref}
-                        aria-required="true"
-                        className={cn(fieldClass, 'text-left')}
-                      >
-                        <SelectValue placeholder={strings.serviceTypePlaceholder} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-72">
-                      {serviceOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value} className="py-3 text-base">
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+                    onBlur={field.onBlur}
+                    ref={option.value === firstValue ? field.ref : undefined}
+                    className="peer sr-only"
+                  />
+                );
+
+                const cardTone = (selected: boolean) =>
+                  cn(
+                    selected
+                      ? 'border-primary bg-primary-soft shadow-e1'
+                      : 'border-input bg-background hover:border-line-strong',
+                    fieldState.error && !selected && 'border-destructive',
+                  );
+
+                return (
+                  <div className="min-w-0">
+                    <p id={labelId} className={labelClass}>
+                      {strings.serviceTypeLabel}
+                      <RequiredMark />
+                    </p>
+                    <p id={helpId} className="mt-2 text-small text-ink-soft">
+                      {x.serviceHelp}
+                    </p>
+
+                    <div
+                      role="radiogroup"
+                      aria-labelledby={labelId}
+                      aria-describedby={describedBy}
+                      aria-required="true"
+                      aria-invalid={fieldState.error ? true : undefined}
+                      className="mt-4 space-y-5"
+                    >
+                      {specialties.length > 0 && (
+                        <div>
+                          <p className="text-small font-medium text-ink-soft">{x.serviceSpecialties}</p>
+                          {/* A row with the picture on the left on a phone, a
+                              tile from 34rem. Three tiles across need ~10rem
+                              each for "Prótesis dentales" at this size; below
+                              that they are rows, which also keeps the label on
+                              one line at 360px. */}
+                          <div className="mt-2 grid gap-2.5 min-[34rem]:grid-cols-3">
+                            {specialties.map((option) => {
+                              const selected = field.value === option.value;
+                              return (
+                                <div key={option.value} className="relative flex min-w-0">
+                                  {radio(option)}
+                                  <label
+                                    htmlFor={`${uid}-service-${option.value}`}
+                                    className={cn(
+                                      'relative flex min-h-[4.5rem] w-full cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors duration-fast',
+                                      'min-[34rem]:flex-col min-[34rem]:items-start min-[34rem]:gap-2 min-[34rem]:p-4',
+                                      choiceFocusClass,
+                                      cardTone(selected),
+                                    )}
+                                  >
+                                    {/* Decorative: the label beside it names
+                                        the service. Lazy, because this group
+                                        is below the first screen. */}
+                                    <Image
+                                      src={`/images/icons/${option.value}.webp`}
+                                      alt=""
+                                      width={64}
+                                      height={64}
+                                      loading="lazy"
+                                      className="h-14 w-14 shrink-0 object-contain"
+                                    />
+                                    <span className="min-w-0 flex-1 text-base font-medium leading-snug text-ink">
+                                      {option.label}
+                                    </span>
+                                    <span className="min-[34rem]:absolute min-[34rem]:right-3 min-[34rem]:top-3">
+                                      <ChoiceDot selected={selected} />
+                                    </span>
+                                  </label>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <p className="text-small font-medium text-ink-soft">{x.serviceGeneral}</p>
+                        <div className="mt-2 grid gap-2.5 sm:grid-cols-2">
+                          {general.map((option) => {
+                            const selected = field.value === option.value;
+                            return (
+                              <div key={option.value} className="relative flex min-w-0">
+                                {radio(option)}
+                                <label
+                                  htmlFor={`${uid}-service-${option.value}`}
+                                  className={cn(
+                                    'flex min-h-[3.25rem] w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors duration-fast',
+                                    choiceFocusClass,
+                                    cardTone(selected),
+                                  )}
+                                >
+                                  <ChoiceDot selected={selected} />
+                                  <span className="min-w-0 text-base leading-snug text-ink">{option.label}</span>
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {fieldState.error && (
+                      <p id={errorId} className="mt-2 text-small font-medium text-destructive">
+                        {fieldState.error.message}
+                      </p>
+                    )}
+                  </div>
+                );
+              }}
             />
 
             <FormField
@@ -993,9 +1407,8 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
                         <PopoverTrigger asChild>
                           <FormControl>
                             {/* `role="combobox"`, not the implicit button role.
-                                Two things depend on it, and both are the same
-                                things Radix's own <SelectTrigger> does one field
-                                higher up this form:
+                                Two things depend on it, and both are what a
+                                Radix <SelectTrigger> does for the same reason:
 
                                 1. `aria-required` is not a supported property of
                                    role=button — assistive tech drops it — but it
@@ -1129,6 +1542,51 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
                       </FormControl>
                     )}
 
+                    {/* Shortcut days. Most requests are for "as soon as you
+                        can", and the native picker — the right control on a
+                        phone — still costs four taps and a month grid to say
+                        so. Client-only: they are computed from the visitor's
+                        own "today", which the server does not know (see
+                        "Client-only facts"). They set the same field through
+                        the same `commit`, so nothing new is submitted. */}
+                    {bounds && (
+                      <div className="pt-1">
+                        <p id={`${uid}-quick-days`} className="text-small text-ink-soft">
+                          {x.quickDatesLabel}
+                        </p>
+                        <div
+                          role="group"
+                          aria-labelledby={`${uid}-quick-days`}
+                          className="mt-2 flex flex-wrap gap-2"
+                        >
+                          {upcomingOpenDays(bounds.minDate, 3).map((day) => {
+                            const value = toCalendarDate(day);
+                            const active = field.value === value;
+                            return (
+                              <button
+                                key={value}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => commit(value)}
+                                className={cn(
+                                  // Intl gives Spanish weekdays in lower case,
+                                  // which is right mid-sentence and wrong as
+                                  // the first word of a button.
+                                  'min-h-11 rounded-lg border px-3.5 text-small font-medium tabular transition-colors duration-fast first-letter:uppercase',
+                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
+                                  active
+                                    ? 'border-primary bg-primary-soft text-ink'
+                                    : 'border-input bg-background text-ink hover:border-line-strong',
+                                )}
+                              >
+                                {formatChipDate(day, lang)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     <FormDescription className="text-small text-ink-soft">
                       {picked && !suggestion
                         ? `${t.preferredDatePicked} ${formatLongDate(picked, lang)}`
@@ -1215,9 +1673,8 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
                             <label
                               htmlFor={optionId}
                               className={cn(
-                                'flex min-h-[3.75rem] cursor-pointer flex-col justify-center rounded-lg border px-4 py-3 transition-colors duration-fast',
-                                'peer-focus:ring-2 peer-focus:ring-ring peer-focus:ring-offset-2 peer-focus:ring-offset-card',
-                                'peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card',
+                                'flex min-h-[3.75rem] cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors duration-fast',
+                                choiceFocusClass,
                                 selected
                                   ? 'border-primary bg-primary-soft shadow-e1'
                                   : 'border-input bg-background hover:border-line-strong',
@@ -1226,8 +1683,11 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
                                 fieldState.error && !selected && 'border-destructive',
                               )}
                             >
-                              <span className="text-base font-medium text-ink">{option.label}</span>
-                              <span className="text-small text-ink-soft tabular">{option.hint}</span>
+                              <ChoiceDot selected={selected} />
+                              <span className="flex min-w-0 flex-col">
+                                <span className="text-base font-medium text-ink">{option.label}</span>
+                                <span className="text-small text-ink-soft tabular">{option.hint}</span>
+                              </span>
                             </label>
                           </div>
                         );
@@ -1347,6 +1807,14 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: Appointmen
                 );
               })}
             </ul>
+
+            <SubmitReadiness
+              schema={schema}
+              labels={groupLabels}
+              lang={lang}
+              missingLabel={x.submitMissing}
+              readyLabel={x.submitReady}
+            />
 
             <Button
               type="submit"

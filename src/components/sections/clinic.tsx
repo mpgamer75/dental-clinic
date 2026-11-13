@@ -45,7 +45,7 @@ export function ClinicSection({ id, lang, content, address, schedule, directions
   const { front, door } = clinicPhotos;
 
   return (
-    <Section id={id} tone="surface" space="normal">
+    <Section id={id} tone="tint" space="normal" sheet>
       {/* Three blocks whose order differs by screen. On a phone the
           photographs come straight after the heading — they are the reason
           the band exists, and under four paragraphs of address they started a

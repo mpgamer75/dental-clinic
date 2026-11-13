@@ -19,6 +19,10 @@ interface ServicesSectionProps {
   description: string;
   services: Service[];
   implantGuideHref: string;
+  /** True when the band directly above is the blue diploma band — i.e. when
+   *  there is no testimonials band between them — so this one is drawn as a
+   *  sheet over it. */
+  followsBlueBand?: boolean;
 }
 
 /**
@@ -36,12 +40,19 @@ interface ServicesSectionProps {
  * state is announced by every screen reader. A server component — the old one
  * was a client component only to hold eight booleans of toggle state.
  */
-export function ServicesSection({ id, copy, description, services, implantGuideHref }: ServicesSectionProps) {
+export function ServicesSection({
+  id,
+  copy,
+  description,
+  services,
+  implantGuideHref,
+  followsBlueBand = false,
+}: ServicesSectionProps) {
   const specialties = services.filter((service) => service.specialty);
   const general = services.filter((service) => !service.specialty);
 
   return (
-    <Section id={id} tone="canvas" space="normal">
+    <Section id={id} tone="canvas" space="normal" sheet={followsBlueBand}>
       <SectionHeading title={copy.title} description={description} align="left" className="lg:col-span-7" />
 
       <h3 className="font-body text-small font-semibold text-brass-ink">{copy.specialtiesTitle}</h3>

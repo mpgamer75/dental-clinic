@@ -20,6 +20,8 @@ import {
   implantCluster,
   implantClusterPath,
   implantEducation,
+  implantPartDetails,
+  implantPartGuideHrefs,
   services,
 } from '@/lib/data';
 import { db } from '@/lib/db';
@@ -181,15 +183,17 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
       />
 
       {/* 2 — why it matters, before anything is offered. */}
-      <ProblemSection id="por-que" content={t.problem} />
+      <ProblemSection id="por-que" content={t.problem} implantHref={`${base}#implantes`} />
 
       {/* 3 — what each part is for, and how long the treatment takes. */}
       <ImplantEducation
         id="implantes"
         content={implantEducation[lang]}
+        details={implantPartDetails[lang]}
         appointmentHref={appointmentHref}
         guide={{
           allHref: implantClusterPath(lang),
+          partHrefs: implantPartGuideHrefs(lang),
           links: cluster.spokes.map((spoke) => ({
             href: implantClusterPath(lang, spoke.slug),
             label: spoke.shortLabel,
@@ -236,6 +240,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: Lan
         description={contactDetails.servicesSection[lang].description.replace('{{doctorName}}', doctorName)}
         services={services[lang]}
         implantGuideHref={implantClusterPath(lang)}
+        followsBlueBand={testimonials.length === 0}
       />
 
       {/* 7 — the questions, implant questions first. */}

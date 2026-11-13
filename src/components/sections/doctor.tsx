@@ -4,7 +4,7 @@ import { Reveal } from '@/components/reveal';
 import { DiplomaShowcase } from '@/components/diploma-showcase';
 import { TestimonialDialog } from '@/components/testimonial-dialog';
 import CountUp from '@/components/reactbits/count-up';
-import type { diplomasUi, homeContent } from '@/lib/data';
+import { diplomaImageSizes, type diplomasUi, type homeContent } from '@/lib/data';
 import type { Diploma } from '@/lib/types';
 
 type DoctorCopy = (typeof homeContent)['es']['doctor'];
@@ -46,7 +46,7 @@ export function DoctorSection({ id, content, qualifications, diplomas, invite }:
 
   return (
     <>
-      <Section id={id} tone="sunk" space="loose">
+      <Section id={id} tone="canvas" space="loose">
         <div className="grid gap-x-[6%] gap-y-10 lg:col-span-12 lg:grid-cols-12">
           <div className="lg:col-span-7">
             <SectionHeading lead={content.lead} title={content.title} align="left" className="mb-7 md:mb-8" />
@@ -113,8 +113,8 @@ export function DoctorSection({ id, content, qualifications, diplomas, invite }:
 
       {/* `overflow-hidden`: the deck's side cards are rotated in 3D and a
           rotated card's far corner projects past the strip's own box. */}
-      <Section id="diplomas" tone="drench" space="normal" className="overflow-hidden">
-        {/* One wash of light behind the centred document. Static. */}
+      <Section id="diplomas" tone="drench" space="normal" sheet className="overflow-hidden">
+        {/* One wash of light behind the documents. Static. */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-[38%] -z-10 h-[46rem] w-[min(120vw,70rem)] -translate-x-1/2 -translate-y-1/2"
@@ -125,6 +125,9 @@ export function DoctorSection({ id, content, qualifications, diplomas, invite }:
         />
         <DiplomaShowcase
           items={diplomas.items}
+          /* Read here, on the server, and passed down: the showcase is a
+             client component and should not pull `data.ts` into its chunk. */
+          sizes={diplomaImageSizes}
           ui={diplomas.ui}
           title={diplomas.title}
           description={diplomas.description}

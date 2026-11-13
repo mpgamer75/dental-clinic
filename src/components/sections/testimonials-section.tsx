@@ -45,7 +45,7 @@ export function TestimonialsSection({ id, title, description, testimonials, dial
   const [featured, ...rest] = testimonials;
 
   return (
-    <Section id={id} tone="surface" space="normal">
+    <Section id={id} tone="tint" space="normal" sheet>
       <SectionHeading title={title} description={description} align="left" className="lg:col-span-6" />
 
       <Reveal as="figure" className="m-0 border-y border-line py-9">

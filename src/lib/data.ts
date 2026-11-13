@@ -756,6 +756,117 @@ export const appointmentBooking: Record<Language, {
   },
 };
 
+/**
+ * Dr. Valerio's public profile on Mi SaludRD (mi-saludrd.com), a Dominican
+ * directory of health professionals.
+ *
+ * THIS IS THE ONE PLACE THE ADDRESS LIVES. The card on the booking page and the
+ * `sameAs` of the doctor's structured data (src/lib/seo-config.ts) both read
+ * it, and both emit nothing when it is `null` — so removing the link is one
+ * edit, and a link is never rendered to a page nobody checked.
+ *
+ * Checked on 2026-11-13 by fetching the page: it names "Francis Rafael Valerio
+ * Paulino", Odontología, Avenida Juan Pablo Duarte, Plaza Las Ramblas, Santiago
+ * de los Caballeros, and it is the URL the page declares as its own canonical.
+ * The profile's id is an opaque UUID, so if the profile is ever re-created the
+ * address changes and this must be pasted again.
+ *
+ * The copy says only that the profile exists. The platform shows its own
+ * verification badge today; repeating that here would be this site vouching
+ * for a third party's check, which it cannot see being withdrawn.
+ */
+export const doctorDirectoryProfile: {
+  url: string | null;
+  copy: Record<Language, { title: string; body: string; cta: string; newTab: string }>;
+} = {
+  url: 'https://mi-saludrd.com/doctors/8e627336-945f-461f-8cc4-3584cb575bc1',
+  copy: {
+    es: {
+      title: "También en Mi SaludRD",
+      body: "El Dr. Valerio tiene su perfil profesional en Mi SaludRD, un directorio dominicano de profesionales de la salud.",
+      cta: "Ver el perfil del Dr. Valerio",
+      newTab: "(se abre en una pestaña nueva)",
+    },
+    en: {
+      title: "Also on Mi SaludRD",
+      body: "Dr. Valerio has a professional profile on Mi SaludRD, a Dominican directory of health professionals.",
+      cta: "See Dr. Valerio's profile",
+      newTab: "(opens in a new tab)",
+    },
+  },
+};
+
+/**
+ * Copy for the parts of the booking form added after `appointmentBooking` was
+ * written: the progress strip, the tap-to-choose service picker, the shortcut
+ * days, the line above the submit button and the confirmation panel.
+ *
+ * A separate export, not more keys on `appointmentBooking`, because that
+ * object is also imported by the server page and the notification email; this
+ * one is read only by the form.
+ */
+export const appointmentFormExtras: Record<Language, {
+  /** Headings inside the service picker. The three specialties come first:
+   *  they are what the practice is built around. */
+  serviceSpecialties: string;
+  serviceGeneral: string;
+  serviceHelp: string;
+  /** Above the three shortcut buttons under the date field. "De consulta", not
+   *  "disponibles": the form does not know the clinic's diary. */
+  quickDatesLabel: string;
+  /** Above the submit button while something required is still missing.
+   *  `{{parts}}` is the list of unfinished groups. */
+  submitMissing: string;
+  submitReady: string;
+  /** Confirmation panel. */
+  successSummaryTitle: string;
+  successService: string;
+  successDay: string;
+  successTime: string;
+  successNextTitle: string;
+  successNext: string[];
+  successContactTitle: string;
+}> = {
+  es: {
+    serviceSpecialties: "Especialidades",
+    serviceGeneral: "Odontología general",
+    serviceHelp: "Si no está seguro, elija «Consulta general / revisión» y lo vemos en la consulta.",
+    quickDatesLabel: "Próximos días de consulta",
+    submitMissing: "Falta por completar: {{parts}}.",
+    submitReady: "Ya está todo. Puede enviar la solicitud.",
+    successSummaryTitle: "Lo que nos ha pedido",
+    successService: "Servicio",
+    successDay: "Día que prefiere",
+    successTime: "Franja horaria",
+    successNextTitle: "Qué pasa ahora",
+    successNext: [
+      "Revisamos su solicitud en horario de consulta.",
+      "Le llamamos al teléfono que nos ha dejado para acordar el día y la hora.",
+      "La cita queda reservada cuando se la confirmamos por teléfono.",
+    ],
+    successContactTitle: "¿Necesita cambiar algo o no puede esperar?",
+  },
+  en: {
+    serviceSpecialties: "Specialties",
+    serviceGeneral: "General dentistry",
+    serviceHelp: "If you are not sure, choose “General consultation / check-up” and we will work it out at the visit.",
+    quickDatesLabel: "Next clinic days",
+    submitMissing: "Still to complete: {{parts}}.",
+    submitReady: "That is everything. You can send the request.",
+    successSummaryTitle: "What you asked for",
+    successService: "Service",
+    successDay: "Preferred day",
+    successTime: "Time of day",
+    successNextTitle: "What happens now",
+    successNext: [
+      "We review your request during opening hours.",
+      "We call the number you gave us to agree the day and time.",
+      "The appointment is reserved once we confirm it with you by phone.",
+    ],
+    successContactTitle: "Need to change something, or can't wait?",
+  },
+};
+
 // Bilingual privacy notice. Describes the site's actual data handling (forms used
 // only to contact patients about their request; no sharing/selling). NOT a
 // substitute for legal review under DR Ley 172-13 — see FINAL_REPORT.md.
@@ -863,6 +974,254 @@ export const implantEducation: Record<Language, {
     ctaLabel: "Book an appointment",
     guideTitle: "Read at your own pace",
     guideAll: "The full implant guide",
+  },
+};
+
+export type ImplantPartKey = (typeof implantEducation)['es']['parts'][number]['key'];
+
+/** What opens when a part's card is pressed on the homepage. */
+export interface ImplantPartDetail {
+  /** One sentence under the part's name: what it is, in plain words. */
+  definition: string;
+  /** "At a glance": three short rows a reader can take in without the prose. */
+  facts: { term: string; value: string }[];
+  /** The explanation proper. Each heading is a question the patient has. */
+  sections: { heading: string; body: string }[];
+  faq: { question: string; answer: string }[];
+  /** Text of the link into the guide page `IMPLANT_PART_GUIDE` names. */
+  guideLabel: string;
+}
+
+export interface ImplantPartsUi {
+  /** The visible affordance on each card. */
+  learnMore: string;
+  /** Accessible name of that control. `{{label}}` is the part's name. */
+  openLabel: string;
+  close: string;
+  /** `{{index}}`, `{{total}}`. */
+  counter: string;
+  /** Accessible name of the row of numbered buttons that jump between parts. */
+  partsNav: string;
+  prev: string;
+  next: string;
+  factsTitle: string;
+  faqTitle: string;
+  guideLead: string;
+  /** Must stay non-promissory: it sits under clinical copy. */
+  disclaimer: string;
+}
+
+/**
+ * Where each part's "read more" goes: a spoke of the implant guide, or a
+ * section of the pillar. The hashes are `ImplantSection.id`s of the pillar,
+ * which the article renders as anchors; renaming one there breaks the link here.
+ */
+const IMPLANT_PART_GUIDE: Record<ImplantPartKey, { spoke?: ImplantSpokeSlug; hash?: string }> = {
+  fixture: { hash: 'materiales' },
+  abutment: { hash: 'secuencia' },
+  crown: { spoke: 'carga-inmediata' },
+  bone: { spoke: 'injerto-oseo' },
+};
+
+export function implantPartGuideHrefs(lang: Language): Record<ImplantPartKey, string> {
+  const href = (key: ImplantPartKey) => {
+    const { spoke, hash } = IMPLANT_PART_GUIDE[key];
+    return `${implantClusterPath(lang, spoke)}${hash ? `#${hash}` : ''}`;
+  };
+  return { fixture: href('fixture'), abutment: href('abutment'), crown: href('crown'), bone: href('bone') };
+}
+
+// The long form behind each card of `implantEducation.parts`. A separate export
+// so the cards' one-liners can be read without pulling this prose along.
+// Same rules as the implant guide, and where the guide states a figure (healing
+// times, surgery length) this repeats the guide's figure: no success rates, no
+// guarantees, nothing about this clinic's equipment or brands.
+export const implantPartDetails: Record<Language, { ui: ImplantPartsUi; parts: Record<ImplantPartKey, ImplantPartDetail> }> = {
+  es: {
+    ui: {
+      learnMore: "Ver en detalle",
+      openLabel: "{{label}}: ver la explicación completa",
+      close: "Cerrar",
+      counter: "Pieza {{index}} de {{total}}",
+      partsNav: "Las cuatro piezas",
+      prev: "Anterior",
+      next: "Siguiente",
+      factsTitle: "De un vistazo",
+      faqTitle: "Dudas habituales",
+      guideLead: "En la guía de implantes",
+      disclaimer: "Información general para pacientes. No sustituye la evaluación de su caso en consulta.",
+    },
+    parts: {
+      fixture: {
+        definition: "Un tornillo pequeño de titanio que se coloca en el hueso y hace el trabajo de la raíz que falta.",
+        facts: [
+          { term: "Material", value: "Titanio de grado médico, o una aleación de titanio y circonio" },
+          { term: "Dónde queda", value: "Dentro del hueso, bajo la encía. No se ve" },
+          { term: "Colocación", value: "Con anestesia local; usted vuelve a casa el mismo día" },
+        ],
+        sections: [
+          { heading: "De qué está hecho", body: "De titanio, un metal que se usa desde hace más de medio siglo en cirugía porque el organismo lo tolera bien y el hueso se adhiere a su superficie. También existen implantes cerámicos de zirconio, sin metal, para casos concretos." },
+          { heading: "Qué hace", body: "Sustituye a la raíz: ancla el diente nuevo al hueso y le transmite la fuerza de la masticación. Como se sostiene por sí mismo, no necesita apoyarse en los dientes vecinos." },
+          { heading: "Cómo se coloca", body: "Se prepara un lecho en el hueso y se enrosca el implante. Una pieza suele llevar entre treinta y sesenta minutos. Después se espera a que el hueso se una a él antes de ponerle un diente definitivo encima." },
+          { heading: "Qué notará usted", body: "Inflamación y molestias los primeros días, que suelen ir cediendo a partir del tercero. Una vez integrado, lo habitual es no notarlo: queda bajo la encía y no tiene nervio." },
+        ],
+        faq: [
+          { question: "¿El titanio puede dar alergia?", answer: "Está descrita, pero es poco frecuente. Si tiene sensibilidad conocida a algún metal, dígalo en la evaluación: existen alternativas cerámicas." },
+          { question: "¿Puedo hacerme una radiografía o una resonancia?", answer: "Avise siempre de que lleva un implante. Puede alterar la imagen de la zona cercana; no se conocen problemas de seguridad por hacerse estas pruebas con implantes dentales." },
+        ],
+        guideLabel: "Materiales: titanio, cerámica y la corona",
+      },
+      abutment: {
+        definition: "La pieza intermedia: se atornilla al implante, atraviesa la encía y sostiene la corona.",
+        facts: [
+          { term: "Material", value: "Titanio o zirconio" },
+          { term: "Dónde queda", value: "A la altura de la encía. Con la corona puesta, no se ve" },
+          { term: "Cuándo se coloca", value: "En la mayoría de los casos, con el implante ya integrado" },
+        ],
+        sections: [
+          { heading: "De qué está hecho", body: "De titanio o de zirconio. El zirconio es blanco y suele elegirse en dientes visibles con encía fina, para que no se transparente un tono gris. El titanio es frecuente en las muelas." },
+          { heading: "Qué hace", body: "Une el implante, que está dentro del hueso, con la corona, que está en la boca. Su forma decide además cómo se apoya la encía alrededor del diente nuevo." },
+          { heading: "Cómo se coloca", body: "Primero suele ponerse un pilar de cicatrización, una tapa provisional que da forma a la encía durante unas semanas. Después se toman las medidas y se atornilla el pilar definitivo. Si el implante quedó cubierto por la encía, antes se descubre con anestesia local." },
+          { heading: "Qué notará usted", body: "Durante esas semanas verá, o tocará con la lengua, una pequeña tapa metálica a ras de encía. Es lo esperado. La encía puede estar sensible unos días." },
+        ],
+        faq: [
+          { question: "¿El pilar se puede aflojar?", answer: "Puede ocurrir: el tornillo que lo sujeta a veces se afloja, sobre todo en quienes aprietan los dientes. Se nota como si el diente girara o se moviera. Suele tener arreglo; avise a la consulta y evite masticar con esa pieza." },
+          { question: "¿Es una pieza aparte del implante?", answer: "Sí. El implante, el pilar de cicatrización y el pilar definitivo son piezas distintas, y en un presupuesto aparecen por separado." },
+        ],
+        guideLabel: "La secuencia del tratamiento, paso a paso",
+      },
+      crown: {
+        definition: "El diente que se ve: una pieza hecha a medida que se fija sobre el pilar y con la que usted mastica.",
+        facts: [
+          { term: "Material", value: "Zirconio, disilicato de litio o metal-cerámica" },
+          { term: "Fijación", value: "Atornillada o cementada" },
+          { term: "Cuándo se coloca", value: "Al final, con el implante ya integrado" },
+        ],
+        sections: [
+          { heading: "De qué está hecha", body: "Hay más de una opción razonable. El zirconio es muy resistente y encaja bien en las muelas. El disilicato de litio es más translúcido y suele preferirse en los dientes de delante. La metal-cerámica, porcelana sobre una base de metal, sigue siendo una solución válida y muy probada." },
+          { heading: "Cómo se elige", body: "Pieza por pieza: según dónde va, cuánta fuerza recibe y de qué color son los dientes de al lado. Ningún material rinde bien fuera de su indicación." },
+          { heading: "Cómo se fija", body: "La corona atornillada se puede retirar para revisarla o repararla; su pequeño orificio de acceso se sella con un material del color del diente. La cementada no lleva orificio, y exige retirar bien el cemento sobrante porque irrita la encía." },
+          { heading: "Qué notará usted", body: "Se prueba y se ajusta la mordida antes de fijarla. Los primeros días puede sentirla distinta al morder. Si nota que choca antes que los demás dientes, pida que se la ajusten." },
+        ],
+        faq: [
+          { question: "¿Le puede salir caries?", answer: "No: la cerámica no se caría. Lo que sí puede enfermar es la encía y el hueso que rodean al implante, y por eso se limpia como un diente, con cepillo, limpieza entre los dientes y revisiones periódicas." },
+          { question: "¿Y si se rompe o se despega?", answer: "La cerámica puede astillarse y una corona cementada puede despegarse. Suelen ser problemas reparables, más frecuentes en quienes aprietan los dientes. Guarde la pieza y llame a la consulta." },
+        ],
+        guideLabel: "Carga inmediata: corona provisional y definitiva",
+      },
+      bone: {
+        definition: "Lo que sostiene todo lo demás: el hueso crece pegado al titanio hasta que el implante queda firme. Ese proceso se llama osteointegración.",
+        facts: [
+          { term: "Plazo habitual", value: "Unos 3 meses en la mandíbula; de 4 a 6 en el maxilar superior" },
+          { term: "Qué lo perjudica", value: "El tabaco, una diabetes descompensada y la enfermedad de las encías" },
+          { term: "Si falta hueso", value: "Puede reponerse con un injerto, que alarga el calendario" },
+        ],
+        sections: [
+          { heading: "Qué es la osteointegración", body: "El hueso crece en contacto directo con la superficie del implante. No es un pegado ni un endurecimiento: es hueso vivo remodelándose contra el metal." },
+          { heading: "Cuánto tarda", body: "Unos tres meses en la mandíbula, donde el hueso es más denso, y de cuatro a seis en el maxilar superior. Su plazo concreto se confirma después de la cirugía, porque depende de su hueso y de su cicatrización." },
+          { heading: "Por qué importa el hueso", body: "Cuando se pierde un diente, el hueso que lo sostenía deja de recibir la fuerza de la masticación y se va reduciendo. Un implante vuelve a transmitírsela, lo que ayuda a conservarlo. Si ya se ha perdido demasiado, puede hacer falta un injerto antes." },
+          { heading: "Qué notará usted", body: "La integración en sí no se siente. Durante esos meses se mastica del otro lado y se acude a los controles. Avise si el dolor aumenta en lugar de disminuir o si nota que algo se mueve." },
+        ],
+        faq: [
+          { question: "¿Fumar afecta?", answer: "Sí. El tabaco reduce el riego de la encía y se asocia a más fracasos y a más inflamación alrededor del implante. No lo impide de forma absoluta, pero cambia el pronóstico, y conviene hablarlo en la evaluación." },
+          { question: "¿Y si el implante no se integra?", answer: "Puede ocurrir, casi siempre en los primeros meses: el implante queda móvil. Se retira, se deja cicatrizar la zona y en muchos casos puede volver a intentarse más adelante." },
+        ],
+        guideLabel: "Cuando falta hueso: el injerto óseo",
+      },
+    },
+  },
+  en: {
+    ui: {
+      learnMore: "See in detail",
+      openLabel: "{{label}}: read the full explanation",
+      close: "Close",
+      counter: "Part {{index}} of {{total}}",
+      partsNav: "The four parts",
+      prev: "Previous",
+      next: "Next",
+      factsTitle: "At a glance",
+      faqTitle: "Common questions",
+      guideLead: "In the implant guide",
+      disclaimer: "General information for patients. It does not replace an assessment of your own case.",
+    },
+    parts: {
+      fixture: {
+        definition: "A small titanium screw placed in the jawbone to do the job of the missing root.",
+        facts: [
+          { term: "Material", value: "Medical-grade titanium, or a titanium-zirconium alloy" },
+          { term: "Where it sits", value: "Inside the bone, under the gum. It cannot be seen" },
+          { term: "Placement", value: "Under local anaesthetic; you go home the same day" },
+        ],
+        sections: [
+          { heading: "What it is made of", body: "Titanium, a metal used in surgery for more than half a century because the body tolerates it well and bone bonds to its surface. Metal-free ceramic implants made of zirconia also exist, for particular cases." },
+          { heading: "What it does", body: "It stands in for the root: it anchors the new tooth in the bone and passes chewing forces on to it. Because it holds itself up, it does not need to lean on the neighbouring teeth." },
+          { heading: "How it is placed", body: "A site is prepared in the bone and the implant is threaded into it. One implant usually takes thirty to sixty minutes. Then comes a wait, while the bone bonds to it, before a permanent tooth goes on top." },
+          { heading: "What you will notice", body: "Swelling and soreness for the first few days, usually easing from the third day on. Once it has integrated you would not normally feel it: it lies under the gum and has no nerve." },
+        ],
+        faq: [
+          { question: "Can titanium cause an allergy?", answer: "It has been reported, but it is uncommon. If you have a known sensitivity to any metal, say so at your assessment: ceramic alternatives exist." },
+          { question: "Can I still have an x-ray or an MRI scan?", answer: "Always mention that you have an implant. It can distort the image close to it; no safety problems are known from having these scans with dental implants." },
+        ],
+        guideLabel: "Materials: titanium, ceramic and the crown",
+      },
+      abutment: {
+        definition: "The piece in the middle: it screws into the implant, passes through the gum and holds the crown.",
+        facts: [
+          { term: "Material", value: "Titanium or zirconia" },
+          { term: "Where it sits", value: "At gum level. With the crown on, it cannot be seen" },
+          { term: "When it goes in", value: "In most cases, once the implant has integrated" },
+        ],
+        sections: [
+          { heading: "What it is made of", body: "Titanium or zirconia. Zirconia is white and is often chosen for visible teeth with thin gums, so that no grey shows through. Titanium is common on back teeth." },
+          { heading: "What it does", body: "It joins the implant, which is inside the bone, to the crown, which is in the mouth. Its shape also decides how the gum sits around the new tooth." },
+          { heading: "How it is placed", body: "A healing abutment usually comes first: a temporary cap that shapes the gum over a few weeks. Measurements are then taken and the final abutment is screwed in. If the implant was left covered by the gum, it is uncovered first under local anaesthetic." },
+          { heading: "What you will notice", body: "During those weeks you will see, or feel with your tongue, a small metal cap level with the gum. That is expected. The gum may be tender for a few days." },
+        ],
+        faq: [
+          { question: "Can the abutment come loose?", answer: "It can: the screw that holds it sometimes loosens, more often in people who clench their teeth. It feels as if the tooth turns or moves. It can usually be put right; call the practice and avoid chewing on that tooth." },
+          { question: "Is it a separate piece from the implant?", answer: "Yes. The implant, the healing abutment and the final abutment are different pieces, and they appear as separate lines on an estimate." },
+        ],
+        guideLabel: "The treatment sequence, step by step",
+      },
+      crown: {
+        definition: "The tooth you can see: a made-to-measure piece fixed onto the abutment, and the part you chew with.",
+        facts: [
+          { term: "Material", value: "Zirconia, lithium disilicate or porcelain fused to metal" },
+          { term: "How it is held", value: "Screwed or cemented" },
+          { term: "When it goes in", value: "Last, once the implant has integrated" },
+        ],
+        sections: [
+          { heading: "What it is made of", body: "There is more than one reasonable choice. Zirconia is very strong and suits back teeth. Lithium disilicate is more translucent and is often preferred at the front. Porcelain fused to metal remains a sound, long-proven option." },
+          { heading: "How it is chosen", body: "Tooth by tooth: by where it goes, how much force it takes and the colour of the teeth beside it. No material performs well outside the job it is suited to." },
+          { heading: "How it is held", body: "A screwed crown can be taken off to check or repair it; its small access hole is sealed with tooth-coloured material. A cemented crown has no hole, and any excess cement has to be cleaned away carefully because it irritates the gum." },
+          { heading: "What you will notice", body: "The crown is tried in and the bite adjusted before it is fixed. It may feel different to bite on for the first few days. If it seems to meet before your other teeth do, ask for it to be adjusted." },
+        ],
+        faq: [
+          { question: "Can it decay?", answer: "No: ceramic does not decay. The gum and bone around the implant can still become diseased, which is why it is cleaned like a tooth, with brushing, cleaning between the teeth and regular check-ups." },
+          { question: "What if it chips or comes off?", answer: "Ceramic can chip and a cemented crown can come loose. These can usually be repaired, and are more common in people who clench their teeth. Keep the piece and call the practice." },
+        ],
+        guideLabel: "Immediate loading: temporary and final crown",
+      },
+      bone: {
+        definition: "What holds everything else up: bone grows against the titanium until the implant is firm. The process is called osseointegration.",
+        facts: [
+          { term: "Usual timing", value: "About 3 months in the lower jaw; 4 to 6 in the upper" },
+          { term: "What works against it", value: "Smoking, uncontrolled diabetes and gum disease" },
+          { term: "If bone is lacking", value: "It can be rebuilt with a graft, which lengthens the schedule" },
+        ],
+        sections: [
+          { heading: "What osseointegration is", body: "Bone grows in direct contact with the surface of the implant. Nothing is glued and nothing sets: it is living bone remodelling itself against the metal." },
+          { heading: "How long it takes", body: "About three months in the lower jaw, where bone is denser, and four to six in the upper. Your own timeline is confirmed after the surgery, because it depends on your bone and on how you heal." },
+          { heading: "Why the bone matters", body: "When a tooth is lost, the bone that held it no longer receives chewing forces and gradually shrinks. An implant passes those forces on again, which helps to keep it. Where too much has already gone, a graft may be needed first." },
+          { heading: "What you will notice", body: "Integration itself cannot be felt. During those months you chew on the other side and come in for checks. Tell us if pain increases instead of easing, or if anything feels loose." },
+        ],
+        faq: [
+          { question: "Does smoking matter?", answer: "Yes. Smoking reduces blood supply to the gum and is associated with more failures and more inflammation around the implant. It does not rule an implant out, but it changes the outlook and is worth raising at your assessment." },
+          { question: "What if the implant does not integrate?", answer: "It can happen, nearly always in the first months: the implant stays loose. It is removed, the site is left to heal, and in many cases another attempt can be made later." },
+        ],
+        guideLabel: "When bone is lacking: bone grafting",
+      },
+    },
   },
 };
 
@@ -1224,8 +1583,18 @@ export const homeContent: Record<
     clinic: { lead: string; title: string; body: string; directions: string };
     problem: {
       title: string;
+      /** What a patient notices day to day, shown as three ruled statements
+       *  beside the heading. Each is a whole sentence. */
+      momentsLabel: string;
+      moments: string[];
+      pointsTitle: string;
       description: string;
-      points: { title: string; desc: string }[];
+      /** The FIRST point is the large lead panel, so the order is editorial.
+       *  `key` picks the illustration (`public/images/problem/`) and is
+       *  stable; a title is copy and may change. */
+      points: { key: 'bone' | 'drift' | 'denture'; title: string; desc: string }[];
+      /** The closing line that hands over to the implant explainer. */
+      bridge: { text: string; cta: string };
     };
     doctor: {
       title: string;
@@ -1292,22 +1661,39 @@ export const homeContent: Record<
     },
     problem: {
       title: 'Cuando falta una pieza, cambia todo lo demás.',
+      momentsLabel: 'Se nota primero en lo cotidiano',
+      moments: [
+        'Masticar siempre del mismo lado.',
+        'Dejar de pedir ciertos platos.',
+        'Taparse la boca al reír.',
+      ],
+      pointsTitle: 'Lo que ocurre mientras tanto',
       description:
-        'Masticar siempre del mismo lado. Dejar de pedir ciertos platos. Taparse la boca al reír. Un espacio vacío o una prótesis que ya no ajusta no es solo un asunto estético: el hueso y los dientes vecinos también responden.',
+        'Un espacio vacío o una prótesis que ya no ajusta no es solo un asunto estético: el hueso y los dientes vecinos también responden.',
       points: [
         {
+          key: 'bone',
           title: 'El hueso pierde volumen',
           desc: 'La raíz de un diente estimula el hueso maxilar cada vez que usted muerde. Sin ella, ese hueso se reabsorbe progresivamente.',
         },
         {
+          key: 'drift',
           title: 'Los dientes vecinos se inclinan',
           desc: 'Las piezas contiguas tienden a desplazarse hacia el espacio libre, y la mordida deja de encajar como antes.',
         },
         {
+          key: 'denture',
           title: 'La prótesis deja de ajustar',
           desc: 'Como el hueso cambia de forma, una dentadura que encajaba bien hace años empieza a moverse al hablar o comer.',
         },
       ],
+      // Says only what the explainer below already says of the implant itself
+      // ("Sustituye la raíz y se coloca en el hueso"). It does not promise that
+      // an implant stops or reverses any of the three changes above.
+      bridge: {
+        text: 'Un implante sustituye también la raíz, no solo la parte que se ve.',
+        cta: 'Cómo funciona un implante',
+      },
     },
     doctor: {
       title: 'Treinta años en la misma consulta.',
@@ -1394,22 +1780,36 @@ export const homeContent: Record<
     },
     problem: {
       title: 'When one tooth goes, everything else shifts.',
+      momentsLabel: 'It shows first in everyday things',
+      moments: [
+        'Always chewing on the same side.',
+        'Quietly avoiding certain dishes.',
+        'Covering your mouth when you laugh.',
+      ],
+      pointsTitle: 'What happens in the meantime',
       description:
-        'Always chewing on the same side. Quietly avoiding certain dishes. Covering your mouth when you laugh. A gap — or a denture that no longer fits — is not only a cosmetic matter: the bone and the neighbouring teeth respond too.',
+        'A gap — or a denture that no longer fits — is not only a cosmetic matter: the bone and the neighbouring teeth respond too.',
       points: [
         {
+          key: 'bone',
           title: 'The bone loses volume',
           desc: 'A tooth root stimulates the jawbone every time you bite. Without it, that bone gradually resorbs.',
         },
         {
+          key: 'drift',
           title: 'Neighbouring teeth tilt',
           desc: 'Adjacent teeth tend to drift into the empty space, and the bite stops meeting the way it used to.',
         },
         {
+          key: 'denture',
           title: 'The denture stops fitting',
           desc: 'Because the bone changes shape, a denture that fitted well years ago starts to move when you talk or eat.',
         },
       ],
+      bridge: {
+        text: 'An implant replaces the root as well, not only the part that shows.',
+        cta: 'How an implant works',
+      },
     },
     doctor: {
       title: 'Thirty years in the same practice.',
@@ -1518,6 +1918,11 @@ export const diplomasUi: Record<
     /** Span of the record. `{{range}}` = earliest–latest year. */
     rail: string;
     empty: string;
+    /** The switch between the two ways of looking at the same nine documents:
+     *  `viewLabel` names the control, the other two are its options. */
+    viewLabel: string;
+    viewWall: string;
+    viewDeck: string;
     /** Visible hover/tap hint on a certificate. */
     openHint: string;
     /** Accessible name of the trigger button. Must name the specific document. */
@@ -1537,6 +1942,9 @@ export const diplomasUi: Record<
   es: {
     rail: 'Formación continua, {{range}}',
     empty: 'No hay diplomas registrados.',
+    viewLabel: 'Cómo ver los diplomas',
+    viewWall: 'Todos',
+    viewDeck: 'Uno a uno',
     openHint: 'Ampliar',
     openLabel: 'Ampliar el certificado {{title}}, {{institution}}, {{year}}',
     stripLabel: 'Diplomas y certificados del Dr. Francis Valerio',
@@ -1552,6 +1960,9 @@ export const diplomasUi: Record<
   en: {
     rail: 'Continuing education, {{range}}',
     empty: 'No diplomas on record.',
+    viewLabel: 'How to view the diplomas',
+    viewWall: 'All',
+    viewDeck: 'One by one',
     openHint: 'Enlarge',
     openLabel: 'Enlarge the certificate {{title}}, {{institution}}, {{year}}',
     stripLabel: "Dr. Francis Valerio's diplomas and certificates",
@@ -1564,6 +1975,28 @@ export const diplomasUi: Record<
     fullSize: 'Open the original image',
     keyboardHint: 'Use the ← and → arrow keys to move between certificates.',
   },
+};
+
+/**
+ * Pixel size of each diploma photograph, keyed by diploma `id` (the files are
+ * the same in both languages, so this is not repeated per language).
+ *
+ * The gallery wall hangs every document at its real shape — the ratios run
+ * from 0.62 to 1.49 — and it has to know those shapes before the images load,
+ * or every row would be re-laid-out as each file arrives. Read from the JPEG
+ * headers of `public/images/diploma1..9.jpg`; when a photograph is replaced,
+ * measure the new file and update its entry.
+ */
+export const diplomaImageSizes: Record<string, { width: number; height: number }> = {
+  diploma1: { width: 1183, height: 940 },
+  diploma2: { width: 978, height: 1229 },
+  diploma3: { width: 954, height: 734 },
+  diploma4: { width: 1034, height: 1343 },
+  diploma5: { width: 856, height: 1373 },
+  diploma6: { width: 1314, height: 1043 },
+  diploma7: { width: 1105, height: 741 },
+  diploma8: { width: 1144, height: 805 },
+  diploma9: { width: 1200, height: 1033 },
 };
 
 export const diplomas: DiplomaData = {

@@ -33,9 +33,10 @@ interface HeroProps {
  *
  * So the band is now a stage, built from five layers that each do one thing:
  *
- *   aurora   three pools of blue light drifting slowly behind everything
  *   grid     a fine lattice, strongest behind the film, gone before the copy
- *   spot     a soft light that follows the pointer across the band
+ *   aurora   three pools of blue light over it, drifting slowly on wide
+ *            screens and still on phones
+ *   spot    a soft light that follows the pointer across the band
  *   headline each word rising out of its own line, once, on load
  *   case     the film, edged by a light that travels round its border, tilting
  *            towards the pointer, with two facts floating in front of it
@@ -57,10 +58,13 @@ export function Hero({ lang, content, appointmentHref, implantHref, diplomaCount
     <section className="hero-band drenched-deep relative isolate overflow-hidden">
       {/* ── The stage ────────────────────────────────────────────────── */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+        {/* The lattice comes FIRST, under the lights. It is a still picture;
+            painted after the drifting aurora it had to be composited above
+            it as a separate, masked layer on every frame. */}
+        <span className="hero-grid" />
         <span className="hero-aurora hero-aurora-a" />
         <span className="hero-aurora hero-aurora-b" />
         <span className="hero-aurora hero-aurora-c" />
-        <span className="hero-grid" />
         <span className="hero-spot" />
         {/* The band's foot falls back to the ground colour, so the light does
             not end in a hard line where the next band begins. */}
